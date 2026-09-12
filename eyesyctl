@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+"""Local development and read-only device inventory for EYESY Platform."""
+import argparse
+import gzip
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import urllib.parse
+import urllib.request
+
+ROOT = Path(__file__).resolve().parent
+IMAGE = "localhost/eyesy-build:bookworm"
+
+def run(args, **kwargs):
+    return subprocess.run([str(a) for a in args], check=True, **kwargs)
+
+def digest(path):
+    value = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+def verify_hash_set(metadata, field, current):
+    recorded = metadata.get(field)
+    if not isinstance(recorded, dict) or set(recorded) != set(current):
+        raise RuntimeError(f'Build provenance {field} set is stale; rebuild before packaging')
+    for name, checksum in recorded.items():
+        relative = Path(name)
+        if relative.is_absolute() or '..' in relative.parts:
+            raise RuntimeError('Unsafe provenance path: ' + name)
+        if digest(ROOT / relative) != checksum:
+            raise RuntimeError(f'Build provenance {field} hash is stale; rebuild before packaging')
+
+def container(command, graphical=False, arm=False):
+    sdk_dir = '.cache/of-arm' if arm else '.cache/of'
+    args = ["podman", "run", "--rm", "--init", "--arch", "arm" if arm else "amd64", "--userns=keep-id", "-v", f"{ROOT}:/workspace", "-v", f"{ROOT}/{sdk_dir}:/opt/of", "-w", "/workspace", "-e", "LD_LIBRARY_PATH=/workspace/engine/bin"]
+    if graphical:
+        # Use host Xwayland only for an explicitly requested visible preview.
+        args += ["--security-opt", "label=disable", "--device", "/dev/dri", "-e", f"DISPLAY={os.environ.get('DISPLAY', ':0')}",
+                 "-v", "/tmp/.X11-unix:/tmp/.X11-unix:ro"]
+        if os.environ.get("XAUTHORITY"):
+            args += ["-e", "XAUTHORITY=/tmp/eyesy-xauthority", "-v", f"{os.environ['XAUTHORITY']}:/tmp/eyesy-xauthority:ro"]
+    return run(args + ["localhost/eyesy-build:armhf" if arm else IMAGE] + command)
+
+def doctor(host=None):
+    if host:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        files = {"model": "/proc/device-tree/model", "os": "/etc/os-release",
+                 "display": "/boot/firmware/config.txt", "engine_service": "/etc/systemd/system/eyesypy.service",
+                 "hardware_service": "/etc/systemd/system/eyesyhw.service"}
+        result = {"host": host, "source": "EYESY editor read API", "files": {}}
+        for name, path in files.items():
+            url = f"http://{host}/get_file?" + urllib.parse.urlencode({"fpath": path})
+            with opener.open(url, timeout=8) as response:
+                result["files"][name] = response.read(65536).decode().rstrip("\0")
+        print(json.dumps(result, indent=2))
+    else:
+        result = {"architecture": platform.machine(), "sdk_present": (ROOT / ".cache/of/libs/openFrameworks/ofMain.h").exists(),
+                  "tools": {name: shutil.which(name) for name in ("podman", "cmake", "ninja", "g++", "ssh", "lsblk")}}
+        print(json.dumps(result, indent=2))
+
+def sdk(arm=False):
+    lock = json.loads((ROOT / "dependencies.lock.json").read_text())["openframeworks"]
+    archive = ROOT / (".cache/downloads/of-0.12.1-armhf.tar.gz" if arm else ".cache/downloads/of-0.12.1-linux64.tar.gz")
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    if not archive.exists():
+        run(["curl", "-fL", "--retry", "2", "-o", archive, lock["armhf_url" if arm else "desktop_url"]])
+    if digest(archive) != lock["armhf_sha256" if arm else "desktop_sha256"]:
+        raise RuntimeError("SDK checksum mismatch; refusing extraction")
+    target = ROOT / (".cache/of-arm" if arm else ".cache/of")
+    if not (target / "libs/openFrameworks/ofMain.h").exists():
+        target.mkdir(parents=True, exist_ok=True)
+        run(["tar", "-xzf", archive, "-C", target, "--strip-components=1"])
+    surface_patch = ROOT / 'tools/of-fbo-surface.patch'
+    surface_marker = target / '.eyesy-fbo-surface-patched'
+    if surface_marker.exists():
+        if surface_marker.read_text().strip() != digest(surface_patch):
+            raise RuntimeError('FBO patch changed since SDK application; rebuild SDK cache explicitly')
+    else:
+        run(['patch', '--dry-run', '--fuzz=0', '-d', target, '-p1', '-i', surface_patch])
+        run(['patch', '--fuzz=0', '-d', target, '-p1', '-i', surface_patch])
+        surface_marker.write_text(digest(surface_patch) + '\n')
+    if arm and not (target / '.eyesy-kms-patched').exists():
+        run(['patch', '-d', target, '-p1', '-i', ROOT / 'tools/of-kms.patch'])
+        (target / '.eyesy-kms-patched').write_text(digest(ROOT / 'tools/of-kms.patch') + '\n')
+    if arm and not (target / '.eyesy-kms-link-patched').exists():
+        run(['patch', '-d', target, '-p1', '-i', ROOT / 'tools/of-kms-link.patch'])
+        (target / '.eyesy-kms-link-patched').write_text(digest(ROOT / 'tools/of-kms-link.patch') + '\n')
+
+def package(arm=False):
+    binary = ROOT / ("engine/bin/eyesy-armhf" if arm else "engine/bin/engine")
+    if not binary.is_file():
+        raise RuntimeError("Build the engine first")
+    info = subprocess.check_output(["file", binary], text=True)
+    architecture = "armhf" if "ARM," in info and "32-bit" in info else "amd64" if "x86-64" in info else "unknown"
+    expected = 'armhf' if arm else 'amd64'
+    if architecture != expected:
+        raise RuntimeError(f"Expected {expected} artifact, found: {info}")
+    for path in (ROOT / 'modes').rglob('*'):
+        if path.is_symlink():
+            raise RuntimeError(f"Package modes must not contain symlinks: {path}")
+    output = ROOT / "dist"
+    output.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="eyesy-package-") as temp:
+        stage = Path(temp) / 'release'
+        stage.mkdir()
+        shutil.copy2(binary, stage / "eyesy-engine")
+        shutil.copytree(ROOT / "modes", stage / "modes")
+        shutil.copy2(ROOT / "dependencies.lock.json", stage)
+        provenance = ROOT / 'build' / f'provenance-{architecture}.json'
+        if arm and not provenance.is_file():
+            raise RuntimeError('ARM packaging requires build provenance; run eyesyctl build --arm again')
+        if provenance.is_file():
+            metadata = json.loads(provenance.read_text())
+            if metadata['binary']['sha256'] != digest(binary):
+                raise RuntimeError('Build provenance is stale; run eyesyctl build again')
+            from tools import build_provenance
+            verify_hash_set(metadata, 'engine_sources', build_provenance.engine_sources(ROOT))
+            verify_hash_set(metadata, 'patches', build_provenance.sdk_patches(ROOT))
+            if arm:
+                required = {'libstdc++.so.6', 'libgcc_s.so.1'}
+                libraries = metadata.get('private_runtime_libraries', {})
+                if set(libraries) != required:
+                    raise RuntimeError('ARM provenance must contain exact private runtime library set')
+                for name in required:
+                    if digest(ROOT / 'local/runtime-arm' / name) != libraries[name]:
+                        raise RuntimeError('Private ARM runtime changed since build; rebuild before packaging')
+            shutil.copy2(provenance, stage / 'build-provenance.json')
+        if not arm and (ROOT / 'engine/bin/libfmod.so').exists():
+            shutil.copy2(ROOT / 'engine/bin/libfmod.so', stage)
+        if arm:
+            runtime = ROOT / 'local/runtime-arm'
+            (stage / 'libs').mkdir()
+            for name in ('libstdc++.so.6', 'libgcc_s.so.1'):
+                source = runtime / name
+                if not source.is_file():
+                    raise RuntimeError('Missing ARM private runtime library: ' + str(source))
+                shutil.copy2(source, stage / 'libs' / name)
+        files = {}
+        for path in sorted(stage.rglob("*")):
+            if path.is_file():
+                files[str(path.relative_to(stage))] = digest(path)
+        # All payloads, including dependency metadata and bundled libraries,
+        # participate in release identity. File timestamps do not.
+        release = 'dev-' + hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:12]
+        manifest = {"schema_version": 1, "release": release, "architecture": architecture,
+                    "hardware_validated": False, "files": files}
+        (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        target = output / f"{release}-{architecture}.tar.gz"
+        def reproducible(info):
+            info.uid = info.gid = 0
+            info.uname = info.gname = ''
+            info.mtime = 0
+            info.mode = 0o755 if info.isdir() or info.name.endswith('/eyesy-engine') else 0o644
+            info.pax_headers = {}
+            return info
+        # Normalize both gzip and tar metadata for byte-identical packaging.
+        with target.open('wb') as output_stream:
+            with gzip.GzipFile(filename='', mode='wb', fileobj=output_stream, mtime=0) as compressed:
+                with tarfile.open(fileobj=compressed, mode='w', format=tarfile.PAX_FORMAT) as tar:
+                    tar.add(stage, arcname=release, filter=reproducible)
+        print(f"{target}\nSHA256 {digest(target)}\nHardware validated: false")
+
+def ssh_options(args):
+    if not re.fullmatch(r'[a-zA-Z0-9_.:-]+', args.host): raise RuntimeError('Invalid hostname')
+    if args.host.startswith('-'): raise RuntimeError('Invalid hostname')
+    options = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes']
+    known_hosts = getattr(args, 'known_hosts', None)
+    if known_hosts is None and (ROOT / 'local/eyesy_known_hosts').is_file():
+        known_hosts = ROOT / 'local/eyesy_known_hosts'
+    if known_hosts:
+        known_hosts = Path(known_hosts).resolve(strict=True)
+        options += ['-o', f'UserKnownHostsFile={known_hosts}']
+    return options
+
+def remote(args):
+    options = ssh_options(args)
+    ssh = ['ssh'] + options + [f'music@{args.host}']
+    scp = ['scp'] + options
+    if not re.fullmatch(r'[a-f0-9-]{36}', args.clone_id): raise RuntimeError('Use the exact clone UUID from preparation')
+    command = 'mktemp -d /tmp/eyesy-platform.XXXXXXXX'
+    staging = subprocess.check_output(ssh + [command], text=True).strip()
+    if not re.fullmatch(r'/tmp/eyesy-platform\.[A-Za-z0-9]+', staging): raise RuntimeError('Unexpected staging path')
+    if args.command == 'rollback':
+        run(scp + [str(ROOT / 'tools/release.py'), f'music@{args.host}:{staging}/release.py'])
+        run(ssh + [shlex.join(['sudo', '-n', 'python3', staging+'/release.py', 'rollback',
+                              '--activate-clone', args.clone_id, '--target', args.target])])
+    elif args.command == 'deploy':
+        archive = args.archive.resolve()
+        run([sys.executable, ROOT / 'tools/release.py', archive, '--architecture', 'armhf'])
+        run(scp + [str(archive), f'music@{args.host}:{staging}/release.tar.gz'])
+        run(scp + [str(ROOT / 'tools/release.py'), f'music@{args.host}:{staging}/release.py'])
+        run(ssh + [shlex.join(['sudo', 'python3', staging+'/release.py', staging+'/release.tar.gz', '--activate-clone', args.clone_id])])
+    else:
+        run(ssh + [shlex.join(['mkdir', staging+'/tools', staging+'/deploy'])])
+        run(scp + [str(ROOT / 'tools/provision_device.sh'), f'music@{args.host}:{staging}/tools/'])
+        for name in ('eyesy-platform.service', 'eyesy-platform-fallback.service'):
+            run(scp + [str(ROOT / 'deploy' / name), f'music@{args.host}:{staging}/deploy/'])
+        run(ssh + [shlex.join(['sudo', 'bash', staging+'/tools/provision_device.sh', args.clone_id])])
+    print(f'Remote staging retained for inspection: {staging}')
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser("doctor"); p.add_argument("--host")
+    p = sub.add_parser("bootstrap"); p.add_argument('--arm', action='store_true')
+    p = sub.add_parser("build"); p.add_argument("--arm", action="store_true")
+    p = sub.add_parser("test"); p.add_argument('--graphics', action='store_true')
+    sub.add_parser("prepare-native")
+    p = sub.add_parser("package"); p.add_argument('--arm', action='store_true')
+    p = sub.add_parser('headless-test'); p.add_argument('archive', type=Path); p.add_argument('--host', required=True); p.add_argument('--clone-id', required=True); p.add_argument('--mode', default='starter'); p.add_argument('--frames', type=int, default=600); p.add_argument('--output', type=Path, required=True); p.add_argument('--known-hosts', type=Path)
+    for name in ('provision', 'deploy', 'rollback'):
+        p = sub.add_parser(name); p.add_argument('--host', required=True)
+        p.add_argument('--clone-id', required=True); p.add_argument('--known-hosts', type=Path)
+        if name == 'rollback': p.add_argument('--target', choices=['stock', 'previous'], default='stock')
+        if name == 'deploy': p.add_argument('archive', type=Path)
+    p = sub.add_parser("preview"); p.add_argument("mode", nargs="?", default="starter"); p.add_argument("--frames", type=int, default=0); p.add_argument("--headless", action="store_true"); p.add_argument("--native", action="store_true"); p.add_argument("--probe", action="store_true"); p.add_argument("--switch-every", type=int, default=0); p.add_argument("--replay", type=Path); p.add_argument("--audio-wav", type=Path); p.add_argument("--record", type=Path); p.add_argument("--record-limit", type=int, default=10000)
+    p = sub.add_parser("new-mode"); p.add_argument("name")
+    for name in ("status", "logs"):
+        p = sub.add_parser(name); p.add_argument("--host", required=True); p.add_argument('--known-hosts', type=Path)
+    args = parser.parse_args()
+    if args.command == "doctor": doctor(args.host)
+    elif args.command == "bootstrap":
+        sdk(args.arm); run(["podman", "build", '--arch', 'arm' if args.arm else 'amd64', "-t", 'localhost/eyesy-build:armhf' if args.arm else IMAGE, "-f", ROOT / "tools/Containerfile", ROOT])
+    elif args.command == "build":
+        sdk(args.arm)
+        if args.arm:
+            # Keep desktop and target output separate; OF uses platform-specific object dirs.
+            container(["make", "-C", "engine", "-j8", "JOBS=-j8", "Release", "PLATFORM_ARCH=armv6l", "CROSS_COMPILING=0", "USE_PI_LEGACY=0", "APPNAME=eyesy-armhf"], arm=True)
+            runtime = ROOT / 'local/runtime-arm'; runtime.mkdir(parents=True, exist_ok=True)
+            container(['cp', '-L', '/usr/lib/arm-linux-gnueabihf/libstdc++.so.6', '/usr/lib/arm-linux-gnueabihf/libgcc_s.so.1', '/workspace/local/runtime-arm/'], arm=True)
+        else: container(["make", "-C", "engine", "-j6", "Release"])
+        run([sys.executable, ROOT / 'tools/build_provenance.py'] + (['--arm'] if args.arm else []), stdout=subprocess.DEVNULL)
+    elif args.command == "test":
+        run(["cmake", "-S", ROOT, "-B", ROOT / "build/core", "-G", "Ninja"])
+        run(["cmake", "--build", ROOT / "build/core"])
+        run(["ctest", "--test-dir", ROOT / "build/core", "--output-on-failure"])
+        run([sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests"), "-p", "test_*.py"])
+        if args.graphics:
+            for script in ('graphics_tests.py', 'creative_tests.py', 'input_workflow_tests.py', 'runtime_robustness_tests.py', 'render_target_tests.py'):
+                if (ROOT / 'tests' / script).is_file():
+                    container(['python3', '/workspace/tests/' + script])
+    elif args.command == 'prepare-native':
+        destination = ROOT / 'local/runtime'; destination.mkdir(parents=True, exist_ok=True)
+        libraries = ['libglfw.so.3', 'librtaudio.so.6', 'libGLEW.so.2.2', 'libfreeimage.so.3',
+                     'liburiparser.so.1', 'libjxrglue.so.0', 'libjpeg.so.62', 'libraw.so.20',
+                     'libOpenEXR-3_1.so.30', 'libIex-3_1.so.30', 'libImath-3_1.so.29',
+                     'libjpegxr.so.0', 'libIlmThread-3_1.so.30']
+        container(['cp', '-L'] + ['/usr/lib/x86_64-linux-gnu/' + name for name in libraries] + ['/workspace/local/runtime/'])
+        env = os.environ.copy(); env['LD_LIBRARY_PATH'] = f'{destination}:{ROOT}/engine/bin'
+        output = subprocess.check_output(['ldd', ROOT / 'engine/bin/engine'], env=env, text=True)
+        if 'not found' in output: raise RuntimeError(output)
+        print('Native runtime ready. Run eyesyctl preview shader --native.')
+    elif args.command == "preview":
+        folder = (ROOT / "modes" / args.mode).resolve()
+        if not folder.is_relative_to(ROOT / "modes") or not folder.is_dir():
+            raise RuntimeError("Mode must exist inside modes/")
+        command = ["/workspace/engine/bin/engine", "--mode", f"/workspace/modes/{args.mode}", "--storage", "/workspace/local/preview", "--frames", str(args.frames), "--report", f"/workspace/local/reports/{args.mode}.json", "--switch-every", str(args.switch_every)]
+        if args.probe: command += ["--probe"]
+        if args.replay:
+            replay = args.replay.resolve().relative_to(ROOT)
+            command += ["--replay", "/workspace/" + str(replay)]
+        if args.audio_wav:
+            wav = args.audio_wav.resolve().relative_to(ROOT)
+            command += ["--audio-wav", "/workspace/" + str(wav)]
+        if args.record:
+            record = args.record.resolve().relative_to(ROOT)
+            command += ["--record", "/workspace/" + str(record)]
+        if args.record_limit != 10000:
+            if args.record_limit < 1 or args.record_limit > 100000: raise RuntimeError("--record-limit must be 1..100000")
+            command += ["--record-limit", str(args.record_limit)]
+        if args.headless: command = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"] + command
+        if args.native:
+            if args.headless: raise RuntimeError("Choose native or headless, not both")
+            command = [part.replace('/workspace', str(ROOT)) for part in command]
+            env = os.environ.copy(); env['LD_LIBRARY_PATH'] = f'{ROOT}/local/runtime:{ROOT}/engine/bin'
+            run(command, env=env)
+        else: container(command, graphical=not args.headless)
+    elif args.command == "new-mode":
+        if not args.name or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-_" for c in args.name):
+            raise RuntimeError("Use lowercase letters, digits, hyphens or underscores")
+        shutil.copytree(ROOT / "modes/starter", ROOT / "modes" / args.name)
+        print(ROOT / "modes" / args.name)
+    elif args.command == "package": package(args.arm)
+    elif args.command == 'headless-test':
+        if args.frames < 1 or args.frames > 3600: raise RuntimeError('--frames must be 1..3600')
+        from tools.headless_test import execute
+        print(json.dumps(execute(args.archive.resolve(), args.host, args.clone_id, args.mode, args.frames, args.output, ssh_options(args)), indent=2))
+    elif args.command in ('provision', 'deploy', 'rollback'): remote(args)
+    elif args.command in ("status", "logs"):
+        command = "cat /sdcard/eyesy-platform/status.json" if args.command == "status" else "journalctl -u eyesy-platform -n 100 --no-pager"
+        run(["ssh"] + ssh_options(args) + [f"music@{args.host}", command])
+
+if __name__ == "__main__":
+    try: main()
+    except (RuntimeError, OSError, subprocess.SubprocessError, ValueError) as exc:
+        print(f"eyesyctl: {exc}", file=sys.stderr)
+        sys.exit(1)

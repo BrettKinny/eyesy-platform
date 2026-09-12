@@ -1,0 +1,8 @@
+.cache/
+build/
+dist/
+engine/bin/
+engine/obj/
+__pycache__/
+*.pyc
+local/

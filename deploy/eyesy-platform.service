@@ -1,0 +1,27 @@
+[Unit]
+Description=EYESY Lua graphics platform
+After=local-fs.target eyesyhw.service ttymidi.service
+Requires=eyesyhw.service ttymidi.service
+Conflicts=eyesypy.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+OnFailure=eyesy-platform-fallback.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=music
+Group=music
+SupplementaryGroups=audio video render input
+EnvironmentFile=-/sdcard/eyesy-platform/active.env
+WorkingDirectory=/sdcard/eyesy-platform/current
+ExecStart=/usr/bin/xinit /sdcard/eyesy-platform/current/eyesy-engine --mode /sdcard/eyesy-platform/current/modes/starter --storage /sdcard/eyesy-platform --audio-device auto --osc-port 4000 --fullscreen -- :1 vt2 -nolisten tcp
+Restart=on-failure
+RestartSec=2
+WatchdogSec=10
+TimeoutStartSec=30
+TimeoutStopSec=5
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

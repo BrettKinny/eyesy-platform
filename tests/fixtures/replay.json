@@ -1,0 +1,8 @@
+[
+  {"frame": 0, "type": "knob", "index": 1, "value": 0.25},
+  {"frame": 5, "type": "key", "key": 115},
+  {"frame": 10, "type": "knob", "index": 1, "value": 0.9},
+  {"frame": 15, "type": "key", "key": 93},
+  {"frame": 20, "type": "midi", "status": 144, "a": 60, "b": 100},
+  {"frame": 25, "type": "midi", "status": 144, "a": 60, "b": 0}
+]

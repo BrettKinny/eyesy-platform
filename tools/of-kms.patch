@@ -1,0 +1,21 @@
+--- a/libs/openFrameworks/utils/ofConstants.h
++++ b/libs/openFrameworks/utils/ofConstants.h
+@@ -230,7 +230,7 @@
+ #ifdef TARGET_LINUX
+ 
+ 	#ifdef TARGET_LINUX_ARM
+-		#ifdef TARGET_RASPBERRY_PI
++		#ifdef TARGET_RASPBERRY_PI_LEGACY
+ 			#include <bcm_host.h>
+ 			// rpi firmware headers define countof
+ 			// which messes up other libraries like glm
+--- a/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk
++++ b/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk
+@@ -76,6 +76,7 @@
+ endif
+ 
+ ifdef USE_GLFW_WINDOW
++	PLATFORM_DEFINES += __ARM__ OF_RTAUDIO
+ 	PLATFORM_DEFINES += TARGET_GLFW_WINDOW
+ endif
+ 

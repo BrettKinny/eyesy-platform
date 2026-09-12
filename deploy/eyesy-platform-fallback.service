@@ -1,0 +1,6 @@
+[Unit]
+Description=Restore stock EYESY after platform failure
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl start eyesypy.service

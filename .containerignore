@@ -1,0 +1,7 @@
+.cache
+.git
+build
+dist
+local
+engine/bin
+engine/obj

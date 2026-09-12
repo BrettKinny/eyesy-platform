@@ -1,0 +1,10 @@
+--- a/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk
++++ b/libs/openFrameworksCompiled/project/linuxarmv6l/config.linuxarmv6l.default.mk
+@@ -184,7 +184,6 @@
+ endif
+ 
+ # PLATFORM_LIBRARIES += vchiq_arm
+-PLATFORM_LIBRARIES += pcre
+ PLATFORM_LIBRARIES += rt
+ PLATFORM_LIBRARIES += X11
+ PLATFORM_LIBRARIES += dl

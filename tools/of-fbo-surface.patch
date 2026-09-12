@@ -1,0 +1,32 @@
+--- a/libs/openFrameworks/utils/ofMatrixStack.h
++++ b/libs/openFrameworks/utils/ofMatrixStack.h
+@@ -111,4 +111,5 @@
+ 	std::stack <std::pair<ofOrientation,bool> > orientationStack;
++	std::stack <std::pair<ofBaseDraws*,bool> > renderSurfaceStack;
+ 
+ 	int getRenderSurfaceWidth() const;
+ 	int getRenderSurfaceHeight() const;
+--- a/libs/openFrameworks/utils/ofMatrixStack.cpp
++++ b/libs/openFrameworks/utils/ofMatrixStack.cpp
+@@ -248,2 +248,3 @@
+ void ofMatrixStack::pushView(){
++	renderSurfaceStack.push(make_pair(currentRenderSurface, flipRenderSurfaceMatrix));
+ 	viewportHistory.push(currentViewport);
+@@ -266,2 +267,8 @@
+ void ofMatrixStack::popView(){
++	if(!renderSurfaceStack.empty()){
++		currentRenderSurface = renderSurfaceStack.top().first;
++		flipRenderSurfaceMatrix = renderSurfaceStack.top().second;
++		renderSurfaceStack.pop();
++	}
++
+ 	if(!viewMatrixStack.empty()){
+@@ -326,4 +333,8 @@
+ void ofMatrixStack::clearStacks(){
++	while (!renderSurfaceStack.empty()){
++		renderSurfaceStack.pop();
++	}
++
+ 	int tmpCounter = 0;
+ 	while (!modelViewMatrixStack.empty()){
+ 		modelViewMatrixStack.pop();
