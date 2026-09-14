@@ -16,19 +16,21 @@ qualify HDMI scanout, physical controls/MIDI, audio wiring, or full deployment.
 
 ## 2. HDMI, GPU, audio, and recovery probe
 
-Stage a verified ARM package and the existing `tools/probe_device.sh` on the
-prepared card. Its invocation is:
+Stage a verified ARM package on the prepared card. The platform display path is
+now direct KMS (engine flag `--kms`): no Xorg runs, the engine takes DRM master
+and selects a kernel-EDID mode itself. A live activation health check must show
+advancing frames plus a hardware renderer (`VC4 V3D 2.1`, never llvmpipe).
 
-```sh
-sudo bash /PATH/TO/probe_device.sh UUID_FROM_RECEIPT /PATH/TO/verified/eyesy-engine
-```
-
-The script starts a bounded X session, stops stock Python, and attempts to restore
-it on exit. Do not manually stop stock first. Before the first bench invocation,
-review the script and arrange an independent timed stock-restoration unit, as
-used for the headless capture experiment: shell traps alone cannot survive SIGKILL
-or power loss. Keep a verified SSH session available. This display probe has not
-yet been live-qualified; do not treat the command as unattended-safe acceptance.
+The HDMI→USB capture dongle is a qualified A/B observer when its UVC pipeline
+streams continuously (its HPD line follows its streaming state; without a
+client it asserts no HPD and the device sees no display — the engine fails
+its probe and the fallback restores stock, which is correct behavior). Keep
+exactly one streamer on the dongle (two UVC clients collide fatally) and use
+`tools/vidctl_watch.sh` as the latch oracle: `HDMI_VID_CTL 0xc0080000` or
+`0xc0000000` is healthy; `0xc2000000` (bit 25) means Xorg-class damage — with
+the Xorg path removed this must never appear. Treat a uniform-gray capture
+(7,7,7) as "sync present, pixels blanked" and uniform black (0,0,0) as no
+TMDS. See [HDMI display issue](HDMI-DISPLAY-ISSUE.md).
 
 Capture the probe output, renderer identity, measured display mode, codec capture,
 clean exit, and return to stock. Verify HDMI image, orientation, frame pacing,
@@ -63,14 +65,16 @@ renderer, audio-open failure, or failure to recover the stock service.
 Only after the preceding gates pass, use the existing CLI workflow:
 
 ```sh
-./eyesyctl deploy dist/RELEASE-armhf.tar.gz --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
+./eyesyctl package --arm
+python3 tools/release.py dist/dev-<payload-id>-armhf.tar.gz --architecture armhf
+./eyesyctl deploy dist/dev-<payload-id>-armhf.tar.gz --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
 ./eyesyctl status --host DEVICE_IP
 ./eyesyctl logs --host DEVICE_IP
 ```
-
 Capture archive/clone identity, deploy output, status heartbeat, renderer, mode,
 and service logs. Confirm candidate `active.env`, advancing frames, GPU renderer,
-and unchanged stock boot selection.
+and the expected boot selection (stock during gating; platform after the V2
+platform-owned boot has passed).
 
 Previous-release recovery requires two distinct, healthy releases to have been
 activated in sequence. First activation alone has no previous platform release;

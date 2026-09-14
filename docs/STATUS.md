@@ -76,6 +76,67 @@ Final local regression log: `local/overnight/final-regressions-round2.log`
 (five core executables, 77 Python checks, and five graphics integration scripts).
 The [overnight log](OVERNIGHT.md) records the experiment sequence and caveats.
 
+## 2026-09-13 live deployment and HDMI investigation
+
+First live transactional activation succeeded on the spare card: release
+`dev-dd42a1d3bd86` passed health (advancing frames, VC4 renderer, audio
+capture with zero drops), `previous.json` was committed, and the `OnFailure`
+fallback restored stock twice when activation failed. Two service defects
+were found and fixed in `deploy/eyesy-platform.service`: X's default
+10-minute DPMS blanking (server flags `-s -dpms` added) and teardown from an
+`eyesyhw` boot race (`Requires=` relaxed to `Wants=`).
+
+After activation, no image reaches the display through the HDMI→USB capture
+chain, while stock SDL/KMSDRM output displays from any clean boot. The
+platform side is verified healthy end to end (engine frames, X framebuffer
+contents captured via XGetImage, active CRTC at EDID-preferred timings,
+identity gamma, linear and tiled scanout, RandR re-modeset, fbcon on vt1);
+the bad display state persists across master handover until reboot. See
+[HDMI display issue](HDMI-DISPLAY-ISSUE.md) for the evidence table and ranked
+next tests; the decisive unrun one is the same output on a real HDMI display.
+Boot ownership was restored to stock for a known-good power-on.
+
+## 2026-09-14 root cause: latched HDMI_VID_CTL bit under Xorg
+
+With the capture dongle observed directly on the workstation (after
+diagnosing and controlling its HPD↔USB-streaming coupling), the black-screen
+bug is reproduced and explained: any Xorg session on the card trips a sticky,
+driver-undefined `HDMI_VID_CTL` bit 25 (`0xc0080000` → `0xc2000000`). TMDS
+sync continues with pixels blanked, the state survives stock restarts on the
+same boot, and only a power cycle clears it. Stock-first boots and the
+firmware splash transmit fine. Xorg additionally commits degenerate mode
+blobs (empty name, flags `0x0`; causality unproven) and fails its initial
+config with EINVAL when composite is connected (576i chosen against
+`vc4.tv_norm=NTSC`). Evidence, observer-chain qualification, and the
+remediation plan — direct KMS/GBM engine scanout as the product fix, kernel
+patch as rescue only, one-boot bisect protocol — are in
+[HDMI display issue](HDMI-DISPLAY-ISSUE.md). Boot ownership is stock; the
+platform must not ship Xorg-driven display on this kernel until fixed.
+
+## 2026-09-15: black-screen fix shipped — direct KMS backend, V1+V2 passed
+
+Root cause (2026-09-14, see [HDMI display issue](HDMI-DISPLAY-ISSUE.md)):
+Xorg sessions latch an undocumented `HDMI_VID_CTL` bit on the BCM2837
+transmitter (sync alive, pixels blanked) that no later client clears until
+power-off. Fix: the engine gained a direct KMS/GBM scanout window
+(`engine/src/kms_window.*`, flag `--kms`, kernel-EDID modes only, hardware
+EGL on V3D) and the platform service dropped Xorg entirely.
+
+Validated on hardware through the capture-dongle chain with the VID_CTL
+oracle (`tools/vidctl_watch.sh`):
+- **V1** (one boot, no power cycles): stock visible → platform engine live
+  at ~60 fps on `VC4 V3D 2.1` (first hardware-GL run; Xorg path was stuck on
+  llvmpipe at 14–20 fps) with OSD readable off the wire → stock recovered
+  after engine exit. 788 oracle samples, zero latched.
+- **V2** (deployed service, platform-owned cold boot): release
+  `dev-cf8b1ee8013f` activated transactionally; firmware splash visible,
+  then continuous engine output from boot; `VID_CTL=0xc0000000`; 60.4 fps;
+  no Xorg process. **The device now boots into a working platform.**
+
+Remaining HDMI-gate work on the deployed service: physical controls, mode
+switching, display latency, and a soak; plus the old Xorg conf cleanup at
+provision and the noted `bootstrap --arm` image-arch defect.
+
 ## Remaining acceptance gates
 
 1. HDMI fullscreen scanout, resolution/orientation, visible controls, and display
@@ -89,6 +150,12 @@ The [overnight log](OVERNIGHT.md) records the experiment sequence and caveats.
    a future provisioning qualification, not another uncontrolled apt run tonight.
 5. Fully pinned clean-machine package acquisition: SDK/base-image digests and
    exact build provenance are recorded, but apt repositories still float.
+6. Qualified observation path: the HDMI→USB dongle is qualified for A/B
+   display testing on the workstation using the continuous-streamer protocol
+   (its HPD line follows its UVC streaming state; see HDMI-DISPLAY-ISSUE.md).
+   The 2026-09-13 "never shows Xorg output" reading was the latched VID_CTL
+   bit, not the chain. A real display remains recommended for final visual
+   and latency acceptance.
 
 Release manifests intentionally retain `hardware_validated: false`.
 Use the [next-session bench checklist](BENCH-CHECKLIST.md) for the remaining gates.

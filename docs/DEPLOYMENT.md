@@ -42,7 +42,7 @@ then verify the SSH host fingerprint before accepting it on the workstation.
 ./eyesyctl bootstrap --arm
 ./eyesyctl build --arm
 ./eyesyctl package --arm
-python3 tools/release.py dist/RELEASE-armhf.tar.gz --architecture armhf
+python3 tools/release.py dist/dev-<payload-id>-armhf.tar.gz --architecture armhf  # actual name printed by `package`
 ```
 
 The ARM SDK has a small checked-in patch to select GLES2 explicitly and avoid the
@@ -76,7 +76,7 @@ emulated rendering does not satisfy it.
 After that gate:
 
 ```sh
-./eyesyctl deploy dist/RELEASE-armhf.tar.gz --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
+./eyesyctl deploy dist/dev-<payload-id>-armhf.tar.gz --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
 ./eyesyctl status --host DEVICE_IP
 ./eyesyctl logs --host DEVICE_IP
 ./eyesyctl rollback --host DEVICE_IP --clone-id UUID_FROM_RECEIPT --target stock

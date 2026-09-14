@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "kms_window.h"
 #include "offscreen_window.h"
 #include "runtime.h"
 #include <alsa/asoundlib.h>
@@ -16,7 +17,7 @@ namespace fs = std::filesystem;
 struct Options {
     fs::path mode, storage = "local", report, replay, audioWav, record;
     int frames = 0, device = -1, port = 0, switchEvery = 0;
-    bool fullscreen = false, probe = false, offscreen = false;
+    bool fullscreen = false, probe = false, offscreen = false, kms = false;
     size_t recordLimit = 10000;
 };
 static void atomicJson(const fs::path &path, const ofJson &data) {
@@ -775,8 +776,8 @@ int main(int argc, char **argv) {
                 o.fullscreen = true;
             else if (arg == "--offscreen")
                 o.offscreen = true;
-            else if (arg == "--probe")
-                o.probe = true;
+            else if (arg == "--kms")
+                o.kms = true;
             else
                 throw std::runtime_error("unknown argument: " + arg);
         }
@@ -795,7 +796,9 @@ int main(int argc, char **argv) {
 #endif
         settings.setSize(1280, 720);
         settings.windowMode = o.fullscreen ? OF_FULLSCREEN : OF_WINDOW;
-        auto window = o.offscreen ? createOffscreenWindow(1280, 720) : ofCreateWindow(settings);
+        auto window = o.kms ? createKmsWindow()
+                            : o.offscreen ? createOffscreenWindow(1280, 720)
+                                          : ofCreateWindow(settings);
         ofRunApp(window, std::make_shared<EngineApp>(o));
         return ofRunMainLoop();
     } catch (const std::exception &e) {

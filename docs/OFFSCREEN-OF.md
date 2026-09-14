@@ -19,5 +19,18 @@ tests. Shader geometry and `u_resolution` use the active target's dimensions.
 
 Native CM3+ mode rendering, capture plumbing, and an independent watchdog restart
 have been exercised with this backend. It does not prove HDMI output,
-Xorg/compositor behavior, physical controls, musical response, or display latency.
-Refer to the dated reports rather than extrapolating simple probe performance.
+Xorg/compositor behavior, physical controls, musical response, or display
+latency. Refer to the dated reports rather than extrapolating simple probe
+performance.
+
+## Direct KMS scanout window (ARM)
+
+`engine/src/kms_window.{h,cpp}` provides `createKmsWindow()` for the same
+TARGET_OPENGLES builds. It opens `/dev/dri/card0`, acquires DRM master,
+creates a GBM XRGB8888 scanout surface, binds EGL on V3D, selects a mode
+strictly from the kernel connector's EDID-derived list (named and flagged —
+client-constructed mode blobs are forbidden on this hardware; see the
+HDMI display issue notes), and drives vsync'd page flips. Entry point flag:
+`--kms`. The mode actually chosen is logged (name, flags, type, clock) for
+bench evidence. Close deliberately leaves the last scanout CRTC enabled, as
+stock SDL/KMSDRM does.

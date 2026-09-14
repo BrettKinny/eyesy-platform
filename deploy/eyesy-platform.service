@@ -1,7 +1,7 @@
 [Unit]
 Description=EYESY Lua graphics platform
 After=local-fs.target eyesyhw.service ttymidi.service
-Requires=eyesyhw.service ttymidi.service
+Wants=eyesyhw.service ttymidi.service
 Conflicts=eyesypy.service
 StartLimitIntervalSec=60
 StartLimitBurst=3
@@ -15,7 +15,11 @@ Group=music
 SupplementaryGroups=audio video render input
 EnvironmentFile=-/sdcard/eyesy-platform/active.env
 WorkingDirectory=/sdcard/eyesy-platform/current
-ExecStart=/usr/bin/xinit /sdcard/eyesy-platform/current/eyesy-engine --mode /sdcard/eyesy-platform/current/modes/starter --storage /sdcard/eyesy-platform --audio-device auto --osc-port 4000 --fullscreen -- :1 vt2 -nolisten tcp
+# Direct KMS scanout: no Xorg anywhere in the display path (Xorg sessions on
+# this hardware trip a sticky HDMI_VID_CTL bit that blanks output until power
+# cycle; see docs/HDMI-DISPLAY-ISSUE.md). The engine takes DRM master and
+# selects a kernel-EDID mode itself.
+ExecStart=/sdcard/eyesy-platform/current/eyesy-engine --kms --mode /sdcard/eyesy-platform/current/modes/starter --storage /sdcard/eyesy-platform --audio-device auto --osc-port 4000
 Restart=on-failure
 RestartSec=2
 WatchdogSec=10
