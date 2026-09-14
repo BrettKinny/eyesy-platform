@@ -231,7 +231,9 @@ def main():
     args = parser.parse_args()
     if args.command == "doctor": doctor(args.host)
     elif args.command == "bootstrap":
-        sdk(args.arm); run(["podman", "build", '--arch', 'arm' if args.arm else 'amd64', "-t", 'localhost/eyesy-build:armhf' if args.arm else IMAGE, "-f", ROOT / "tools/Containerfile", ROOT])
+        expected_arch = "armhf" if args.arm else "amd64"
+        sdk(args.arm)
+        run(["podman", "build", '--arch', 'arm' if args.arm else 'amd64', "--build-arg", f"EXPECTED_ARCH={expected_arch}", "-t", 'localhost/eyesy-build:armhf' if args.arm else IMAGE, "-f", ROOT / "tools/Containerfile", ROOT])
     elif args.command == "build":
         sdk(args.arm)
         if args.arm:

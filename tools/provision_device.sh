@@ -82,14 +82,28 @@ dpkg-query -W > "$task_base/provision-backup/packages.before"
 task_mount_options=$(findmnt -n -o OPTIONS /)
 task_restore_ro=false
 if [[ ,$task_mount_options, == *,ro,* ]]; then
-    mount -o remount,rw /
+    if ! mount -o remount,rw /; then
+        echo 'ERROR: failed to remount root filesystem read-write' >&2
+        exit 1
+    fi
     task_restore_ro=true
+fi
+task_xorg_conf="/etc/X11/xorg.conf.d/10-eyesy-720p.conf"
+if [[ -e "$task_xorg_conf" ]]; then
+    rm -f "$task_xorg_conf" || {
+        echo "ERROR: failed to remove $task_xorg_conf" >&2
+        exit 1
+    }
+fi
+if [[ -e "$task_xorg_conf" ]]; then
+    echo "ERROR: failed to remove $task_xorg_conf" >&2
+    exit 1
 fi
 cleanup() {
     local task_status=$?
     sync
     if $task_restore_ro && ! mount -o remount,ro /; then
-        echo 'WARNING: failed to restore the root filesystem read-only; reboot before using the clone' >&2
+        echo 'ERROR: failed to restore the root filesystem read-only; reboot before using the clone' >&2
         [[ $task_status == 0 ]] && task_status=1
     fi
     # An EXIT trap's return value does not replace the shell's original status.

@@ -8,6 +8,6 @@
     "armhf_sha256": "e4b2a135b6eab7b8deed4f91cac84c48f66c02e875f3156e1fb17c923d90f2e0"
   },
   "lua": {"runtime": "LuaJIT", "api": "5.1", "source": "Bookworm libluajit-5.1-dev"},
-  "build_base": "docker.io/library/debian@sha256:5ae3c39ebd15e229dcedd5cee596b2497182493d41ff162e824ba13fc1b2b867",
+  "build_base": "docker.io/library/debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
   "target": {"board": "Raspberry Pi Compute Module 3 Plus Rev 1.0", "os": "Raspbian GNU/Linux 12", "eyesy_os": "3.0", "resolution": [1280, 720], "refresh_hz": 60}
 }

@@ -1,5 +1,7 @@
-ARG BASE_IMAGE=docker.io/library/debian@sha256:5ae3c39ebd15e229dcedd5cee596b2497182493d41ff162e824ba13fc1b2b867
+ARG BASE_IMAGE=docker.io/library/debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
 FROM ${BASE_IMAGE}
+ARG EXPECTED_ARCH=amd64
+RUN test "$(dpkg --print-architecture)" = "${EXPECTED_ARCH}" || (echo "Expected Debian image arch ${EXPECTED_ARCH}, got $(dpkg --print-architecture)" >&2; exit 1)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential pkg-config ca-certificates curl git python3 cmake ninja-build \
     libluajit-5.1-dev libasound2-dev libglfw3-dev libglew-dev libfreeimage-dev \
