@@ -40,6 +40,8 @@ reuse their vertex table and mesh handle each frame.
 | Aurora | Flow | Glow | Quality | Palette phase | — |
 | Prism Mesh | Amplitude | Depth | Spin | Palette phase | Speed |
 | Echo Feedback | Decay | Orbit | Scale | Hue | Size |
+| Phosphor | Decay | Morph | Gain | Hue | Swirl |
+| Kali Bloom | Decay | Morph | Pulse | Hue | Zoom |
 
 Bound parameters follow knob values, so a declared parameter default is not a
 substitute for setting the corresponding knob in a replay. Workstation knobs

@@ -176,6 +176,33 @@ Evidence and phase-by-phase detail: `local/reports/bench-2026-09-15/REPORT.md`.
   silently falls back to `modes[0]`; recovery-vs-fallback race leaves the
   fallback unit FAILED (benign, convergent).
 
+## 2026-09-15 (evening): two creative scenes shipped
+
+Two new Lua modes extend the seven-mode set; release `dev-cd72740cc708` is
+live (transactional deploy, `previous.json` → `dev-c2f150be2380`, platform
+service active at ~60 fps on the KMS path, real codec audio).
+
+- **phosphor** — stereo XY oscilloscope with phosphor afterglow: left/right
+  buffers drawn as XY and time-domain traces into a half-res (640x360)
+  ping-pong feedback chain (feedback warp + decay + vignette in one shader
+  pass), halo/core mesh passes for glow, sum-of-phasors synthetic Lissajous
+  when audio is silent, trigger jumps orbit ratios. Desktop preview verified
+  visually; on-device offscreen p50 **24.0 ms (~41 fps)**, zero errors, zero
+  RSS growth.
+- **kali-bloom** — kaliset (`a - |p|`, 10 iterations, half-res) fragment
+  bloom with bounded max()-composite feedback, bass zoom breathing, treble
+  core accent, trigger morphs the fractal constant. On-device offscreen p50
+  **30.3 ms (~33 fps)**, zero errors, zero RSS growth. Both sit inside the
+  shipped fleet's 15.7-29.7 ms envelope; full-formality 60 fps remains an
+  open gate for shader modes.
+
+Evidence: `local/reports/headless-phosphor-round2/` (full-res baseline),
+`headless-phosphor-round3/`, `headless-kali-round2/`, plus desktop previews
+under `local/preview/grabs/`. Tuning history caught two design traps now
+encoded in the shaders: bloom inside a feedback loop self-amplifies to
+white, and clamping the kaliset denominator at 1e-4 collapses orbits onto a
+shared trajectory (uniform gray).
+
 ## Remaining acceptance gates
 
 1. HDMI scanout, resolution, and orientation are validated through the
