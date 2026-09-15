@@ -30,7 +30,13 @@ where the evidence lives.
    visible-latency feel. Needs hands; everything remote-drivable is done.
 2. **Full-formality 60-min soak rerun**: today's deployed-service soak was
    stopped early at 53.7 min / 446 of 500 switches (memory growth +248 KiB,
-   zero mode errors/drops) — rerun once to close the formality.
+   zero mode errors/drops) — rerun once to close the formality. For the
+   rerun, use an **observe-only poller** (status.json `rss_bytes` +
+   `/sys/class/thermal/thermal_zone0/temp` at ~5 s), not `soak_guard.py`:
+   the guard SIGTERMs/SIGKILLs its target at duration end and on any guard
+   exception (`tools/soak_guard.py:92-103`), which is correct for standalone
+   experiment PIDs but wrong to point at the deployed service. Keep the
+   guard's hard kill limits for standalone-engine experiments only.
 3. **Cold-boot recovery confirmation**: one user power-cycle after the
    no-sink failure → stock → platform sequence (service-level recovery is
    already live-proven).
