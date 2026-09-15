@@ -229,6 +229,30 @@ pass, 44.9->31.0 ms). Engineering notes: e.palette stop spacing is cyclic
 outrun hardcodes its trio for the same reason. Knob contract held:
 k1 motion/energy, k2 structure, k3 detail, k4 hue, k5 feedback.
 
+## 2026-09-16: scene library batch 2 shipped
+
+Ten scenes from the ideation swarm (op art, retro-futurism, sacred
+geometry, vintage CGI, psychedelia, ports). Release `dev-30e2ba1e0197`
+live (transactional, health passed, ~60 fps on the KMS path). 27 modes.
+
+radar-sweep 23.8 ms, wireframe-room 23.5, lyapunov-field 24.5,
+flow-field-drift 24.1, riley-grating 26.2
+(converted to an analytic fragment shader after the mesh version measured
+36.6 - analytic op-art needs zero marshalling), penrose-lattice 25.5
+(5-wave quasicrystal at 480x270 after 39.7 at 640x360), complement-flash
+26.7, girih-stars 27.2 (half-res pass after 34.9),
+facet-terrain lands at the
+C bound: 33.3 (at the tier C bound), textmode-field 32.1
+(480x270 content pass after 33.7). All zero-error, zero
+RSS growth (`local/reports/batch2-*`).
+
+New engineering facts: screen-space `uv.y` is top-down; centered-coordinate
+scenes need the translate, top-left-origin particle fields do not;
+`e.palette` stop spacing remains unreliable for palette-critical color
+(riley/lyapunov/outrun hardcode authored pairs); equal-luminance opponent
+pairs are luma-normalized to 0.45 by an iso() helper, not `1-c` complements.
+Research corpus: `docs/research/` (15 docs).
+
 ## Remaining acceptance gates
 
 1. HDMI scanout, resolution, and orientation are validated through the
