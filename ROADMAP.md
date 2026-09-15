@@ -50,12 +50,12 @@ where the evidence lives.
    - recovery-vs-fallback race: `restore_selection`'s stop of a restarting
      unit fires `OnFailure`, whose stock start then gets canceled by
      `Conflicts` (benign, convergent, but the fallback unit ends FAILED).
-5. **1080p decision** (`local/reports/1080p-plan-2026-09-15/analysis.md`):
+5. **1080p — NOT PURSUED (user decision, 2026-09-15).** Viability analysis
+   is complete and parked (`local/reports/1080p-plan-2026-09-15/analysis.md`):
    scanout is reachable (EDID exposes 1080p), but native 1080p60 is not
-   viable for 4/7 modes (they already miss 60 fps at 720p; ~15–25 fps
-   projected). Recommended: keep 720p render resolution; if pursuing
-   sharpness, start with the agent's fill-scaling calibration + offscreen
-   1080p cost pass.
+   viable for 4/7 modes (~15–25 fps projected). Keep 720p render resolution.
+   Revisit only if explicitly re-raised; the analysis, engine-change map, and
+   measurement plan are all in that report if it ever comes back.
 6. **Optional root-cause bisect (upstreamable):** the D1/D2 protocol in
    `docs/HDMI-DISPLAY-ISSUE.md` identifies exactly which Xorg action latches
    `HDMI_VID_CTL` bit 25. Not needed for the product.
