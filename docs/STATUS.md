@@ -203,6 +203,32 @@ encoded in the shaders: bloom inside a feedback loop self-amplifies to
 white, and clamping the kaliset denominator at 1e-4 collapses orbits onto a
 shared trajectory (uniform gray).
 
+## 2026-09-15 (night): scene library batch 1 shipped
+
+Eight more Lua scenes built from the research swarm (blueprint:
+`local/reports/scene-library-blueprint/BLUEPRINT.md`, raw corpus in
+`local/research/`). Release `dev-95ed836e02d1` live (transactional, health
+passed, ~59.5 fps on the KMS path, real codec audio). 17 modes total.
+
+| scene | family | on-device p50 |
+| --- | --- | --- |
+| chladni-plate | sacred geometry / cymatics | 27.6 ms |
+| outrun-grid | cyberpunk / synthwave | 25.3 ms |
+| rutt-etra | video synthesis raster warp | 24.8 ms |
+| plasma-flow | fbm domain warp (2-octave) | 32.7 ms |
+| whitney-kaleido | Whitney permutation lattice | 29.1 ms |
+| lorenz-trail | attractor phosphor trail | 24.0 ms |
+| reaction-diffusion | Gray-Scott on GPU (first anywhere on EYESY) | 27.5 ms |
+| ascii-wave | dot-matrix terminal | 31.0 ms |
+
+All passed desktop preview, 81-test suite, and on-device headless runs
+(`local/reports/batch1-*`); two required optimization rounds (plasma:
+3->2-octave fbm + 480x270 targets, 72.5->32.7 ms; ascii: half-res ASCII
+pass, 44.9->31.0 ms). Engineering notes: e.palette stop spacing is cyclic
+(i/n segments) - characterize precisely before palette-critical work;
+outrun hardcodes its trio for the same reason. Knob contract held:
+k1 motion/energy, k2 structure, k3 detail, k4 hue, k5 feedback.
+
 ## Remaining acceptance gates
 
 1. HDMI scanout, resolution, and orientation are validated through the

@@ -29,7 +29,9 @@ saves. On the device, Shift+OSD opens settings, Scene buttons select the row, Mo
 buttons change the value, and Save persists it.
 
 Modes: `starter`, `stereo-mesh`, `shader`, `feedback`, `aurora`, `prism-mesh`,
-`echo-feedback`, `phosphor`, and `kali-bloom`. See [API](docs/API.md) and
+`echo-feedback`, `phosphor`, `kali-bloom`, `chladni-plate`, `outrun-grid`,
+`rutt-etra`, `plasma-flow`, `whitney-kaleido`, `lorenz-trail`,
+`reaction-diffusion`, and `ascii-wave`. See [API](docs/API.md) and
 [creative modes](docs/CREATIVE.md).
 Use [WAV input and event recording](docs/INPUT-WORKFLOW.md) for repeatable sessions.
 
