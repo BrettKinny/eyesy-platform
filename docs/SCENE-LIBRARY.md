@@ -19,7 +19,7 @@ Rationale and family taxonomy: `local/reports/scene-library-blueprint/BLUEPRINT.
 | --- | --- | --- |
 | A | <= 16.7 ms (60 fps) | pure mesh/line scenes (~1-2 ms GPU); full-res single-pass shaders |
 | B | <= 22.2 ms (45 fps) | (reserved) |
-| C | <= 33.3 ms (30 fps) | half-res feedback scenes: lorenz-trail 24.0, rutt-etra 24.8, outrun-grid 25.3, reaction-diffusion 27.5, chladni-plate 27.6, whitney-kaleido 29.1, kali-bloom 30.3, ascii-wave 31.0, plasma-flow 32.7 |
+| C | <= 33.3 ms (30 fps) | half-res feedback scenes: phosphor 24.0, lorenz-trail 24.0, rutt-etra 24.8, outrun-grid 25.3, reaction-diffusion 27.5, chladni-plate 27.6, whitney-kaleido 29.1, kali-bloom 30.3, ascii-wave 31.0, plasma-flow 32.7 |
 
 Rules: fragment-iterative scenes render at 640x360 (or 480x270 for heavy
 fields) and upscale; every scene gets a headless device run asserting its

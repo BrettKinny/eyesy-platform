@@ -207,7 +207,7 @@ shared trajectory (uniform gray).
 
 Eight more Lua scenes built from the research swarm (blueprint:
 `local/reports/scene-library-blueprint/BLUEPRINT.md`, raw corpus in
-`local/research/`). Release `dev-95ed836e02d1` live (transactional, health
+`docs/research/`). Release `dev-95ed836e02d1` live (transactional, health
 passed, ~59.5 fps on the KMS path, real codec audio). 17 modes total.
 
 | scene | family | on-device p50 |
