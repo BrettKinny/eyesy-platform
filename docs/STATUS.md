@@ -133,18 +133,60 @@ oracle (`tools/vidctl_watch.sh`):
   then continuous engine output from boot; `VID_CTL=0xc0000000`; 60.4 fps;
   no Xorg process. **The device now boots into a working platform.**
 
-Remaining HDMI-gate work on the deployed service: physical controls, mode
-switching, display latency, and a soak; plus the old Xorg conf cleanup at
-provision and the noted `bootstrap --arm` image-arch defect.
+Remaining HDMI-gate work after the later bench session: physical controls,
+stereo signal, and display latency still need hands; the full-formality
+60-min soak needs one clean rerun (today's was stopped at 53.7 min). The
+Xorg conf cleanup and the `bootstrap --arm` defect are fixed.
+
+## 2026-09-15 (later): bench qualification session
+
+Evidence and phase-by-phase detail: `local/reports/bench-2026-09-15/REPORT.md`.
+
+- **Rollback qualified live in all four paths**: the Xorg-era previous
+  (`dev-dd42a1d3bd86`) is safely rejected (`unknown argument: --kms`) with
+  automatic sub-2-second restore; `--target stock` restores visible stock;
+  and after deploying `dev-c2f150be2380` (built by the fixed bootstrap),
+  `--target previous` was live-proven in both directions between healthy KMS
+  releases for the first time. Device ends on `dev-c2f150be2380` with
+  `previous.json` → `dev-cf8b1ee8013f`.
+- **Recovery path qualified unattended**: no-sink engine start fails with an
+  actionable probe error → start-limit → unit failed → `OnFailure` fallback
+  starts stock (~9 s total); stock stays up with no display; platform
+  recovery with the sink present is clean. Cold-boot variant still needs one
+  user power cycle.
+- **Provision hygiene**: legacy `/etc/X11/xorg.conf.d/10-eyesy-720p.conf`
+  removed on the device with verified rw→rm→verify→ro; the provisioner now
+  does the same loudly (10 targeted tests pass).
+- **`bootstrap --arm` defect fixed**: the base pin was the single-arch amd64
+  manifest of the bookworm-slim index; now pinned to the slim multi-arch OCI
+  index with an `EXPECTED_ARCH` build-time assertion. Both images rebuilt
+  from scratch; armhf ELF and private runtime libs verified; desktop build
+  unaffected.
+- **Partial deployed-service soak** (early stop): 53.7 min, 446/500 OSC mode
+  switches, all landed (`reloads=447`), zero mode errors, zero audio drops,
+  RSS growth **+248 KiB** (69.9 → 70.2 MiB window medians, peak 70.4 MiB),
+  SoC peak 58.0 °C.
+- **1080p viability assessed** (`local/reports/1080p-plan-2026-09-15/`):
+  scanout reachable via EDID 1080p modes, but native 1080p60 is not viable
+  for 4/7 modes (they already miss 60 fps at 720p); recommendation is to keep
+  720p rendering and calibrate before any native-1080p trial.
+- **New known findings** (follow-ups): engine exits 1 on SIGTERM (routine
+  stops mark the unit failed and spuriously fire `OnFailure`); no supported
+  re-entry to an installed release after stock rollback; KMS mode chooser
+  silently falls back to `modes[0]`; recovery-vs-fallback race leaves the
+  fallback unit FAILED (benign, convergent).
 
 ## Remaining acceptance gates
 
-1. HDMI fullscreen scanout, resolution/orientation, visible controls, and display
-   latency before activating the full display service.
+1. HDMI scanout, resolution, and orientation are validated through the
+   qualified dongle chain; visible physical controls and display latency
+   remain (need hands; a real display is recommended for final acceptance).
 2. Known stereo signals; physical MIDI notes/clock, knobs/buttons, settings feel,
    and disconnect/reconnect behavior.
-3. Live transactional deployment, interrupted transfer, failed activation, and
-   both previous-release/stock recovery of the production service.
+3. Live transactional deployment and rollback of the production service are
+   now live-proven (all four paths, see bench report); interrupted transfer
+   and failed activation remain covered by the earlier mocked/test-filesystem
+   evidence and may be re-exercised live opportunistically.
 4. Reliable immediate read-only restoration after provisioning apt changes.
    Failure now propagates as a nonzero exit; successful restoration still needs
    a future provisioning qualification, not another uncontrolled apt run tonight.
