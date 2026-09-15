@@ -240,11 +240,9 @@ flow-field-drift 24.1, riley-grating 26.2
 (converted to an analytic fragment shader after the mesh version measured
 36.6 - analytic op-art needs zero marshalling), penrose-lattice 25.5
 (5-wave quasicrystal at 480x270 after 39.7 at 640x360), complement-flash
-26.7, girih-stars 27.2 (half-res pass after 34.9),
-facet-terrain lands at the
-C bound: 33.3 (at the tier C bound), textmode-field 32.1
-(480x270 content pass after 33.7). All zero-error, zero
-RSS growth (`local/reports/batch2-*`).
+26.7, girih-stars 27.2 (half-res pass after 34.9), textmode-field 32.1
+(480x270 content pass after 33.7), facet-terrain 33.3 (at the tier C
+bound). All zero-error, zero RSS growth (`local/reports/batch2-*`).
 
 New engineering facts: screen-space `uv.y` is top-down; centered-coordinate
 scenes need the translate, top-left-origin particle fields do not;
