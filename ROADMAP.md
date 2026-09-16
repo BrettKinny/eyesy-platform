@@ -131,6 +131,17 @@ the evidence lives.
   display sink (or dongle streamer) already live. Not the bit-25 latch
   (bit 25 read clear throughout), not thermal (52.6°C), not the build.
 
+- 2026-09-16 (later): item-5 soak done (60 min, observe-only
+  `tools/soak_observe.py`, all 28 modes, 720 samples): zero errors, thermal
+  flat 51.5-55.8 °C, backbone 60.3 fps, per-mode fps reproduces the tier
+  table. One flag: same-mode RSS growth ≈ +2.2 MB/h (~73 KB/reload) — 8x
+  the prior soak rate, reload-correlated (milkdrop preset loads are new);
+  follow-up = switching-disabled vs enabled attribution run. Report:
+  `local/reports/soak-2026-09-16/REPORT.md`. Research: Buddhist × retro-CG
+  scene backlog at `docs/research/SacredRetroBuddhist.md` (flagship four:
+  enso, kolam-knot, sri-yantra-exact, sand-dissolution; cultural flags
+  documented).
+
 - 2026-09-16 (later): Track B shipped and deployed (`dev-e46f786ab44d`,
   28 modes, 60.3 fps KMS path). One milkdrop engine, 12 self-authored
   presets, built by tower task agents against
