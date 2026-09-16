@@ -17,9 +17,9 @@
 namespace fs = std::filesystem;
 // A routine stop (systemd SIGTERM) must exit 0: the platform unit's
 // OnFailure= fallback fires on any nonzero exit, so a clean stop that looked
-// like a failure spuriously summoned the stock recovery path. OF's own
-// SIGTERM handler exits nonzero; replace it after window creation and exit
-// cleanly from the next frame instead.
+// like a failure spuriously summoned the stock recovery path. Handle SIGTERM
+// with a flag and exit cleanly from the next frame; a nonzero exit here comes
+// from a teardown throw (main's catch block), not the handler.
 static volatile std::sig_atomic_t terminateRequested = 0;
 static void requestTermination(int) { terminateRequested = 1; }
 struct Options {
