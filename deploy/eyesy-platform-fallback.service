@@ -13,7 +13,11 @@ Type=oneshot
 # total display failure.
 ExecStart=/bin/sh -ec 'i=0; \
 while [ "$i" -lt 10 ]; do \
-  systemctl is-active --quiet eyesy-platform.service && exit 0; \
+  state=$(systemctl show eyesy-platform.service -p ActiveState --value); \
+  [ "$state" = active ] && exit 0; \
+  # A genuine death exhausts StartLimitBurst and parks in failed with no \
+  # restart pending -- hand over immediately instead of burning the poll. \
+  [ "$state" = failed ] && break; \
   i=$((i+1)); sleep 1; \
 done; \
 # Platform did not recover on its own (transient restarts converge within a \
