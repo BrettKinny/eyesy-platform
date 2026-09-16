@@ -101,14 +101,20 @@ the evidence lives.
   exercised live — current dongle EDID has no 720p, engine runs 720x480i).
   `rollback --target stock` → re-deploy same archive re-selects the
   installed release (sha256-verified, previous.json preserved). Fallback
-  unit no longer starts stock blindly: 10 s self-recovery poll first;
-  both branches verified live (healthy: no clobber; platform down: 12.7 s
-  → stock, success). Tests 25/25. GIF research: docs/research/GIFModes.md
-  — recommended path is offline GIF→PNG-frame transcode + existing
-  image()/draw_image() blit; Lua decode blocked (no pixel-upload API);
-  on-device video decode is a separate XL project. Note: capture via the
-  currently-plugged dongle shows uniform RGB(7,7,7) on the 480i fallback
-  mode — use the 720p-capable dongle for visual capture.
+  unit no longer starts stock blindly: state-gated poll (active→exit,
+  failed→immediate handover, else 10 s wait); both branches verified live
+  (healthy: no clobber; platform down: ~12.7 s → stock, success). Tests
+  25/25. GIF research: docs/research/GIFModes.md — recommended path is
+  offline GIF→PNG-frame transcode + existing image()/draw_image() blit;
+  Lua decode blocked (no pixel-upload API); on-device video decode is a
+  separate XL project. Capture note: blank RGB(7,7,7) after a service
+  restart was NOT the VID_CTL bit-25 latch (register read 0x001c0000, bit
+  25 clear) — the engine had been restarted while the dongle streamer was
+  down, so it committed with the sink absent. Restart the engine with the
+  streamer live → VID_CTL 0xc0000000 and live content on the capture
+  (YAVG ~34, varied). The current dongle's EDID has no 720p, so the
+  platform runs its 720x480i fallback mode; use the 720p dongle for
+  720p60 visual work.
 
 - 2026-09-16 (later): Track B shipped and deployed (`dev-e46f786ab44d`,
   28 modes, 60.3 fps KMS path). One milkdrop engine, 12 self-authored
