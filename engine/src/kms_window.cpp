@@ -4,7 +4,9 @@
 #include "ofMainLoop.h"
 #include <cstdio>
 #include <cstring>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -14,6 +16,7 @@
 #include <EGL/eglext.h>
 #include <fcntl.h>
 #include <gbm.h>
+#include <cerrno>
 #include <poll.h>
 #include <unistd.h>
 #include <xf86drm.h>
@@ -26,6 +29,11 @@
 // (HDMI_VID_CTL bit 25, blanked pixels until power cycle), and Xorg's blobs
 // additionally arrive name-less with zero flags. See
 // docs/HDMI-DISPLAY-ISSUE.md before changing mode handling.
+
+// Nonempty when the mode chooser fell back to modes[0]; surfaced in
+// status.json by the engine (see kmsModeFallbackNote) so the fallback is
+// loud without a console.
+static std::string kmsModeFallbackNoteValue;
 class KmsWindow final : public ofAppBaseGLESWindow {
   public:
     KmsWindow() : coreEvents(new ofCoreEvents) {}
@@ -259,8 +267,15 @@ class KmsWindow final : public ofAppBaseGLESWindow {
                 break;
             }
         }
-        if (!chosen)
+        if (!chosen) {
             chosen = &connector->modes[0];
+            std::ostringstream note;
+            note << "no 1280x720@55-65 mode in EDID; using modes[0] \"" << chosen->name
+                 << "\" " << chosen->hdisplay << "x" << chosen->vdisplay << "@"
+                 << chosen->vrefresh;
+            kmsModeFallbackNoteValue = note.str();
+            fprintf(stderr, "KMS: WARNING mode fallback: %s\n", kmsModeFallbackNoteValue.c_str());
+        }
         mode = *chosen;
         connectorId = connector->connector_id;
         width = mode.hdisplay;
@@ -333,7 +348,11 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         if (!flipPending)
             return;
         pollfd pfd{drmFd, POLLIN, 0};
-        int result = poll(&pfd, 1, 100);
+        int result;
+        do {
+            result = poll(&pfd, 1, 100);
+        } while (result < 0 && errno == EINTR); // SIGTERM must not abort the flip wait; the
+                                                // flag-driven exit happens in update().
         if (result < 0)
             throw std::runtime_error("KMS: page flip poll failed");
         if (result == 0) {
@@ -404,4 +423,13 @@ std::shared_ptr<ofAppBaseWindow> createKmsWindow() {
 std::shared_ptr<ofAppBaseWindow> createKmsWindow() {
     throw std::runtime_error("KMS scanout window requires TARGET_LINUX + TARGET_OPENGLES");
 }
+
 #endif
+
+std::string kmsModeFallbackNote() {
+#if defined(TARGET_LINUX) && defined(TARGET_OPENGLES)
+    return kmsModeFallbackNoteValue;
+#else
+    return {};
+#endif
+}

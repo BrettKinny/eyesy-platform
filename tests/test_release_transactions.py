@@ -116,6 +116,44 @@ class ReleaseTransactionTests(unittest.TestCase):
             self.assertFalse((base / 'active.env').exists())
             self.assertTrue(any(c[0] == ['systemctl', 'start', 'eyesypy.service'] for c in calls))
 
+    def install(self, base, manifest):
+        """Stage an installed release matching the archive helper's manifest."""
+        installed = base / 'releases' / manifest['release']
+        installed.mkdir(parents=True)
+        (installed / 'manifest.json').write_text(json.dumps(manifest))
+        (installed / 'eyesy-engine').write_bytes(b'engine payload')
+        return installed
+
+    def test_activate_after_stock_rollback_reselects_installed_release(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); base = root / 'platform'; base.mkdir()
+            archive, manifest = self.archive(root)
+            installed = self.install(base, manifest)
+            old = base / 'releases' / 'old'; old.mkdir()
+            (base / 'previous.json').write_text(json.dumps({'release_path': str(old)}) + '\n')
+            calls, service = self.services(base, manifest['release'])
+            with ExitStack() as stack:
+                for patch in [mock.patch.object(release, 'verify', return_value=manifest), mock.patch.object(release.subprocess, 'run', side_effect=service), *self.identity('unit'), *self.healthy_clock(base)]: stack.enter_context(patch)
+                result = release.activate(archive, 'unit', base)
+            self.assertEqual(result['release'], 'candidate')
+            self.assertEqual((base / 'current').resolve(), installed.resolve())
+            self.assertEqual((base / 'active.env').read_text(), 'EYESY_RELEASE=candidate\n')
+            # Retained previous.json survives re-entry with no current link.
+            self.assertEqual(json.loads((base / 'previous.json').read_text())['release_path'], str(old))
+
+    def test_activate_refuses_installed_release_with_different_content(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); base = root / 'platform'; base.mkdir()
+            archive, manifest = self.archive(root)
+            self.install(base, manifest)
+            (base / 'releases' / manifest['release'] / 'eyesy-engine').write_bytes(b'tampered payload')
+            calls, service = self.services(base)
+            with ExitStack() as stack:
+                for patch in [mock.patch.object(release, 'verify', return_value=manifest), mock.patch.object(release.subprocess, 'run', side_effect=service), *self.identity('unit')]: stack.enter_context(patch)
+                with self.assertRaisesRegex(ValueError, 'different content'): release.activate(archive, 'unit', base)
+            self.assertEqual(calls, [])
+            self.assertFalse((base / 'current').exists())
+
     def test_identity_and_wrong_clone_refuse_before_service(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp) / 'platform'; base.mkdir(); archive, _ = self.archive(Path(temp))

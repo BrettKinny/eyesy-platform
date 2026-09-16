@@ -4,6 +4,7 @@
 #include "runtime.h"
 #include <alsa/asoundlib.h>
 #include <arpa/inet.h>
+#include <csignal>
 #include <fcntl.h>
 #include <fstream>
 #include <iomanip>
@@ -14,6 +15,13 @@
 #include <unistd.h>
 
 namespace fs = std::filesystem;
+// A routine stop (systemd SIGTERM) must exit 0: the platform unit's
+// OnFailure= fallback fires on any nonzero exit, so a clean stop that looked
+// like a failure spuriously summoned the stock recovery path. OF's own
+// SIGTERM handler exits nonzero; replace it after window creation and exit
+// cleanly from the next frame instead.
+static volatile std::sig_atomic_t terminateRequested = 0;
+static void requestTermination(int) { terminateRequested = 1; }
 struct Options {
     fs::path mode, storage = "local", report, replay, audioWav, record;
     int frames = 0, device = -1, port = 0, switchEvery = 0;
@@ -394,7 +402,8 @@ class EngineApp : public ofBaseApp {
                          {"resources", runtime.resourceCount()},
                          {"reloads", reloads},
                          {"mode_errors", modeErrors},
-                         {"audio_dropped", audio.dropped()}};
+                         {"audio_dropped", audio.dropped()},
+                         {"mode_fallback", kmsModeFallbackNote()}};
         const auto &a = lastAnalysis;
         report["audio_available"] = a.available;
         report["audio_sample_rate"] = a.sampleRate;
@@ -521,6 +530,10 @@ class EngineApp : public ofBaseApp {
         lastFrame = ofGetElapsedTimef();
     }
     void update() override {
+        if (terminateRequested) {
+            ofExit(0);
+            return;
+        }
         double wall = ofGetElapsedTimef(), elapsed = std::clamp(wall - lastFrame, 0.0, .25);
         lastFrame = wall;
         double now = deterministic ? frame / 60.0 : wall, dt = deterministic ? 1.0 / 60 : elapsed;
@@ -799,6 +812,9 @@ int main(int argc, char **argv) {
         auto window = o.kms ? createKmsWindow()
                             : o.offscreen ? createOffscreenWindow(1280, 720)
                                           : ofCreateWindow(settings);
+        // ofInit (called by every window factory) installs OF's handler, which
+        // surfaces SIGTERM as a nonzero exit; replace it for the loop below.
+        std::signal(SIGTERM, requestTermination);
         ofRunApp(window, std::make_shared<EngineApp>(o));
         return ofRunMainLoop();
     } catch (const std::exception &e) {

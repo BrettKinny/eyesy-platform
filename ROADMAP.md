@@ -92,6 +92,24 @@ the evidence lives.
 
 ## Session log
 
+- 2026-09-16 (later): stability batch (ROADMAP item 7) done and
+  device-verified; deployed `dev-0cae3aba9192`. SIGTERM now exits 0
+  (`Deactivated successfully`, no OnFailure; needed both the flag-driven
+  exit in main.cpp AND an EINTR retry in the kms_window.cpp page-flip poll
+  — desktop smoke missed the KMS-only path, caught live on device). KMS
+  modes[0] fallback is loud (stderr + status.json `mode_fallback`;
+  exercised live — current dongle EDID has no 720p, engine runs 720x480i).
+  `rollback --target stock` → re-deploy same archive re-selects the
+  installed release (sha256-verified, previous.json preserved). Fallback
+  unit no longer starts stock blindly: 10 s self-recovery poll first;
+  both branches verified live (healthy: no clobber; platform down: 12.7 s
+  → stock, success). Tests 25/25. GIF research: docs/research/GIFModes.md
+  — recommended path is offline GIF→PNG-frame transcode + existing
+  image()/draw_image() blit; Lua decode blocked (no pixel-upload API);
+  on-device video decode is a separate XL project. Note: capture via the
+  currently-plugged dongle shows uniform RGB(7,7,7) on the 480i fallback
+  mode — use the 720p-capable dongle for visual capture.
+
 - 2026-09-16 (later): Track B shipped and deployed (`dev-e46f786ab44d`,
   28 modes, 60.3 fps KMS path). One milkdrop engine, 12 self-authored
   presets, built by tower task agents against

@@ -3,4 +3,23 @@ Description=Restore stock EYESY after platform failure
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/systemctl start eyesypy.service
+# OnFailure= fires the moment eyesy-platform enters failed state, which also
+# happens transiently when Restart=on-failure schedules an auto-restart. In
+# that race a blind stock start is canceled by the concurrent platform start
+# (Conflicts=eyesypy.service) and this unit ended FAILED -- benign and
+# convergent but noisy (bench-2026-09-15 phase 1/2). Give the platform a
+# short window to recover on its own first; only then hand the display to
+# stock. Nonzero exit now means neither display client is up: a genuine
+# total display failure.
+ExecStart=/bin/sh -ec 'i=0; \
+while [ "$i" -lt 10 ]; do \
+  systemctl is-active --quiet eyesy-platform.service && exit 0; \
+  i=$((i+1)); sleep 1; \
+done; \
+# Platform did not recover on its own (transient restarts converge within a \
+# couple of start-limit cycles). Hand the display to stock, then succeed only \
+# if exactly one display client ended up active. \
+systemctl start eyesypy.service || true; \
+sleep 2; \
+if systemctl is-active --quiet eyesy-platform.service; then exit 0; fi; \
+systemctl is-active --quiet eyesypy.service'

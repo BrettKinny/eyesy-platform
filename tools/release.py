@@ -90,6 +90,13 @@ def write_atomic(path, content):
     finally:
         if temporary.exists(): temporary.unlink()
 
+def digest(path):
+    value = hashlib.sha256()
+    with open(path, 'rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
 def check_clone(clone_id):
     if os.geteuid() != 0:
         raise ValueError('Operation requires root on the clone')
@@ -214,21 +221,38 @@ def activate(archive, clone_id, base=Path('/sdcard/eyesy-platform')):
     base = validate_base(base)
     releases = base / 'releases'; releases.mkdir(parents=True, exist_ok=True)
     destination = releases / manifest['release']
-    if destination.is_symlink(): raise ValueError('Release destination must not be a symlink')
-    if destination.exists(): raise ValueError('Release already installed; refusing to overwrite it')
+    installed = destination.exists() and not destination.is_symlink()
+    if destination.is_symlink() or (destination.exists() and not installed):
+        raise ValueError('Release destination must be a real directory')
+    if installed:
+        # Supported re-entry: rollback --target stock deselects a release but
+        # leaves it installed, and byte-reproducible packaging reproduces the
+        # same release ID. Re-activating the identical payload re-selects it;
+        # only a genuine content mismatch (release-ID collision) is refused.
+        try:
+            existing = json.loads((destination / 'manifest.json').read_text())
+        except (OSError, ValueError):
+            existing = None
+        if existing != manifest or not all(
+                (destination / name).is_file() and not (destination / name).is_symlink()
+                and digest(destination / name) == checksum
+                for name, checksum in manifest['files'].items()):
+            raise ValueError('Release already installed with different content; refusing to overwrite it')
+        print(f"Release {manifest['release']} is already installed; re-selecting it")
     with tempfile.TemporaryDirectory(prefix='.stage-', dir=releases) as temp:
         stage = Path(temp) / 'release'; stage.mkdir()
-        with tarfile.open(archive, 'r:gz') as tar:
-            for name in manifest['files']:
-                target = stage / name; target.parent.mkdir(parents=True, exist_ok=True)
-                with tar.extractfile(manifest['release'] + '/' + name) as src, target.open('wb') as out:
-                    shutil.copyfileobj(src, out)
-                target.chmod(0o755 if name == 'eyesy-engine' else 0o644)
-        (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-        result = subprocess.run(['ldd', str(stage / 'eyesy-engine')], capture_output=True, text=True)
-        if result.returncode or 'not found' in result.stdout:
-            raise ValueError('Runtime dependencies missing; stock engine unchanged:\n' + result.stdout + result.stderr)
-        os.rename(stage, destination)
+        if not installed:
+            with tarfile.open(archive, 'r:gz') as tar:
+                for name in manifest['files']:
+                    target = stage / name; target.parent.mkdir(parents=True, exist_ok=True)
+                    with tar.extractfile(manifest['release'] + '/' + name) as src, target.open('wb') as out:
+                        shutil.copyfileobj(src, out)
+                    target.chmod(0o755 if name == 'eyesy-engine' else 0o644)
+            (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+            result = subprocess.run(['ldd', str(stage / 'eyesy-engine')], capture_output=True, text=True)
+            if result.returncode or 'not found' in result.stdout:
+                raise ValueError('Runtime dependencies missing; stock engine unchanged:\n' + result.stdout + result.stderr)
+            os.rename(stage, destination)
     current = base / 'current'
     if current.exists() and not current.is_symlink(): raise ValueError('current is not a release symlink')
     previous = str(release_path(base, current.resolve())) if current.is_symlink() else None
@@ -247,7 +271,11 @@ def activate(archive, clone_id, base=Path('/sdcard/eyesy-platform')):
         if status_path.exists(): status_path.unlink()
         systemctl('start', 'eyesy-platform.service')
         status = wait_healthy(base, manifest['release'])
-        write_atomic(base / 'previous.json', json.dumps({'release_path': previous}) + '\n')
+        # With no current symlink (post rollback --target stock), a retained
+        # previous.json still points at an installed release and must survive
+        # re-entry; clobbering it would strand `rollback --target previous`.
+        if previous is not None or not (base / 'previous.json').exists():
+            write_atomic(base / 'previous.json', json.dumps({'release_path': previous}) + '\n')
         return status
     except Exception:
         restore_selection(base, previous, old_env)
