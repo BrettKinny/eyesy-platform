@@ -116,6 +116,21 @@ the evidence lives.
   platform runs its 720x480i fallback mode; use the 720p dongle for
   720p60 visual work.
 
+- 2026-09-16 (later): clean-checkout re-bench. Curated clean-checkout release
+  `dev-b5cf00d32b6c` built (28-mode catalog verified in-package and on
+  device).
+  Headless re-bench on real GPU: starter 60.00, stereo-mesh 60.00,
+  prism-mesh and lyapunov-field also measured. NEW BOOT FACT (reproduced both
+  ways, byte-identical binary): engine started while the sink is absent
+  (HPD down — no streamer on the capture dongle) comes up degraded:
+  VID_CTL 0x401c0000/0x001c0000, blanked pixels or ~51.8 fps flip
+  pacing; persists after the sink appears and survives restarts of
+  nothing but itself. Engine started with the sink live: VID_CTL
+  0xc0000000, 60.4 fps, live content — even on the 480i fallback mode.
+  Rule for the rig: power on / restart the platform ONLY with the
+  display sink (or dongle streamer) already live. Not the bit-25 latch
+  (bit 25 read clear throughout), not thermal (52.6°C), not the build.
+
 - 2026-09-16 (later): Track B shipped and deployed (`dev-e46f786ab44d`,
   28 modes, 60.3 fps KMS path). One milkdrop engine, 12 self-authored
   presets, built by tower task agents against
