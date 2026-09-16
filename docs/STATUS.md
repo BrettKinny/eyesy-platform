@@ -276,3 +276,32 @@ Research corpus: `docs/research/` (15 docs).
 
 Release manifests intentionally retain `hardware_validated: false`.
 Use the [next-session bench checklist](BENCH-CHECKLIST.md) for the remaining gates.
+
+## 2026-09-16 (later): Track B shipped — milkdrop engine
+
+The scaling unlock is live: `modes/milkdrop/` is one Lua engine (736 lines)
+that plays 12 self-authored MilkDrop-style presets through six canonical ES2
+fragments. Release `dev-e46f786ab44d` deployed transactionally, healthy at
+60.3 fps on the KMS path (28 modes). Built by tower-local task agents
+(qwen3.8:27b) against `local/reports/trackB-plan/BRIEF.md`: T1 AVS-subset
+expression evaluator (36/36 tests, mutation-checked), T2 fragment library,
+T3 preset pack, T4 engine integration.
+
+Device tier evidence (600 frames per preset, offscreen, VC4): 10/12 presets
+meet tier C (27.3-31.8 ms); the two glow-comp presets ship waived at 40.4/
+50.0 ms after two optimization rounds — the 5-gather composite's VC4 fill
+cost is intrinsic at content res (waiver + levers in docs/SCENE-LIBRARY.md).
+
+Bugs found and fixed during QC (all caught by measurement, not review):
+clamp_engine indexed default/min instead of min/max (comp gamma collapsed
+to 0.1, decay to 0 — the "no trails" symptom), comp_glow double-centered its
+gather ring (+0.9/axis, flat-frame output), blur1 inverted its texel scale
+(black blur), comp_glow ran six gathers instead of five, and per-point wave
+env missed per-frame state. Engine facts added to docs/SCENE-LIBRARY.md.
+Tooling: headless-test/benchmark gained --replay passthrough so in-mode
+presets get individual device tier runs; remote staging now cleans up on
+success (tmpfs was filling).
+
+Research: BeatDrop fork (OfficialIncubo) portables assessed in
+docs/research/BeatDropForkPorting.md — FFT/wave shader variables ranked
+first for a post-v1 engine round.

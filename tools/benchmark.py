@@ -74,12 +74,13 @@ def sample_failed(status):
                 status.get('mode_errors', 0) > 0)
 
 
-def experiment(engine, mode, folder, frames, switch_every, timeout, warmup, offscreen=False, require_gpu=False):
+def experiment(engine, mode, folder, frames, switch_every, timeout, warmup, offscreen=False, require_gpu=False, replay=None):
     folder.mkdir(parents=True, exist_ok=False)
     report = folder / 'report.json'
     command = [str(engine), '--mode', str(mode), '--storage', str(folder),
                '--frames', str(frames), '--switch-every', str(switch_every),
                '--report', str(report)]
+    if replay is not None: command += ['--replay', str(replay)]
     if offscreen: command.append('--offscreen')
     started = time.monotonic()
     samples, last_frame = [], -1
@@ -144,6 +145,7 @@ def main():
     parser.add_argument('--frames', type=int, default=600)
     parser.add_argument('--switch-every', type=int, default=0)
     parser.add_argument('--timeout', type=float, default=120)
+    parser.add_argument('--replay', type=Path, help='Optional engine input replay (JSON) passed to each run')
     parser.add_argument('--warmup', type=float, default=3)
     parser.add_argument('--offscreen', action='store_true', help='ARM EGL pbuffer backend, no X server')
     parser.add_argument('--require-gpu', action='store_true', help='Fail software renderer experiments')
@@ -163,7 +165,7 @@ def main():
     for i, mode in enumerate(modes):
         result = experiment(args.engine.resolve(), mode, output / f'{i:02d}-{mode.name}',
                             args.frames, args.switch_every, args.timeout, args.warmup,
-                            args.offscreen, args.require_gpu)
+                            args.offscreen, args.require_gpu, args.replay)
         runs.append(result)
         print(json.dumps({k: result[k] for k in
                           ('mode', 'passed', 'renderer', 'wall_seconds', 'memory')}), flush=True)

@@ -14,12 +14,13 @@ SAFE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$')
 
 def run(args, **kwargs): return subprocess.run([str(x) for x in args], check=True, **kwargs)
 
-def execute(archive, host, clone_id, mode, frames, output, ssh_options=None):
+def execute(archive, host, clone_id, mode, frames, output, ssh_options=None, replay=None):
     manifest = release.verify(archive, 'armhf')
     if not SAFE.fullmatch(mode): raise ValueError('Mode must be a safe basename')
     if frames < 1 or frames > 3600: raise ValueError('Frames must be 1..3600')
     if not isinstance(manifest.get('files'), dict) or f'modes/{mode}/main.lua' not in manifest['files']:
         raise ValueError('Archive does not contain the selected mode')
+    if replay is not None and not Path(replay).is_file(): raise ValueError('Replay file not found')
     output = Path(output)
     if output.is_symlink(): raise ValueError('Output directory must not be a symlink')
     output = output.resolve()
@@ -36,11 +37,14 @@ def execute(archive, host, clone_id, mode, frames, output, ssh_options=None):
     try:
         run(scp + [str(archive), f'music@{host}:{staging}/release.tar.gz'], timeout=120)
         run(scp + [str(ROOT / 'tools/release.py'), str(ROOT / 'tools/benchmark.py'), f'music@{host}:{staging}/'], timeout=120)
+        if replay is not None:
+            run(scp + [str(replay), f'music@{host}:{staging}/replay.json'], timeout=120)
         root = manifest['release']; remote_release = f'{staging}/release'
         run(ssh + [shlex.join(['python3', staging+'/release.py', staging+'/release.tar.gz', '--architecture', 'armhf'])], timeout=120)
         run(ssh + ['mkdir ' + shlex.quote(remote_release) + ' && tar -xzf ' + shlex.quote(staging+'/release.tar.gz') + ' -C ' + shlex.quote(remote_release) + ' --strip-components=1'], timeout=120)
         experiment = f'/sdcard/eyesy-platform/experiments/headless-{uuid.uuid4().hex}'
         command = ['python3', staging+'/benchmark.py', '--engine', remote_release+'/eyesy-engine', '--modes-root', remote_release+'/modes', '--modes', mode, '--output', experiment, '--frames', str(frames), '--timeout', '120', '--offscreen', '--require-gpu']
+        if replay is not None: command += ['--replay', staging+'/replay.json']
         benchmark_error = None
         try:
             run(ssh + [shlex.join(command)], timeout=150)
@@ -53,6 +57,7 @@ def execute(archive, host, clone_id, mode, frames, output, ssh_options=None):
             if benchmark_error is not None: raise benchmark_error
             raise
         if benchmark_error is not None: raise benchmark_error
+        run(ssh + ['rm -rf ' + shlex.quote(staging)], timeout=30)
         return {'output': str(output), 'experiment': experiment, 'release': root, 'staging': staging}
     except Exception:
         print(f'Remote staging retained for inspection: {staging}', file=sys.stderr)

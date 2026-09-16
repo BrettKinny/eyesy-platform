@@ -27,7 +27,10 @@ the evidence lives.
 
 ## Next work, in order
 
-1. **Track B: `milkdrop-engine`** (the scaling unlock): one Lua engine
+1. **Track B: `milkdrop-engine` — SHIPPED 2026-09-16** (deployed
+   `dev-e46f786ab44d`, 28 modes, 10/12 presets tier C, glow pair waived —
+   see docs/SCENE-LIBRARY.md). Further Track B work (variant pass, tier
+   tuning) is deferred. Original scope: one Lua engine
    loading MilkDrop preset parameter JSONs as variants — per-frame
    equations -> Lua (tiny AVS-expression evaluator), per-pixel warp ->
    ~30 canonical ES2 fragments, comp -> display pass, blur -> multi-tap
@@ -89,6 +92,16 @@ the evidence lives.
 
 ## Session log
 
+- 2026-09-16 (later): Track B shipped and deployed (`dev-e46f786ab44d`,
+  28 modes, 60.3 fps KMS path). One milkdrop engine, 12 self-authored
+  presets, built by tower task agents against
+  `local/reports/trackB-plan/BRIEF.md`. Device tier evidence per preset:
+  10/12 tier C, glow pair waived (docs/SCENE-LIBRARY.md). QC caught five
+  real defects by measurement (clamp off-by-one, comp_glow centering +
+  gather count, blur1 texel inversion, per-point env sync). Tooling:
+  headless-test/benchmark --replay passthrough for in-mode preset tiers;
+  staging cleanup on success. BeatDrop-fork portables assessed
+  (docs/research/BeatDropForkPorting.md) for the next engine round.
 - 2026-09-13: first live activation; black screen observed through the
   then-unqualified capture chain; two service fixes (DPMS, eyesyhw Wants=).
 - 2026-09-14: observer chain qualified (HPD↔streaming coupling found);

@@ -218,7 +218,7 @@ def main():
     p = sub.add_parser("test"); p.add_argument('--graphics', action='store_true')
     sub.add_parser("prepare-native")
     p = sub.add_parser("package"); p.add_argument('--arm', action='store_true')
-    p = sub.add_parser('headless-test'); p.add_argument('archive', type=Path); p.add_argument('--host', required=True); p.add_argument('--clone-id', required=True); p.add_argument('--mode', default='starter'); p.add_argument('--frames', type=int, default=600); p.add_argument('--output', type=Path, required=True); p.add_argument('--known-hosts', type=Path)
+    p = sub.add_parser('headless-test'); p.add_argument('archive', type=Path); p.add_argument('--host', required=True); p.add_argument('--clone-id', required=True); p.add_argument('--mode', default='starter'); p.add_argument('--frames', type=int, default=600); p.add_argument('--output', type=Path, required=True); p.add_argument('--replay', type=Path); p.add_argument('--known-hosts', type=Path)
     for name in ('provision', 'deploy', 'rollback'):
         p = sub.add_parser(name); p.add_argument('--host', required=True)
         p.add_argument('--clone-id', required=True); p.add_argument('--known-hosts', type=Path)
@@ -297,7 +297,7 @@ def main():
     elif args.command == 'headless-test':
         if args.frames < 1 or args.frames > 3600: raise RuntimeError('--frames must be 1..3600')
         from tools.headless_test import execute
-        print(json.dumps(execute(args.archive.resolve(), args.host, args.clone_id, args.mode, args.frames, args.output, ssh_options(args)), indent=2))
+        print(json.dumps(execute(args.archive.resolve(), args.host, args.clone_id, args.mode, args.frames, args.output, ssh_options(args), replay=args.replay), indent=2))
     elif args.command in ('provision', 'deploy', 'rollback'): remote(args)
     elif args.command in ("status", "logs"):
         command = "cat /sdcard/eyesy-platform/status.json" if args.command == "status" else "journalctl -u eyesy-platform -n 100 --no-pager"

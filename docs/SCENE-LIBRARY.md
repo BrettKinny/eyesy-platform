@@ -25,6 +25,38 @@ Rules: fragment-iterative scenes render at 640x360 (or 480x270 for heavy
 fields) and upscale; every scene gets a headless device run asserting its
 tier before merge; the fleet envelope is 15.7-33.3 ms.
 
+## milkdrop-engine tiers (dev-e46f786ab44d, 2026-09-16)
+
+The milkdrop engine (one mode, 12 presets) measures per preset on device
+(600 frames, offscreen, live platform service as GPU neighbour):
+
+| preset | p50 |
+| --- | --- |
+| rot-spin 27.3, built-in-spectrum 27.3, sphere-rush 27.4, warp-oscillation 27.8, q-bridge 28.4, custom-wave-petals 28.3, zoom-drift 28.4, darken-drift 29.2, beat-pulse 29.0, custom-wave-ring 31.8 | tier C |
+| sector-shards-16 40.4, sector-shards 50.0 | **waived** |
+
+Waiver: the two glow-comp presets ship above tier C (24.6/19.9 fps) after
+two optimization rounds (dense 480x270 content, composite at content res,
+gather-count fix); the residual is the 5-gather max() composite's fill and
+trig cost on VC4 and is intrinsic to the archetype at this content size.
+Follow-up levers live in ROADMAP backlog (glow tier work). Everything else
+in the engine meets tier C.
+
+milkdrop engine facts (empirical, 2026-09-16):
+
+- Composite through a content-resolution target + `draw_target` upscale —
+  full-res composite passes dominate the frame budget; this pattern is now
+  standard for any shader-display engine.
+- Custom-wave per-point Lua evaluation costs real milliseconds on ARM
+  (built-in-wave presets run ~7 ms/frame cheaper than custom-wave presets
+  at equal pipeline); author 160-256 samples, not 512+, unless the look
+  demands it.
+- The milkdrop catalog saturates the 8-target budget (4 targets x 2 content
+  sizes); no further in-mode targets are available without dropping dense.
+- Warp sampling beyond [0,1] clamps to edge columns: extreme sphere/zoom
+  values produce flat edge panels — keep per-frame warp/sphere magnitudes
+  bounded (see sphere-rush tune).
+
 ## Design law
 
 1. Never add light into the render target you next sample for decay — bloom
