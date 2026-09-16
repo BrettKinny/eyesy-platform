@@ -1,17 +1,19 @@
 # Roadmap
 
-Updated 2026-09-15 after the bench qualification session (rollback, recovery
-path, provision hygiene, bootstrap arch fix, partial soak). Point of this
-file: a fresh session starts here and knows what is done, what is next, and
-where the evidence lives.
+Updated 2026-09-16 after two scene-library batches. Point of this file: a
+fresh session starts here and knows what is done, what is next, and where
+the evidence lives.
 
 ## Where things stand
 
-- The device runs `dev-c2f150be2380` (built by the fixed bootstrap), direct
-  KMS engine (`--kms`), hardware GL (`VC4 V3D 2.1`) at ~60 fps, no Xorg in
-  the display path. `previous.json` → `dev-cf8b1ee8013f`, so
-  `rollback --target previous` is live-proven in both directions between
-  healthy KMS releases. Boot ownership is the platform.
+- The device runs `dev-fd196b8b39cf` (27 modes: 7 reference + 20 library
+  scenes), direct KMS engine (`--kms`), hardware GL (`VC4 V3D 2.1`) at
+  ~60 fps, no Xorg in the display path. Rollback via `previous.json` is
+  live-proven in both directions. Boot ownership is the platform.
+- Scene library: batches 1-2 shipped (2026-09-15/16) — 20 new scenes
+  across 11 families, all tier-measured on device; conventions and tier
+  table in `docs/SCENE-LIBRARY.md`; research corpus in `docs/research/`
+  (15 docs); blueprint and batch plans under `local/reports/`.
 - The black-screen bug is closed (V1/V2; `docs/HDMI-DISPLAY-ISSUE.md`).
 - 2026-09-15 bench session (`local/reports/bench-2026-09-15/REPORT.md`):
   rollback qualified in all four paths (incompatible-previous rejection,
@@ -25,43 +27,43 @@ where the evidence lives.
 
 ## Next work, in order
 
-1. **Physical bench acceptance** (`docs/BENCH-CHECKLIST.md` sections 3–4,
+1. **Track B: `milkdrop-engine`** (the scaling unlock): one Lua engine
+   loading MilkDrop preset parameter JSONs as variants — per-frame
+   equations -> Lua (tiny AVS-expression evaluator), per-pixel warp ->
+   ~30 canonical ES2 fragments, comp -> display pass, blur -> multi-tap
+   gather. Source: milkdrop2077/MilkDrop3 (BSD-3). Plan:
+   `local/reports/batch2-plan/PLAN.md` Track B; licensing note: community
+   preset packs are third-party artwork — user-supplied content unless
+   cleared.
+2. **Variant pass**: saved-scene JSONs per family (palette/regime/motion
+   axes) — the cheap path from 27 engines+scenes to the 100+ target.
+   QC: per-scene tier assertion + contact sheet per batch.
+3. **Backlog scenes**: flame variations (published fractal-flame math
+   only — flam3 is GPL-3.0, no transliteration), DLA growth, Buddhabrot-
+   lite accumulation, Whitney fans, Lissajous weaver.
+4. **Physical bench acceptance** (`docs/BENCH-CHECKLIST.md` sections 3–4,
    6): knobs/trigger/scene/MIDI, known stereo signal through the codec,
-   visible-latency feel. Needs hands; everything remote-drivable is done.
-2. **Full-formality 60-min soak rerun**: today's deployed-service soak was
-   stopped early at 53.7 min / 446 of 500 switches (memory growth +248 KiB,
-   zero mode errors/drops) — rerun once to close the formality. For the
-   rerun, use an **observe-only poller** (status.json `rss_bytes` +
-   `/sys/class/thermal/thermal_zone0/temp` at ~5 s), not `soak_guard.py`:
-   the guard SIGTERMs/SIGKILLs its target at duration end and on any guard
-   exception (`tools/soak_guard.py:92-103`), which is correct for standalone
-   experiment PIDs but wrong to point at the deployed service. Keep the
-   guard's hard kill limits for standalone-engine experiments only.
-3. **Cold-boot recovery confirmation**: one user power-cycle after the
-   no-sink failure → stock → platform sequence (service-level recovery is
-   already live-proven).
-4. **Tooling follow-ups found during the bench session**:
-   - supported re-entry after `rollback --target stock` (activate refuses
-     installed dirs; today required manual `reselect_cf8b.py`);
-   - engine should exit 0 on SIGTERM (today it exits 1, so routine stops mark
-     the unit failed and spuriously fire `OnFailure`);
-   - KMS mode chooser silently falls back to `modes[0]`
-     (`engine/src/kms_window.cpp:253-263`) — make the fallback loud;
-   - recovery-vs-fallback race: `restore_selection`'s stop of a restarting
-     unit fires `OnFailure`, whose stock start then gets canceled by
-     `Conflicts` (benign, convergent, but the fallback unit ends FAILED).
-5. **1080p — NOT PURSUED (user decision, 2026-09-15).** Viability analysis
-   is complete and parked (`local/reports/1080p-plan-2026-09-15/analysis.md`):
-   scanout is reachable (EDID exposes 1080p), but native 1080p60 is not
-   viable for 4/7 modes (~15–25 fps projected). Keep 720p render resolution.
-   Revisit only if explicitly re-raised; the analysis, engine-change map, and
-   measurement plan are all in that report if it ever comes back.
-6. **Optional root-cause bisect (upstreamable):** the D1/D2 protocol in
-   `docs/HDMI-DISPLAY-ISSUE.md` identifies exactly which Xorg action latches
-   `HDMI_VID_CTL` bit 25. Not needed for the product.
-7. **Longer-term items** from `docs/STATUS.md` gates: read-only restoration
-   qualification after apt changes, fully pinned package acquisition, and
-   (later) engine features per `docs/CREATIVE.md` / `03-of-lua-engine.md`.
+   visible-latency feel across all 27 modes. Needs hands.
+5. **Full-formality 60-min soak rerun** with an **observe-only poller**
+   (status.json `rss_bytes` + thermal temp at ~5 s — not `soak_guard.py`,
+   which kills its target; `tools/soak_guard.py:92-103`). The 27-mode
+   library changes what "formality" means: per-mode p50s are already
+   recorded in `docs/SCENE-LIBRARY.md`.
+6. **Cold-boot recovery confirmation**: one user power-cycle after the
+   no-sink failure → stock → platform sequence.
+7. **Tooling follow-ups**: supported re-entry after `rollback --target
+   stock` (activate refuses installed dirs); engine should exit 0 on
+   SIGTERM (exits 1 today, spuriously firing `OnFailure`); KMS mode
+   chooser falls back to `modes[0]` silently
+   (`engine/src/kms_window.cpp:253-263`) — make it loud;
+   recovery-vs-fallback race ends the fallback unit FAILED (benign,
+   convergent).
+8. **1080p — NOT PURSUED** (user decision, 2026-09-15; analysis parked in
+   `local/reports/1080p-plan-2026-09-15/`). Revisit only if re-raised.
+9. **Optional upstreamable bisect**: D1/D2 protocol in
+   `docs/HDMI-DISPLAY-ISSUE.md` (Xorg latches HDMI_VID_CTL bit 25).
+10. **Longer-term**: read-only restoration qualification after apt changes,
+   fully pinned package acquisition, engine features per `docs/CREATIVE.md`.
 
 ## Bench infrastructure cheat sheet
 
