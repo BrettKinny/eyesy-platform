@@ -366,3 +366,51 @@ and `docs/SCENE-LIBRARY.md` carries the nine knob maps. `./eyesyctl test`
 passed unchanged after the cutover (ctest 5/5, 120 Python tests OK), so no
 catalog-coupled test needed fixing. No commits were made.
 
+## 2026-09-17 (later): bardo scenes device-gated, optimized, and shipped
+
+The nine bardo-night scenes met the on-device tier gate only after two
+optimization rounds. Release `dev-f2c914333761` is deployed transactionally
+(`previous.json` → `dev-b5cf00d32b6c`), health passed, 60.3 fps on the KMS
+path, zero errors, and the device carries all 37 modes. `modes/zzprobe`
+(scratch diagnostic, "delete after use") is excluded from releases; it stays
+in the repo.
+
+Device tier (VC4 V3D 2.1, 600 frames offscreen, live platform on
+`stereo-mesh` as GPU neighbour, evidence `local/reports/bardo-device*/`):
+
+| scene | first gate p50 | shipped p50 | what changed |
+| --- | --- | --- | --- |
+| temple-core | 57.1 | 26.3 | composite moved into the 320x180 ink target + nearest-blit upscale (full-res pass was 16x redundant) |
+| wireframe-bardo | 27.6 | 27.6 | unchanged (passed as built) |
+| tesseract-yidam | 27.6 | 27.6 | unchanged (passed as built) |
+| buddha-1kb | 33.2 | 33.2 | unchanged (borderline pass) |
+| phosphor-seance | 73.7 | 29.5 | 320x180 field, drift trig + eye profile substitutions, exact sigil bounding test |
+| mandala-bardo | 55.3 | 30.3 | 352x198 content, ring loop 6→2 evaluations (≤2 rings touch a pixel), exact ink early-outs |
+| copper-bar-hymn | 67.6 | 30.5 | y-only bar raster to an 8x360 target (1/80 fill), scrolltext font baked into a Lua atlas |
+| slit-scan-vortex | 46.1 | 30.9 | 320x180 content, per-layer phase pre-expansion (identity refactor) |
+| koan-terminal | 74.1 | 31.3 | 320x180 pass at 1.5 layout px, hum/corner substitutions, flyback branch-gated, tints folded |
+
+All pass `tools/scene_verify.py` at 130 and 300 frames; the restructured
+shaders carry same-sim-frame equivalence A/Bs (mandala and the seance trig
+are pixel-exact; the substitutions are bounded and measured in
+`local/ab-opt2-mandala-bardo/`, `local/koan-opt2-ab/`, `local/opt2b-slit/`,
+`local/verify-opt2-phosphor-seance/opt2-report.json`).
+
+New measurement facts for the library:
+
+- **llvmpipe p50 is meaningless for tier work.** The dawn sweep measured a
+  flat 16.6 ms on all nine; the real VC4 gate measured 26-74 ms (1.4-4.5x).
+  Only structure (pixels x taps x per-pixel math) predicts; the container is
+  a correctness gate only.
+- **There is a ~23.5 ms engine floor** per frame at 720p output (cheapest
+  shipped 640x360-content + upscale scenes all measure 23.5-24.1). Pure
+  fill cuts deliver about 0.85 of their nominal ratio plus a fixed term;
+  pass restructures (move full-res work into the content target, hoist
+  per-frame constants to Lua) delivered at or above estimate.
+- **The benchmark neighbour matters.** A stuck settings menu (OSC `/key`
+  events route to `settingsKey` while the menu is open; key 1 exits) left
+  the live service on `complement-flash` at 43.8 fps, which inflated every
+  offscreen gate number by 5-7 ms and looked like four regressions. Gate
+  runs must start from the verified condition: live platform on a tier-A
+  scene at ~60 fps (`./eyesyctl status` + OSC key check on the device).
+

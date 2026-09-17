@@ -57,13 +57,28 @@ milkdrop engine facts (empirical, 2026-09-16):
   values produce flat edge panels — keep per-frame warp/sphere magnitudes
   bounded (see sphere-rush tune).
 
-## bardo-night scenes (2026-09-17, llvmpipe-verified)
+## bardo-night scenes (2026-09-17, device-qualified; release dev-f2c914333761)
 
 Nine scenes built in one night (reports + evidence:
 `local/reports/bardo-night/`, dawn sweep `local/verify-catalog-bardo-dawn/`).
 All nine pass the scene contract at 300 frames in the build container's
-software GL; **no device-tier claim is made here** — p50 in that sweep is
-llvmpipe, and the real tier gate remains the on-device benchmark.
+software GL, and all nine now hold tier C on the device after optimization
+(device evidence `local/reports/bardo-device*/`; the dawn llvmpipe p50 of
+16.6 ms proved 1.4-4.5x optimistic — llvmpipe timing never predicts VC4).
+
+Device tier (VC4, 600 frames offscreen, tier-A neighbour; release
+`dev-f2c914333761`):
+
+| scene | shipped p50 | content |
+| --- | --- | --- |
+| temple-core | 26.3 | 320x180 ink + 320x180 composite, nearest blit |
+| wireframe-bardo | 27.6 | 640x360 (unchanged) |
+| tesseract-yidam | 27.6 | 640x360 (unchanged) |
+| buddha-1kb | 33.2 | 640x360 (unchanged, borderline) |
+| phosphor-seance | 29.5 | 320x180 field |
+| mandala-bardo | 30.3 | 352x198, 2-ring eval + exact ink early-outs |
+| copper-bar-hymn | 30.5 | 640x360 composite + 8x360 y-only raster |
+| slit-scan-vortex | 30.9 | 320x180 |
 
 | scene | what it is | knob map |
 | --- | --- | --- |
@@ -96,6 +111,21 @@ Shared facts from the night worth carrying forward:
   `define_palette` overwrites the entry and the 32-name cap (four built-ins
   preloaded) only counts *new* names, so the two modes simply re-define it on
   load and there is no duplicate-name error.
+- **Optimization levers that delivered on VC4** (first gate missed tier C on
+  six of nine; see `docs/STATUS.md` 2026-09-17): move full-res composite
+  work into the content-resolution target and upscale with a nearest
+  resample pass (`floor(uv*RES)+0.5`; `ofFbo` targets are GL_LINEAR, so
+  `draw_target` upscale blurs chunky looks — temple-core); hoist anything
+  frame-constant into Lua uniforms or a baked atlas (copper-bar-hymn font,
+  seance orbits/ink, koan tints/flicker); pre-expand per-layer phase
+  constants (slit-scan); exploit provable dead work (mandala: at most two
+  rings reach a pixel; seance: sigils have bounded support). Pure fill cuts
+  alone underdeliver — VC4 has a ~23.5 ms per-frame floor and credits only
+  ~0.85 of a nominal fill ratio.
+- **Benchmark hygiene**: gate runs need the live platform on a tier-A scene
+  at ~60 fps (`./eyesyctl status`); a heavy GPU neighbour inflated every
+  measurement by 5-7 ms once. llvmpipe p50 never predicts VC4 (16.6 ms
+  flat at dawn vs 26-74 ms real).
 
 ## Design law
 

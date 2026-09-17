@@ -37,8 +37,8 @@ Modes (37): `starter`, `stereo-mesh`, `shader`, `feedback`, `aurora`,
 `milkdrop` (one engine, twelve presets), and the nine bardo-night scenes
 `mandala-bardo`, `temple-core`, `buddha-1kb`, `wireframe-bardo`,
 `slit-scan-vortex`, `copper-bar-hymn`, `koan-terminal`, `tesseract-yidam`,
-and `phosphor-seance` (all nine catalog-verified at 300 frames at dawn; the
-llvmpipe caveat is in [implementation status](docs/STATUS.md)).
+and `phosphor-seance` (all nine device-tier qualified on VC4 and shipped in
+release `dev-f2c914333761`; history in [implementation status](docs/STATUS.md)).
 See [API](docs/API.md), [creative modes](docs/CREATIVE.md), and
 [scene library](docs/SCENE-LIBRARY.md).
 Use [WAV input and event recording](docs/INPUT-WORKFLOW.md) for repeatable sessions.
