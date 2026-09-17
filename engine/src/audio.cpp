@@ -55,6 +55,7 @@ void AudioInput::stop() {
     stream.stop();
     stream.close();
     running = false;
+    synthesizing = false;
     if (worker.joinable())
         worker.join();
     eyesy::StereoFrame discarded;
@@ -64,6 +65,8 @@ void AudioInput::stop() {
     latest = {};
 }
 void AudioInput::audioIn(ofSoundBuffer &buffer) {
+    if (synthesizing.load())
+        return;
     auto channels = buffer.getNumChannels();
     if (channels < 2)
         return;
@@ -79,7 +82,19 @@ void AudioInput::work() {
     auto deadline = std::chrono::steady_clock::now();
     size_t wavCursor = 0;
     while (running) {
-        if (wav) {
+        if (synthesizing.load()) {
+            // Stock OS v3 fills the input buffer with an undulating sine while the
+            // trigger is held so audio-reactive modes run without an external source.
+            undulatePhase += 0.005;
+            double undulate = ((std::sin(undulatePhase * 2 * PI) + 1.0) * 2.0) + 0.5;
+            for (int i = 0; i < 256; ++i) {
+                float value = float(std::sin((i / 100.0) * 2 * PI * undulate) *
+                                    (25000.0 / 32768.0));
+                ring.push({value, value});
+            }
+            deadline += std::chrono::microseconds(5333);
+            std::this_thread::sleep_until(deadline);
+        } else if (wav) {
             if (wavCursor >= wav->frames.size()) {
                 running = false;
                 break;
@@ -115,6 +130,11 @@ void AudioInput::work() {
                 for (size_t i = 0; i < ordered.size(); ++i)
                     ordered[i] = history[(cursor + i) % history.size()];
                 auto a = eyesy::analyze(ordered, sampleRate.load());
+                if (synthesizing.load()) {
+                    float peak = float(25000.0 / 32768.0);
+                    a.peakL = std::max(a.peakL, peak);
+                    a.peakR = std::max(a.peakR, peak);
+                }
                 a.sequence = ++seq;
                 a.timestamp = ofGetElapsedTimef();
                 if (detector.update(std::max(a.peakL, a.peakR), 512.0 / a.sampleRate, a.timestamp))

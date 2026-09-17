@@ -19,7 +19,7 @@ However, while the 10 basic button actions were mapped (`loadMode +/-`, `recallS
    - `Shift + Mode +/-`: cycle foreground color palette.
    - `Shift + Scene +/-`: cycle background color palette.
    - `Shift + Save`: update current scene in-place (overwrite) instead of appending a new scene.
-   - `Hold Save (2s)`: delete currently loaded scene file.
+   - `Hold Save (1s)`: delete currently loaded scene file.
    - `Shift + Screenshot`: knob sequencer play / stop.
    - `Shift + Trigger`: knob sequencer record-enable / stop.
    - `Shift + Knob 1`: live audio input gain adjustment with OSD bar feedback.
@@ -56,11 +56,11 @@ Stock dispatches hardware keys via `eyesy.dispatch_key_event(k, v)` (`v > 0` = p
 | **Key 6** | Prev Scene (`prev_scene()`) | **Prev BG Palette** (`prev_bg_palette()`) | Shift action **dropped** |
 | **Key 7** | Next Scene (`next_scene()`) | **Next BG Palette** (`next_bg_palette()`) | Shift action **dropped** |
 | **Key 8** | Save Scene (new timestamped scene) | **Update Current Scene** (`update_scene()`) | Shift action **dropped** |
-| **Key 8 (hold >2s)** | **Delete Current Scene** (`delete_scene()`) | — | Long-press detection **missing** |
+| **Key 8 (hold >1s)** | **Delete Current Scene** (`delete_scene()`) | — | Long-press detection **missing** |
 | **Key 9** | Screenshot (`screengrab_flag = True`) | **Knob Seq Play/Stop** (`knob_seq_play_stop_key()`) | Shift action **dropped** |
 | **Key 10** | Trigger (`trig = True` + sine audio) | **Knob Seq Record** (`knob_seq_record_key()`) | Shift action **dropped** |
 | **Knob 1** | Mode Param 1 | **Audio Input Gain Takeover** (`check_gain_knob()`) | Shift action **dropped** |
-| **Hold 4/5/6/7/10** | **Key-repeat** (fires every frame after 10 ticks held) | — | Key repeater **missing** |
+| **Hold 4/5/6/7/10** | **Key-repeat** (fires every frame after 10 ticks held; suspended in menu mode) | — | Key repeater **missing** |
 
 ### 2.3 The Knob Sequencer
 
@@ -75,7 +75,13 @@ Documented in Section 2.5 of the official manual:
 
 ### 2.4 Status LED Color Protocol
 
-The hardware daemon (`eyesyhw`) listens on OSC `127.0.0.1:4000/led` for an integer value:
+The hardware daemon (`eyesyhw`, the `controls` process) listens on OSC
+`127.0.0.1:4001/led` for an integer value (`OSC_IN_PORT 4001` in its
+`hw_controls/main.cpp`; stock `engines/python/osc.py` likewise sends through
+`liblo.Address(4001)` while serving the engine on 4000). The plan originally
+said 4000: that is the *engine's* receive port, and sending there loops the
+packet back into our own listener instead of reaching the daemon. The engine
+therefore defaults `--led-port` to 4001.
 
 | Value | Manual State | Stock Code Source (`eyesy.py`) | Meaning |
 |---|---|---|---|
@@ -84,7 +90,8 @@ The hardware daemon (`eyesyhw`) listens on OSC `127.0.0.1:4000/led` for an integ
 | `1` | **Red** | `stock_eyesy.py:1131` | Knob sequence recording |
 | `3` | **Green** | `stock_eyesy.py:1124` | Knob sequence playing |
 
-*Note: Our engine currently never sends `/led` to port 4000; the LED stays at whatever state the C++ daemon initialized it to.*
+The engine now sends `/led` on state changes (7 idle, 6 armed, 1 recording,
+3 playing) and reports the last value in `status.json`.
 
 ### 2.5 On-Screen Display (OSD) HUD
 
@@ -108,7 +115,7 @@ The hardware daemon (`eyesyhw`) listens on OSC `127.0.0.1:4000/led` for an integ
 
 Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode buttons (value change), and Save (confirm):
 1. **Home / Main Menu**: Icon grid / list navigating to sub-screens.
-2. **Video Settings**: Select HDMI resolution (720p, 1080p, etc.) and composite format (NTSC/PAL) with restart prompt.
+2. **Video Settings**: Select HDMI resolution (720p, 1080p, etc.) with a restart prompt. The platform scanout is HDMI-only direct KMS, so no composite format is offered (see §7).
 3. **Audio & MIDI Settings**: Trigger Source (Audio, MIDI Note, Audio+Note, MIDI Clock divisions), MIDI Channel (1–16), CC mapping for Knobs 1–5, CC for Persist (CC 25 default), CC for Palettes, CC for Mode selection, MIDI Note Mode Selection toggle.
 4. **MIDI PC Mapping**: Assign Program Change numbers 1–128 to specific scenes, with live thumbnail preview.
 5. **Color Palettes**: Fullscreen preview of FG and BG cosine palettes with waveform parameter graphs.
@@ -142,9 +149,9 @@ Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
 │   1.1 Trigger audio simulation (undulating sine wave while held)│
 │   1.2 Shift + Knob 1 audio gain live adjustment                 │
 │   1.3 Shift + Save (update current scene in-place)              │
-│   1.4 Hold Save for 2s (delete current scene)                   │
+│   1.4 Hold Save for 1s (delete current scene)                   │
 │   1.5 Hardware key-repeater (hold Mode/Scene +/- to scroll)     │
-│   1.6 OSC /led multi-color status updates to port 4000          │
+│   1.6 OSC /led multi-color status updates to port 4001          │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
 ┌────────────────────────────────▼────────────────────────────────┐
@@ -179,7 +186,7 @@ Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
 │   5.1 Global FG/BG cosine palette manager + System/palettes.json│
 │   5.2 Shift + Mode +/- (FG palette) & Shift + Scene +/- (BG)    │
 │   5.3 Fullscreen 2D menu overlay engine                         │
-│   5.4 Video resolution & composite format switcher              │
+│   5.4 Video resolution switcher (EDID modes only)               │
 │   5.5 Audio & MIDI settings (CC maps, PC scene recall)          │
 │   5.6 Factory diagnostics / hardware test screen                │
 └─────────────────────────────────────────────────────────────────┘
@@ -220,16 +227,17 @@ Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
       - Overwrite the existing JSON file at `scenes[sceneIndex]` with current mode, parameters, and autoClear.
       - Message: `"Updated " + scenes[sceneIndex].filename().string()`.
 
-#### 1.4 Hold Save for 2 Seconds (Delete Scene)
+#### 1.4 Hold Save for 1 Second (Delete Scene)
 - **Files**: `engine/src/main.cpp`
-- **Design**:
+- **Design** (stock `save_or_delete_scene` + `update_scene_save_key`):
   - Add `double savePressTime = 0;` and `bool saveHeld = false;`
-  - In `hardwareKey(8, true)`: `savePressTime = ofGetElapsedTimef(); saveHeld = true;`
-  - In `update()`: if `saveHeld && (ofGetElapsedTimef() - savePressTime > 2.0)`:
+  - In `hardwareKey(8, true)` (not shifted): `savePressTime = ofGetElapsedTimef(); saveHeld = true;`
+  - In `hardwareKey(8, false)`: if still held, save the scene (stock saves on
+    release, so a hold that turns into a delete never also appends a scene).
+  - In `update()`: if `saveHeld && !shift && (wall - savePressTime >= 1.0)`:
     - `saveHeld = false;`
-    - If `sceneIndex >= 0 && sceneIndex < scenes.size()`:
-      - Remove file `fs::remove(scenes[sceneIndex]);`
-      - Reload scenes; update `sceneIndex`; show message `"Deleted scene"`.
+    - Delete the loaded scene, drop the slot, clamp the index, recall the scene
+      now at that slot, message `"Deleted <file>"`.
 
 #### 1.5 Hardware Key Repeat
 - **Files**: `engine/src/main.cpp`
@@ -242,7 +250,7 @@ Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
 #### 1.6 OSC `/led` Feedback
 - **Files**: `engine/src/main.cpp`
 - **Design**:
-  - Open UDP send socket to `127.0.0.1:4000`.
+  - Open UDP send socket to `127.0.0.1:4001` (the daemon's OSC input port; `--led-port`).
   - Helper `void sendLed(int color);`
   - Constants:
     - `LED_WHITE = 7` (normal / idle)
@@ -285,13 +293,16 @@ Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
 - **Design**:
   - State enum: `STOPPED`, `ENABLED` (armed), `RECORDING`, `PLAYING`.
   - Storage: `std::vector<std::array<double, 5>> frames;` capped at 1,000 frames.
-  - Recording trigger: when `ENABLED`, if any knob moves `std::abs(k - last[i]) > 0.02`:
+  - Recording trigger: when `ENABLED`, if any knob moves `std::abs(k - last[i]) >= 0.005`
+    (stock `knob_seq_run`), snapshotted against the knob positions at arm time:
     - Transition to `RECORDING`.
     - Set LED to `1` (Red).
   - Loop playback: when `PLAYING`, inject recorded values into active knob array each frame; set LED to `3` (Green).
   - Shortcuts:
-    - `Shift + Trigger` (Key 2 + 10): Toggle record (STOPPED → ENABLED; RECORDING/PLAYING → STOPPED).
-    - `Shift + Screenshot` (Key 2 + 9): Toggle play/stop (PLAYING ↔ STOPPED).
+    - `Shift + Trigger` (Key 2 + 10): toggle record (STOPPED/PLAYING → ENABLED;
+    RECORDING/ENABLED → STOPPED).
+  - `Shift + Screenshot` (Key 2 + 9): toggle play/stop (STOPPED/RECORDING →
+    PLAYING; PLAYING/ENABLED → STOPPED).
 - **Scene Serialization**:
   - Add `"knob_sequence"` object to scene JSON.
   - Auto-start playback on scene recall when sequence data is present.
@@ -338,12 +349,93 @@ Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
 
 ---
 
+---
+
 ## 6. Verification and Acceptance Gates
 
 | Phase | Verification Method | Pass Criteria |
 |---|---|---|
-| **Phase 1** | Headless replay with synthesized trigger + OSC monitor | Holding trigger synthesizes audio in `status.json`; `/led` sends 7, 6, 1, 3 to port 4000; long-press Save deletes scene |
+| **Phase 1** | Headless replay with synthesized trigger + OSC monitor | Holding trigger synthesizes audio in `status.json`; `/led` sends 7, 6, 1, 3 to the daemon's port 4001; long-press Save deletes scene |
 | **Phase 2** | `tests/graphics_tests.py` persist regression test | Polarity assertion passes; grab hashes differ between persist-on and persist-off runs in `starter` |
 | **Phase 3** | Automated knob sequencer replay test | Recorded knob movements replay accurately over 120 frames; scene recall restores active sequence |
-| **Phase 4** | Headless screenshot inspection of OSD | Sliders, VU meters, MIDI grid, and trigger flash render cleanly at 720p without frame drops |
-| **Phase 5** | Interactive menu navigation via recorded inputs | All 9 sub-screens navigate, persist settings to `config.json`, and exit cleanly |
+| **Phase 4** | Headless overlay accounting + HDMI capture inspection | Overlay draws in 9 batched calls and never contaminates the mode render; sliders, VU meters, MIDI grid, gain bar, palette swatches and trigger flash render cleanly at 720p without frame drops |
+| **Phase 5** | Interactive menu navigation via recorded inputs | Home plus the four sub-screens navigate, persist settings to `config.json`, and exit cleanly |
+
+---
+
+## 7. Implementation status (2026-09-17)
+
+All five phases are implemented. Verification is the automated suites
+(`./eyesyctl test --graphics`: native ctest, 120 Python unit tests, and the
+container renderer checks) plus hardware receipts from the CM3+ at
+<device-ip>, captured through the HDMI dongle
+(`evidence/reports/os3-parity-2026-09-17/`).
+
+| Phase | Delivered | Evidence |
+|---|---|---|
+| **1** | Trigger sine synthesis in `AudioInput::work()` (replaces the input while held, floors `peak*` at 25000/32768); Shift + Knob 1 gain takeover with stock pickup; Shift + Save in-place update; hold Save deletes; key repeater; OSC `/led` | `input_workflow_tests.py` asserts the tone in `status.json` (RMS 0.54), the LED order 7→6→1→3, save/update/delete on disk, and the repeater; on-device `led_codes_on_daemon_port_4001 = [6,1,3,7]` |
+| **2** | `ctx.auto_clear` in the mode snapshot; persist indicator; veil idiom in the two pilots | `graphics_tests.py` asserts mode-side polarity, differing grabs for a fixture **and** for `starter` and `stereo-mesh` |
+| **3** | `KnobSequencer` (5×1000 frames, STOPPED/ENABLED/RECORDING/PLAYING), scene persistence, auto-play on recall | `core_tests` FSM/limit/JSON-free round-trip; `input_workflow_tests.py` records 4 frames, saves, recalls, asserts the sequence resumes and is dropped by an update while stopped; on device 91 frames recorded |
+| **4** | Stock-layout vector HUD (`osd_hud`), batched into 2 mesh draws + 7 text draws | `graphics_tests.py` pins `hud_draw_calls` (9 with the OSD, 0 without) and that the overlay never contaminates the mode render; on-device frames show sliders/VU/MIDI grid/trigger/gain/palette swatches |
+| **5** | `PaletteManager` (43 stock cosine palettes + `System/palettes.json` override), `ctx.palette_fg/bg`, shift palette cycling, fullscreen menu (home + Video / Audio & MIDI / Palettes / Hardware test), `--video-mode` KMS preference | `core_tests` palette math/cycling; `input_workflow_tests.py` navigates the menu, asserts config persistence and live diagnostics; on-device frames show the palette and hardware-test screens |
+
+### Measured corrections to this plan
+
+The instrument's own sources were read on the device
+(`/home/music/EYESY_OS/engines/python`, `platforms/eyesy_cm3/hw_controls`); four
+plan constants were wrong and the implementation follows the instrument:
+
+- **`/led` goes to port 4001**, not 4000. `hw_controls/main.cpp` defines
+  `OSC_IN_PORT 4001` (receive) and `OSC_OUT_PORT 4000`; stock `osc.py` sends
+  through `liblo.Address(4001)` while serving the engine on 4000. 4000 is the
+  engine's own receive port, so the plan's value loops the packet back into our
+  listener. `--led-port` defaults to 4001.
+- **Hold-Save delete is 1 s, not 2 s**, and stock saves the scene on key
+  *release* (so a hold that becomes a delete never also appends a scene).
+  `eyesy.py::update_scene_save_key` / `save_or_delete_scene`.
+- **The sequencer arms on a knob move of 0.005**, not 0.02
+  (`eyesy.py::knob_seq_run`), snapshotted against the positions at arm time.
+- **The key repeater fires every frame after 10 ticks**; ours fires every third
+  frame at 60 fps (≈ stock's 30 fps cadence) and is suspended while the menu is
+  up, as stock does.
+- **Gain scaling differs by design**: stock stores `audio_gain` in 0..1 and
+  applies `50g²+1` on its int16 path; our normalised float pipeline maps the
+  same knob to 0–4× and stores that value in `config.json`.
+
+### Deliberate scope limits
+
+- **Composite (NTSC/PAL) output is not offered**: the platform's scanout is
+  HDMI-only direct KMS, so a composite selector would be a stub. The Video
+  screen selects among EDID modes only (never a client-built mode blob, per
+  `docs/HDMI-DISPLAY-ISSUE.md`) and asks for a restart to apply.
+- **The menu covers the plan's four sub-screens.** Stock's remaining screens
+  (WiFi, PC mapping, backups, logs) are not ported; the platform already owns
+  those through `eyesyctl` and the editor.
+- **Scene freeze respected**: only the two pilot modes carry the veil idiom
+  (`modes/starter`, and `eyesy-modes-bespoke/stereo-mesh`); the fleet rewrite
+  rides the next scene-library pass.
+
+### Verification tooling
+
+`tests/device_parity_tests.py` drives the deployed unit end to end over OSC
+(from the device itself), asserts against `status.json` and the scene/config
+files, watches the daemon's LED socket, and snapshots the HDMI capture stream at
+every step. It needs an HDMI→USB streamer already writing a rolling PNG, because
+the dongle only asserts HPD while it streams. Measured 2026-09-17 on release
+`dev-8fcb282d8437`: 13 steps green in 75 s (`local/reports/device-parity-*`).
+
+One bench-unit hazard the run must tolerate: the CM3+ spare's button matrix
+emits spurious key events in bursts, and a spurious save-bit pair writes a
+scene. See `docs/BENCH-CHECKLIST.md` §3.
+
+### New files
+
+`engine/src/knob_sequencer.{h,cpp}`, `palette_manager.{h,cpp}` (both in the
+native `eyesy_core` library so the FSM and palette math are unit-tested without
+openFrameworks), `osd_hud.{h,cpp}`, `menu_system.{h,cpp}`. New options:
+`--led-port`, `--video-mode`. `status.json` gained `audio_synthesizing`, `led`,
+`sequencer`, `sequencer_frames`, `fg_palette`, `bg_palette`, `palette_count`,
+`hud_draw_calls`, `video_mode`, `menu_screen`, `menu_row`, `auto_clear`, `osd`,
+`diagnostics`.
+
+---

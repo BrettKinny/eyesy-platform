@@ -1,15 +1,16 @@
 #include "audio.h"
 #include "kms_window.h"
+#include "knob_sequencer.h"
+#include "menu_system.h"
 #include "offscreen_window.h"
+#include "osd_hud.h"
 #include "runtime.h"
 #include <alsa/asoundlib.h>
 #include <arpa/inet.h>
 #include <csignal>
 #include <fcntl.h>
 #include <fstream>
-#include <iomanip>
 #include <set>
-#include <sstream>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -24,10 +25,13 @@ static volatile std::sig_atomic_t terminateRequested = 0;
 static void requestTermination(int) { terminateRequested = 1; }
 struct Options {
     fs::path mode, storage = "local", report, replay, audioWav, record;
-    int frames = 0, device = -1, port = 0, switchEvery = 0;
+    std::string videoMode;
+    int frames = 0, device = -1, port = 0, ledPort = 4001, switchEvery = 0;
     bool fullscreen = false, probe = false, offscreen = false, kms = false;
     size_t recordLimit = 10000;
 };
+// Status LED colors the eyesyhw daemon understands on OSC /led.
+constexpr int LED_WHITE = 7, LED_MAGENTA = 6, LED_RED = 1, LED_GREEN = 3;
 static void atomicJson(const fs::path &path, const ofJson &data) {
     fs::create_directories(path.parent_path());
     auto tmp = path;
@@ -80,10 +84,13 @@ class EngineApp : public ofBaseApp {
     std::vector<double> frameTimes;
     std::map<fs::path, fs::file_time_type> watched;
     ofFbo canvas;
-    int selected = 0, sceneIndex = -1, selectedKnob = 0, sock = -1;
+    int selected = 0, sceneIndex = -1, selectedKnob = 0, sock = -1, ledSock = -1, ledState = -1;
     uint64_t frame = 0, triggerCount = 0, reloads = 0, modeErrors = 0;
     double lastFrame = 0, lastWatch = 0, lastStatus = 0;
     bool trigger = false, osd = true, autoClear = true, shift = false;
+    std::array<int, 11> keyHeldTicks{};
+    double savePressTime = 0;
+    bool saveHeld = false;
     std::string message, renderer;
     snd_seq_t *seq = nullptr;
     int seqPort = -1;
@@ -96,12 +103,147 @@ class EngineApp : public ofBaseApp {
     eyesy::InputRecorder recorder;
     std::vector<eyesy::MidiEvent> midiEvents;
     eyesy::Analysis lastAnalysis;
-    bool menu = false;
-    int menuRow = 0, midiChannel = 1, triggerSource = 2;
-    double audioGain = 1, audioRetry = 0;
+    MenuSystem menu;
+    MenuSettings settings;
+    MenuTelemetry telemetry;
+    uint64_t pressCount = 0;
+    double audioRetry = 0;
+    double gainKnobCapture = 0, gainSnapshot = 1;
+    bool gainKnobUnlocked = false;
+    void persistSettings() {
+        atomicJson(options.storage / "config.json", {{"schema_version", 1},
+                                                     {"audio_gain", settings.gain},
+                                                     {"midi_channel", settings.midiChannel},
+                                                     {"trigger_source", settings.triggerSource},
+                                                     {"fg_palette", int(palettes.fg())},
+                                                     {"bg_palette", int(palettes.bg())},
+                                                     {"video_mode", settings.videoMode}});
+    }
     void recordEvent(const eyesy::RecordedInput &event) {
         if (!options.record.empty())
             recorder.record(event);
+    }
+    eyesy::KnobSequencer knobSeq;
+    eyesy::PaletteManager palettes;
+    OsdHud hud;
+    HudState hudState;
+    void handleMenuKey(int key, MenuSystem::Key mapped = MenuSystem::Key::Other) {
+        if (mapped == MenuSystem::Key::Other) {
+            if (key == 6)
+                mapped = MenuSystem::Key::Up;
+            else if (key == 7)
+                mapped = MenuSystem::Key::Down;
+            else if (key == 4)
+                mapped = MenuSystem::Key::Decrease;
+            else if (key == 5)
+                mapped = MenuSystem::Key::Increase;
+            else if (key == 8)
+                mapped = MenuSystem::Key::Confirm;
+            else if (key == 1)
+                mapped = MenuSystem::Key::Back;
+        }
+        menu.key(mapped, settings, palettes);
+        audio.setGain(float(settings.gain));
+        if (!menu.active()) {
+            try {
+                persistSettings();
+            } catch (const std::exception &e) {
+                message = e.what();
+            }
+        }
+    }
+    void refreshHud() {
+        hudState.mode = runtime.directory.filename().string();
+        hudState.modeIndex = selected;
+        hudState.modeCount = int(catalog.size());
+        hudState.sceneLoaded = sceneIndex >= 0 && sceneIndex < int(scenes.size());
+        // Our scenes are single timestamped files, so the HUD shows the stem
+        // clipped to the space the stock folder name occupies.
+        hudState.scene = hudState.sceneLoaded
+                             ? scenes[sceneIndex].stem().string().substr(0, 22)
+                             : std::string();
+        hudState.sceneIndex = sceneIndex;
+        hudState.sceneCount = int(scenes.size());
+        hudState.width = ofGetWidth();
+        hudState.height = ofGetHeight();
+        hudState.usb = false;
+        hudState.knobs = knobs;
+        hudState.sequencer = knobSeq.playing() ? 2 : knobSeq.recording() ? 1 : 0;
+        hudState.notes = &midi.notes;
+        hudState.peakLeft = lastAnalysis.peakL;
+        hudState.peakRight = lastAnalysis.peakR;
+        hudState.gain = settings.gain;
+        hudState.trigger = trigger;
+        hudState.persist = !autoClear;
+        hudState.fps = ofGetFrameRate();
+        hudState.fgPreview = palettes.preview(true);
+        hudState.bgPreview = palettes.preview(false);
+        telemetry.knobs = knobs;
+        telemetry.peakLeft = lastAnalysis.peakL;
+        telemetry.peakRight = lastAnalysis.peakR;
+        telemetry.notes = midi.notes;
+        telemetry.trigger = trigger;
+        telemetry.width = ofGetWidth();
+        telemetry.height = ofGetHeight();
+        telemetry.mode = hudState.mode;
+        telemetry.scene = hudState.scene;
+        telemetry.modeIndex = selected;
+        telemetry.modeCount = int(catalog.size());
+        telemetry.sceneIndex = sceneIndex;
+        telemetry.sceneCount = int(scenes.size());
+        telemetry.fps = ofGetFrameRate();
+        telemetry.videoNote = kmsModeFallbackNote();
+        telemetry.presses = pressCount;
+    }
+    // System/palettes.json replaces the embedded stock table when present.
+    void loadPalettes() {
+        auto path = options.storage / "System" / "palettes.json";
+        if (!fs::exists(path))
+            return;
+        auto data = ofLoadJson(path.string());
+        if (!data.is_array() || data.empty())
+            return;
+        std::vector<eyesy::CosinePalette> parsed;
+        const char *keys[] = {"a", "b", "c", "d"};
+        for (auto &entry : data) {
+            if (!entry.is_object() || !entry.contains("name") || !entry["name"].is_string())
+                return;
+            eyesy::CosinePalette palette;
+            palette.name = entry["name"].get<std::string>();
+            std::array<float, 3> *slots[] = {&palette.a, &palette.b, &palette.c, &palette.d};
+            for (int i = 0; i < 4; ++i) {
+                if (!entry.contains(keys[i]) || !entry[keys[i]].is_array() ||
+                    entry[keys[i]].size() != 3)
+                    return;
+                for (int channel = 0; channel < 3; ++channel) {
+                    if (!entry[keys[i]][channel].is_number())
+                        return;
+                    (*slots[i])[channel] = float(entry[keys[i]][channel].get<double>());
+                }
+            }
+            parsed.push_back(std::move(palette));
+        }
+        if (palettes.replace(std::move(parsed)))
+            message = "Loaded " + path.filename().string();
+    }
+    void cyclePalette(int key) {
+        if (key == 4)
+            palettes.prevFg();
+        if (key == 5)
+            palettes.nextFg();
+        if (key == 6)
+            palettes.prevBg();
+        if (key == 7)
+            palettes.nextBg();
+        if (key >= 4 && key <= 7)
+            message = std::string(key <= 5 ? "FG" : "BG") + " palette: " +
+                      palettes.entries()[key <= 5 ? palettes.fg() : palettes.bg()].name;
+    }
+    void syncLed() {
+        sendLed(knobSeq.playing()          ? LED_GREEN
+                : knobSeq.recording()      ? LED_RED
+                : knobSeq.state() == eyesy::KnobSequencer::State::Enabled ? LED_MAGENTA
+                                                                          : LED_WHITE);
     }
     void writeRecording() {
         if (options.record.empty())
@@ -120,47 +262,15 @@ class EngineApp : public ofBaseApp {
         }
         atomicJson(options.record, result);
     }
-    void settingsText() {
-        message = "SETTINGS [scene +/-: row; mode +/-: value; save: persist]\n";
-        message +=
-            (menuRow == 0 ? "> " : "  ") + std::string("Gain ") + ofToString(audioGain, 2) + "  ";
-        message += (menuRow == 1 ? "> " : "  ") + std::string("MIDI channel ") +
-                   ofToString(midiChannel) + "  ";
-        const char *sources[] = {"audio", "MIDI note", "audio + note", "MIDI quarter"};
-        message += (menuRow == 2 ? "> " : "  ") + std::string("Trigger ") + sources[triggerSource];
-    }
-    void settingsKey(int key) {
-        if (key == 1) {
-            menu = false;
-            message.clear();
+    // Report the hardware status LED to eyesyhw (OSC /led on its input port,
+    // 4001; the engine's own OSC receive port is 4000).
+    void sendLed(int color) {
+        if (ledSock < 0 || color == ledState)
             return;
-        }
-        if (key == 6)
-            menuRow = (menuRow + 2) % 3;
-        if (key == 7)
-            menuRow = (menuRow + 1) % 3;
-        int direction = key == 4 ? -1 : key == 5 ? 1 : 0;
-        if (menuRow == 0)
-            audioGain = std::clamp(audioGain + direction * .05, 0.0, 4.0);
-        if (menuRow == 1)
-            midiChannel = std::clamp(midiChannel + direction, 1, 16);
-        if (menuRow == 2)
-            triggerSource = std::clamp(triggerSource + direction, 0, 3);
-        audio.setGain(audioGain);
-        if (key == 8) {
-            try {
-                atomicJson(options.storage / "config.json", {{"schema_version", 1},
-                                                             {"audio_gain", audioGain},
-                                                             {"midi_channel", midiChannel},
-                                                             {"trigger_source", triggerSource}});
-                menu = false;
-                message = "Settings saved";
-            } catch (const std::exception &e) {
-                message = e.what();
-            }
-            return;
-        }
-        settingsText();
+        ledState = color;
+        std::vector<uint8_t> packet;
+        if (eyesy::encodeOscInt("/led", color, packet))
+            send(ledSock, packet.data(), packet.size(), MSG_NOSIGNAL);
     }
     void watchFiles() {
         watched.clear();
@@ -176,7 +286,7 @@ class EngineApp : public ofBaseApp {
         selected = (index + int(catalog.size())) % catalog.size();
         if (!runtime.load(catalog[selected], 1280, 720))
             ++modeErrors;
-        runtime.snapshot(ofGetElapsedTimef(), 0, knobs, audio.snapshot(), midi, trigger);
+        runtime.snapshot(ofGetElapsedTimef(), 0, knobs, audio.snapshot(), midi, trigger, autoClear);
         ++reloads;
         watchFiles();
         canvas.begin();
@@ -186,22 +296,58 @@ class EngineApp : public ofBaseApp {
     void hardwareKey(int key, bool down) {
         if (!deterministic)
             recordEvent({frame, down ? "hardware_key" : "hardware_release", 0, key});
+        if (key >= 0 && key < int(keyHeldTicks.size()))
+            keyHeldTicks[key] = down ? 1 : 0;
         if (key == 2) {
             shift = down;
+            if (down) {
+                // Grab the physical knob 1 so a small move unlocks the takeover.
+                gainKnobCapture = knobs[0];
+                gainKnobUnlocked = false;
+                gainSnapshot = settings.gain;
+            } else if (gainSnapshot != settings.gain) {
+                try {
+                    persistSettings();
+                } catch (const std::exception &) {
+                }
+            }
             return;
+        }
+        if (key == 10)
+            audio.setSynthesizing(down);
+        if (key == 8) {
+            if (down) {
+                if (!shift) {
+                    savePressTime = ofGetElapsedTimef();
+                    saveHeld = true;
+                }
+            } else if (saveHeld) {
+                saveHeld = false;
+                if (!shift)
+                    saveScene();
+            }
         }
         if (!down)
             return;
-        if (menu) {
-            settingsKey(key);
+        pressCount++;
+        if (menu.active()) {
+            handleMenuKey(key);
             return;
         }
         if (shift) {
             if (key == 1) {
-                menu = true;
+                menu.toggle();
                 osd = true;
-                settingsText();
+                message.clear();
             }
+            if (key == 8)
+                updateCurrentScene();
+            if (key == 9)
+                knobSeq.playStopKey();
+            if (key == 10)
+                knobSeq.recordKey(knobs);
+            if (key >= 4 && key <= 7)
+                cyclePalette(key);
             return;
         }
         if (key == 1)
@@ -216,39 +362,89 @@ class EngineApp : public ofBaseApp {
             recallScene(-1);
         if (key == 7)
             recallScene(1);
-        if (key == 8)
-            saveScene();
         if (key == 9)
             screenshot();
         if (key == 10)
             trigger = true;
     }
+    ofJson sceneJson() {
+        ofJson j = {{"schema_version", 1},
+                    {"mode", runtime.directory.filename().string()},
+                    {"parameters", ofJson::object()},
+                    {"state", runtime.save()},
+                    {"auto_clear", autoClear},
+                    {"fg_palette", int(palettes.fg())},
+                    {"bg_palette", int(palettes.bg())}};
+        for (auto &p : runtime.parameters)
+            j["parameters"][p.first] = p.second.value;
+        // Stock stores the sequence beside the scene only while it is playing;
+        // a stopped sequence is dropped on the next save.
+        if (knobSeq.playing())
+            j["knob_sequence"] = knobSeq.sequence();
+        return j;
+    }
+    void refreshScenes() {
+        scenes.clear();
+        auto folder = options.storage / "scenes";
+        if (fs::exists(folder))
+            for (auto &entry : fs::directory_iterator(folder))
+                if (entry.path().extension() == ".json")
+                    scenes.push_back(entry.path());
+        std::sort(scenes.begin(), scenes.end());
+    }
     void saveScene() {
         try {
-            ofJson j = {{"schema_version", 1},
-                        {"mode", runtime.directory.filename().string()},
-                        {"parameters", ofJson::object()},
-                        {"state", runtime.save()},
-                        {"auto_clear", autoClear}};
-            for (auto &p : runtime.parameters)
-                j["parameters"][p.first] = p.second.value;
             auto path = options.storage / "scenes" /
                         ("scene-" + ofGetTimestampString("%Y%m%d-%H%M%S-%i") + ".json");
-            atomicJson(path, j);
+            atomicJson(path, sceneJson());
+            refreshScenes();
+            auto it = std::find(scenes.begin(), scenes.end(), path);
+            if (it != scenes.end())
+                sceneIndex = it - scenes.begin();
             message = "Saved " + path.filename().string();
         } catch (const std::exception &e) {
             message = e.what();
         }
     }
+    void updateCurrentScene() {
+        try {
+            if (sceneIndex < 0 || sceneIndex >= int(scenes.size())) {
+                message = "No scene to update";
+                return;
+            }
+            atomicJson(scenes[sceneIndex], sceneJson());
+            message = "Updated " + scenes[sceneIndex].filename().string();
+        } catch (const std::exception &e) {
+            message = e.what();
+        }
+    }
+    void deleteCurrentScene() {
+        if (sceneIndex < 0 || sceneIndex >= int(scenes.size())) {
+            message = "No scene to delete";
+            return;
+        }
+        auto removed = scenes[sceneIndex];
+        std::error_code error;
+        fs::remove(removed, error);
+        if (error) {
+            message = error.message();
+            return;
+        }
+        scenes.erase(scenes.begin() + sceneIndex);
+        if (scenes.empty()) {
+            sceneIndex = -1;
+            message = "Deleted scene (none left)";
+            return;
+        }
+        // Stock steps to the same slot, then clamps; keep that ordering.
+        if (sceneIndex >= int(scenes.size()))
+            sceneIndex = int(scenes.size()) - 1;
+        recallScene(0);
+        message = "Deleted " + removed.filename().string();
+    }
     void recallScene(int direction) {
         try {
-            scenes.clear();
-            auto folder = options.storage / "scenes";
-            if (fs::exists(folder))
-                for (auto &e : fs::directory_iterator(folder))
-                    if (e.path().extension() == ".json")
-                        scenes.push_back(e.path());
-            std::sort(scenes.begin(), scenes.end());
+            refreshScenes();
             if (scenes.empty()) {
                 message = "No scenes";
                 return;
@@ -268,7 +464,34 @@ class EngineApp : public ofBaseApp {
                     p.second.restore(j["parameters"][p.first].get<double>(),
                                      p.second.knob >= 0 ? knobs[p.second.knob] : 0);
             autoClear = j.value("auto_clear", true);
+            palettes.setFg(j.value("fg_palette", int(palettes.fg())));
+            palettes.setBg(j.value("bg_palette", int(palettes.bg())));
             runtime.restore(j.value("state", ofJson::object()));
+            bool restored = false;
+            if (j.contains("knob_sequence") && j["knob_sequence"].is_array()) {
+                std::vector<std::array<double, 5>> data;
+                bool valid = true;
+                for (auto &frame : j["knob_sequence"]) {
+                    if (!frame.is_array() || frame.size() != 5) {
+                        valid = false;
+                        break;
+                    }
+                    std::array<double, 5> values{};
+                    for (size_t i = 0; i < values.size(); ++i) {
+                        if (!frame[i].is_number()) {
+                            valid = false;
+                            break;
+                        }
+                        values[i] = frame[i].get<double>();
+                    }
+                    if (!valid)
+                        break;
+                    data.push_back(values);
+                }
+                restored = valid && knobSeq.load(data, true);
+            }
+            if (!restored)
+                knobSeq.clear();
             message = "Recalled " + mode;
         } catch (const std::exception &e) {
             message = e.what();
@@ -295,11 +518,28 @@ class EngineApp : public ofBaseApp {
             eyesy::OscEvent e;
             if (!eyesy::decodeOsc(data, n, e))
                 continue;
-            if (e.address == "/knobs" && e.integers.size() == 6)
-                for (int k = 0; k < 5; ++k) {
-                    knobs[k] = std::clamp(e.integers[k] / 1023.0, 0.0, 1.0);
-                    recordEvent({frame, "knob", k + 1, 0, 0, 0, 0, 0, knobs[k]});
+            if (e.address == "/knobs" && e.integers.size() == 6) {
+                std::array<double, 5> next{};
+                for (int k = 0; k < 5; ++k)
+                    next[k] = std::clamp(e.integers[k] / 1023.0, 0.0, 1.0);
+                if (shift) {
+                    // Shift + Knob 1 takes over live audio input gain; the mode
+                    // parameter stays parked until shift is released.
+                    if (std::abs(gainKnobCapture - next[0]) > .05)
+                        gainKnobUnlocked = true;
+                    double requested =
+                        gainKnobUnlocked ? std::clamp(next[0] * 4.0, 0.0, 4.0) : settings.gain;
+                    if (std::abs(requested - settings.gain) > .01) {
+                        settings.gain = requested;
+                        audio.setGain(float(settings.gain));
+                        message = "Audio gain " + ofToString(settings.gain, 2) + "x";
+                    }
+                    next[0] = knobs[0];
                 }
+                knobs = next;
+                for (int k = 0; k < 5; ++k)
+                    recordEvent({frame, "knob", k + 1, 0, 0, 0, 0, 0, knobs[k]});
+            }
             if (e.address == "/key" && e.integers.size() == 2)
                 hardwareKey(e.integers[0], e.integers[1] > 0);
             if (e.address == "/reload")
@@ -371,13 +611,13 @@ class EngineApp : public ofBaseApp {
                 break;
             }
             m.timestamp = ofGetElapsedTimef();
-            if (m.type >= 0xf0 || m.channel == midiChannel - 1) {
+            if (m.type >= 0xf0 || m.channel == settings.midiChannel - 1) {
                 midi.apply(m);
                 midiEvents.push_back(m);
                 recordEvent({frame, "midi", 0, 0, m.type, m.channel, m.a, m.b, 0});
-                if (m.type == 0x90 && m.b && (triggerSource == 1 || triggerSource == 2))
+                if (m.type == 0x90 && m.b && (settings.triggerSource == 1 || settings.triggerSource == 2))
                     trigger = true;
-                if (m.type == 0xf8 && triggerSource == 3 && midi.clocks % 24 == 0)
+                if (m.type == 0xf8 && settings.triggerSource == 3 && midi.clocks % 24 == 0)
                     trigger = true;
                 if (m.type == 0xb0 && m.a >= 20 && m.a <= 24)
                     knobs[m.a - 20] = std::clamp(m.b / 127.0, 0.0, 1.0);
@@ -415,6 +655,34 @@ class EngineApp : public ofBaseApp {
             options.audioWav.empty() ? (options.device == -1 ? "synthetic" : "device") : "wav";
         report["recorded_events"] = recorder.size();
         report["recording_truncated"] = recorder.truncated();
+        report["audio_synthesizing"] = audio.isSynthesizing();
+        report["led"] = ledState;
+        report["sequencer"] = knobSeq.playing()          ? "playing"
+                              : knobSeq.recording()      ? "recording"
+                              : knobSeq.state() == eyesy::KnobSequencer::State::Enabled ? "enabled"
+                                                                                        : "stopped";
+        report["sequencer_frames"] = knobSeq.size();
+        report["fg_palette"] = int(palettes.fg());
+        report["bg_palette"] = int(palettes.bg());
+        report["palette_count"] = int(palettes.size());
+        report["hud_draw_calls"] = hud.drawCalls();
+        report["mode_index"] = selected;
+        report["mode_count"] = int(catalog.size());
+        report["scene_index"] = sceneIndex;
+        report["scene_count"] = int(scenes.size());
+        report["scene"] = sceneIndex >= 0 && sceneIndex < int(scenes.size())
+                              ? scenes[sceneIndex].stem().string()
+                              : std::string();
+        report["video_mode"] = settings.videoMode;
+        report["auto_clear"] = autoClear;
+        report["osd"] = osd;
+        report["menu_screen"] = menu.active() ? menu.screen() : -1;
+        report["menu_row"] = menu.active() ? menu.row() : -1;
+        auto diagnostics = menu.diagnostics();
+        report["diagnostics"] = {{"pots", diagnostics[0]},
+                                 {"buttons", diagnostics[1]},
+                                 {"midi", diagnostics[2]},
+                                 {"audio", diagnostics[3]}};
         report["frame_time_samples"] = frameTimes.size();
         report["frame_time_window"] = 4096;
         return report;
@@ -429,13 +697,13 @@ class EngineApp : public ofBaseApp {
         ofSetWindowTitle("EYESY Platform");
         renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
         ofLogNotice() << "Renderer: " << renderer;
-        ofFbo::Settings settings;
-        settings.width = 1280;
-        settings.height = 720;
-        settings.internalformat = GL_RGBA;
-        settings.textureTarget = GL_TEXTURE_2D;
-        settings.useDepth = true;
-        canvas.allocate(settings);
+        ofFbo::Settings fboSettings;
+        fboSettings.width = 1280;
+        fboSettings.height = 720;
+        fboSettings.internalformat = GL_RGBA;
+        fboSettings.textureTarget = GL_TEXTURE_2D;
+        fboSettings.useDepth = true;
+        canvas.allocate(fboSettings);
         canvas.begin();
         ofClear(0, 0, 0, 255);
         canvas.end();
@@ -445,13 +713,20 @@ class EngineApp : public ofBaseApp {
                 auto config = ofLoadJson((options.storage / "config.json").string());
                 if (config.at("schema_version") != 1)
                     throw std::runtime_error("unsupported settings");
-                audioGain = std::clamp(config.value("audio_gain", 1.0), 0.0, 4.0);
-                midiChannel = std::clamp(config.value("midi_channel", 1), 1, 16);
-                triggerSource = std::clamp(config.value("trigger_source", 2), 0, 3);
+                settings.gain = std::clamp(config.value("audio_gain", 1.0), 0.0, 4.0);
+                settings.midiChannel = std::clamp(config.value("midi_channel", 1), 1, 16);
+                settings.triggerSource = std::clamp(config.value("trigger_source", 2), 0, 3);
+                palettes.setFg(size_t(std::max(0, config.value("fg_palette", 0))));
+                palettes.setBg(size_t(std::max(0, config.value("bg_palette", 0))));
+                // A --video-mode argument wins over the stored preference.
+                if (options.videoMode.empty())
+                    settings.videoMode = config.value("video_mode", std::string());
             } catch (const std::exception &e) {
                 message = std::string("Settings ignored: ") + e.what();
             }
-        audio.setGain(audioGain);
+        audio.setGain(settings.gain);
+        loadPalettes();
+        runtime.setPalettes(&palettes);
         if (options.port) {
             sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
             sockaddr_in addr{};
@@ -461,6 +736,18 @@ class EngineApp : public ofBaseApp {
             if (sock < 0 || bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0)
                 throw std::runtime_error("OSC port unavailable; another engine may be active");
         }
+        ledSock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+        if (ledSock >= 0) {
+            sockaddr_in led{};
+            led.sin_family = AF_INET;
+            led.sin_port = htons(options.ledPort);
+            led.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            if (connect(ledSock, reinterpret_cast<sockaddr *>(&led), sizeof(led)) < 0) {
+                close(ledSock);
+                ledSock = -1;
+            }
+        }
+        sendLed(LED_WHITE);
         deterministic = !options.replay.empty();
         if (deterministic && !options.audioWav.empty())
             throw std::runtime_error("--audio-wav cannot be combined with deterministic --replay");
@@ -570,12 +857,12 @@ class EngineApp : public ofBaseApp {
             else if (type == "midi") {
                 eyesy::MidiEvent m{e.at("status").get<int>(), e.value("channel", 0),
                                    e.value("a", 0), e.value("b", 0), now};
-                if (m.type >= 0xf0 || m.channel == midiChannel - 1) {
+                if (m.type >= 0xf0 || m.channel == settings.midiChannel - 1) {
                     midi.apply(m);
                     midiEvents.push_back(m);
-                    if (m.type == 0x90 && m.b && (triggerSource == 1 || triggerSource == 2))
+                    if (m.type == 0x90 && m.b && (settings.triggerSource == 1 || settings.triggerSource == 2))
                         trigger = true;
-                    if (m.type == 0xf8 && triggerSource == 3 && midi.clocks % 24 == 0)
+                    if (m.type == 0xf8 && settings.triggerSource == 3 && midi.clocks % 24 == 0)
                         trigger = true;
                     if (m.type == 0xb0 && m.a >= 20 && m.a <= 24)
                         knobs[m.a - 20] = std::clamp(m.b / 127.0, 0.0, 1.0);
@@ -585,6 +872,34 @@ class EngineApp : public ofBaseApp {
                 replayFreq = std::clamp(e.value("freq", 1.0), 0.25, 4.0);
             } else
                 throw std::runtime_error("unknown replay event");
+        }
+        if (saveHeld && !shift && wall - savePressTime >= 1.0) {
+            saveHeld = false;
+            deleteCurrentScene();
+        }
+        // Held scroll keys repeat after ~200ms, then every 50ms (stock key matrix).
+        // Stock suspends the repeater entirely while the menu is up.
+        for (int key : {4, 5, 6, 7, 10}) {
+            if (!keyHeldTicks[key] || menu.active())
+                continue;
+            ++keyHeldTicks[key];
+            if (keyHeldTicks[key] <= 10 || keyHeldTicks[key] % 3)
+                continue;
+            if (key == 10) {
+                if (!shift)
+                    trigger = true;
+                continue;
+            }
+            if (shift)
+                cyclePalette(key);
+            else if (key == 4)
+                loadMode(selected - 1);
+            else if (key == 5)
+                loadMode(selected + 1);
+            else if (key == 6)
+                recallScene(-1);
+            else if (key == 7)
+                recallScene(1);
         }
         auto a = audio.snapshot();
         if (!deterministic && options.audioWav.empty() && options.device != -1 && !a.available &&
@@ -604,12 +919,16 @@ class EngineApp : public ofBaseApp {
         }
         if (a.triggerCount != triggerCount) {
             trigger = trigger ||
-                      ((triggerSource == 0 || triggerSource == 2) && a.triggerCount > triggerCount);
+                      ((settings.triggerSource == 0 || settings.triggerSource == 2) && a.triggerCount > triggerCount);
             triggerCount = a.triggerCount;
         }
         lastAnalysis = a;
         if (!options.probe) {
-            runtime.snapshot(now, dt, knobs, a, midi, trigger, midiEvents);
+            knobs = knobSeq.run(knobs);
+            syncLed();
+            refreshHud();
+            menu.observe(telemetry);
+            runtime.snapshot(now, dt, knobs, a, midi, trigger, autoClear, midiEvents);
             runtime.call("update", dt);
         }
         if (wall - lastWatch > .3 && !options.probe) {
@@ -658,16 +977,20 @@ class EngineApp : public ofBaseApp {
         canvas.end();
         ofSetColor(255);
         canvas.draw(0, 0, ofGetWidth(), ofGetHeight());
-        if (osd) {
-            ofSetColor(0, 0, 0, 190);
-            ofDrawRectangle(0, ofGetHeight() - 64, ofGetWidth(), 64);
-            ofSetColor(255);
-            std::ostringstream line;
-            line << "EYESY | " << runtime.directory.filename().string() << " | " << std::fixed
-                 << std::setprecision(1) << ofGetFrameRate() << " fps | knob " << selectedKnob + 1
-                 << ": " << knobs[selectedKnob] << "\n"
-                 << message;
-            ofDrawBitmapString(line.str(), 16, ofGetHeight() - 40);
+        if (osd || menu.active()) {
+            ofPushStyle();
+            if (menu.active())
+                menu.draw(settings, telemetry, palettes);
+            else {
+                hud.draw(hudState);
+                if (!message.empty()) {
+                    ofSetColor(0, 0, 0, 190);
+                    ofDrawRectangle(0, ofGetHeight() - 40, ofGetWidth(), 40);
+                    ofSetColor(255);
+                    ofDrawBitmapString(message, 16, ofGetHeight() - 16);
+                }
+            }
+            ofPopStyle();
         }
         trigger = false;
         midiEvents.clear();
@@ -679,25 +1002,24 @@ class EngineApp : public ofBaseApp {
         if (!deterministic)
             recordEvent({frame, "key", 0, key});
         if (key == 'm') {
-            menu = !menu;
+            menu.toggle();
             osd = true;
-            if (menu)
-                settingsText();
-            else
-                message.clear();
+            message.clear();
             return;
         }
-        if (menu) {
+        if (menu.active()) {
             if (key == OF_KEY_UP)
-                settingsKey(6);
+                handleMenuKey(0, MenuSystem::Key::Up);
             if (key == OF_KEY_DOWN)
-                settingsKey(7);
+                handleMenuKey(0, MenuSystem::Key::Down);
             if (key == OF_KEY_LEFT)
-                settingsKey(4);
+                handleMenuKey(0, MenuSystem::Key::Decrease);
             if (key == OF_KEY_RIGHT)
-                settingsKey(5);
+                handleMenuKey(0, MenuSystem::Key::Increase);
             if (key == OF_KEY_RETURN)
-                settingsKey(8);
+                handleMenuKey(0, MenuSystem::Key::Confirm);
+            if (key == OF_KEY_BACKSPACE || key == OF_KEY_ESC)
+                handleMenuKey(0, MenuSystem::Key::Back);
             return;
         }
         if (key >= '1' && key <= '5')
@@ -755,6 +1077,8 @@ class EngineApp : public ofBaseApp {
         runtime.close();
         if (sock >= 0)
             close(sock);
+        if (ledSock >= 0)
+            close(ledSock);
         if (seq)
             snd_seq_close(seq);
     }
@@ -780,6 +1104,10 @@ int main(int argc, char **argv) {
                 o.device = device == "auto" ? -2 : std::stoi(device);
             } else if (arg == "--osc-port")
                 o.port = std::stoi(next());
+            else if (arg == "--led-port")
+                o.ledPort = std::stoi(next());
+            else if (arg == "--video-mode")
+                o.videoMode = next();
             else if (arg == "--report")
                 o.report = fs::absolute(next());
             else if (arg == "--replay")
@@ -805,20 +1133,21 @@ int main(int argc, char **argv) {
             throw std::runtime_error("--mode must name a folder containing main.lua");
         if (!o.recordLimit || o.recordLimit > 100000)
             throw std::runtime_error("--record-limit must be 1..100000");
-        if (o.frames < 0 || o.switchEvery < 0 || o.port < 0 || o.port > 65535 || o.device < -2)
+        if (o.frames < 0 || o.switchEvery < 0 || o.port < 0 || o.port > 65535 || o.device < -2 ||
+            o.ledPort < 1 || o.ledPort > 65535)
             throw std::runtime_error(
                 "invalid frame count, switch interval, audio device or OSC port");
-        ofGLFWWindowSettings settings;
+        ofGLFWWindowSettings windowSettings;
 #ifdef TARGET_OPENGLES
-        settings.setGLESVersion(2);
+        windowSettings.setGLESVersion(2);
 #else
-        settings.setGLVersion(3, 2);
+        windowSettings.setGLVersion(3, 2);
 #endif
-        settings.setSize(1280, 720);
-        settings.windowMode = o.fullscreen ? OF_FULLSCREEN : OF_WINDOW;
-        auto window = o.kms ? createKmsWindow()
+        windowSettings.setSize(1280, 720);
+        windowSettings.windowMode = o.fullscreen ? OF_FULLSCREEN : OF_WINDOW;
+        auto window = o.kms ? createKmsWindow(o.videoMode)
                             : o.offscreen ? createOffscreenWindow(1280, 720)
-                                          : ofCreateWindow(settings);
+                                          : ofCreateWindow(windowSettings);
         // ofInit (called by every window factory) installs OF's handler, which
         // surfaces SIGTERM as a nonzero exit; replace it for the loop below.
         std::signal(SIGTERM, requestTermination);

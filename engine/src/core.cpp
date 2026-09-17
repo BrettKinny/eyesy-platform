@@ -144,6 +144,26 @@ bool decodeOsc(const uint8_t *data, size_t size, OscEvent &result) {
     result = std::move(e);
     return true;
 }
+static void appendOscString(std::vector<uint8_t> &out, const std::string &value) {
+    out.insert(out.end(), value.begin(), value.end());
+    out.push_back(0);
+    while (out.size() % 4)
+        out.push_back(0);
+}
+bool encodeOscInt(const std::string &address, int32_t value, std::vector<uint8_t> &out) {
+    if (address.empty() || address[0] != '/')
+        return false;
+    out.clear();
+    appendOscString(out, address);
+    appendOscString(out, ",i");
+    uint32_t bits;
+    std::memcpy(&bits, &value, sizeof(bits));
+    out.push_back(uint8_t(bits >> 24));
+    out.push_back(uint8_t(bits >> 16));
+    out.push_back(uint8_t(bits >> 8));
+    out.push_back(uint8_t(bits));
+    return true;
+}
 void MidiState::apply(const MidiEvent &e) {
     if (e.type == 0x90 && e.a >= 0 && e.a < 128)
         notes[e.a] = std::clamp(e.b, 0, 127);

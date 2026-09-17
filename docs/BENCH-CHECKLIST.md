@@ -46,6 +46,16 @@ renderer, audio-open failure, or failure to recover the stock service.
 
 ## 3. Physical input and settings
 
+- Confirm the button matrix is quiet before trusting any control test: with the
+  engine idle and nothing pressed, watch `scenes/` for a few minutes. A spurious
+  matrix transition on the save bit arrives as a `/key` 8 press/release pair
+  (the daemon maps matrix bit 3 to key 8 in `keysInput()`), and each pair writes
+  a scene; a *held* one deletes the loaded scene. Measured on the CM3+ spare
+  2026-09-17: bursts of 2-9 spurious saves inside 20 s windows (17 scenes in
+  `scenes/`, several identical), plus a self-toggling OSD. `eyesyhw` restart,
+  temperature, or a marginal ribbon contact are candidates; treat a nonzero
+  spurious rate as a fail for the save/delete gates and for any test that
+  asserts exact scene counts.
 - With the platform preview/test path running, exercise all five knobs, trigger,
   scene save/recall, mode navigation, OSD, and settings changes.
 - Verify soft takeover after scene recall and confirm the selected trigger source

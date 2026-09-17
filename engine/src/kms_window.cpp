@@ -2,6 +2,7 @@
 #include "ofAppRunner.h"
 #include "ofEvents.h"
 #include "ofMainLoop.h"
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <sstream>
@@ -259,20 +260,37 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         }
 
         drmModeModeInfo *chosen = nullptr;
-        for (int i = 0; i < connector->count_modes; ++i) {
-            auto &m = connector->modes[i];
-            if (m.hdisplay == 1280 && m.vdisplay == 720 &&
-                m.vrefresh >= 55 && m.vrefresh <= 65) {
-                chosen = &m;
-                break;
+        // An operator preference (--video-mode, set from the menu) is honored
+        // only when the kernel's EDID list offers a matching mode: blobs are
+        // never constructed here (see docs/HDMI-DISPLAY-ISSUE.md).
+        int wantWidth = 0, wantHeight = 0;
+        double wantRate = 0;
+        if (!modePreference.empty() &&
+            sscanf(modePreference.c_str(), "%dx%d@%lf", &wantWidth, &wantHeight, &wantRate) >= 2)
+            for (int i = 0; i < connector->count_modes; ++i) {
+                auto &m = connector->modes[i];
+                if (m.hdisplay == wantWidth && m.vdisplay == wantHeight &&
+                    (wantRate <= 0 || std::abs(double(m.vrefresh) - wantRate) < 1.5)) {
+                    chosen = &m;
+                    break;
+                }
             }
-        }
+        if (!chosen)
+            for (int i = 0; i < connector->count_modes; ++i) {
+                auto &m = connector->modes[i];
+                if (m.hdisplay == 1280 && m.vdisplay == 720 &&
+                    m.vrefresh >= 55 && m.vrefresh <= 65) {
+                    chosen = &m;
+                    break;
+                }
+            }
         if (!chosen) {
             chosen = &connector->modes[0];
             std::ostringstream note;
-            note << "no 1280x720@55-65 mode in EDID; using modes[0] \"" << chosen->name
-                 << "\" " << chosen->hdisplay << "x" << chosen->vdisplay << "@"
-                 << chosen->vrefresh;
+            if (!modePreference.empty())
+                note << "requested " << modePreference << " is not in the EDID; ";
+            note << "using modes[0] \"" << chosen->name << "\" " << chosen->hdisplay << "x"
+                 << chosen->vdisplay << "@" << chosen->vrefresh;
             kmsModeFallbackNoteValue = note.str();
             fprintf(stderr, "KMS: WARNING mode fallback: %s\n", kmsModeFallbackNoteValue.c_str());
         }
@@ -408,11 +426,16 @@ class KmsWindow final : public ofAppBaseGLESWindow {
     uint32_t connectorId = 0, crtcId = 0;
     drmModeModeInfo mode{};
     std::unordered_map<gbm_bo *, uint32_t> framebuffers;
+
+  public:
+    // Operator-requested output mode ("WxH" or "WxH@R"); empty follows the EDID.
+    std::string modePreference;
 };
 
-std::shared_ptr<ofAppBaseWindow> createKmsWindow() {
+std::shared_ptr<ofAppBaseWindow> createKmsWindow(const std::string &preference) {
     ofInit();
     auto window = std::make_shared<KmsWindow>();
+    window->modePreference = preference;
     ofGetMainLoop()->addWindow(window);
     ofGLESWindowSettings settings;
     settings.setGLESVersion(2);
@@ -420,7 +443,7 @@ std::shared_ptr<ofAppBaseWindow> createKmsWindow() {
     return window;
 }
 #else
-std::shared_ptr<ofAppBaseWindow> createKmsWindow() {
+std::shared_ptr<ofAppBaseWindow> createKmsWindow(const std::string &) {
     throw std::runtime_error("KMS scanout window requires TARGET_LINUX + TARGET_OPENGLES");
 }
 

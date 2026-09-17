@@ -23,6 +23,8 @@ enum Operation {
     RANDOM,
     PALETTE,
     PALETTE_DEFINE,
+    PALETTE_FG,
+    PALETTE_BG,
     LFO,
     FBO_NEW,
     FBO_BEGIN,
@@ -244,6 +246,13 @@ bool ModeRuntime::load(const std::filesystem::path &folder, int w, int h) {
     lua_newtable(lua);
     number(lua, "width", w);
     number(lua, "height", h);
+    for (auto entry : {std::make_pair("palette_fg", PALETTE_FG),
+                       std::make_pair("palette_bg", PALETTE_BG)}) {
+        lua_pushlightuserdata(lua, this);
+        lua_pushinteger(lua, entry.second);
+        lua_pushcclosure(lua, dispatch, 2);
+        lua_setfield(lua, -2, entry.first);
+    }
     contextRef = luaL_ref(lua, LUA_REGISTRYINDEX);
     if (luaL_loadfile(lua, (directory / "main.lua").c_str()) || lua_pcall(lua, 0, 1, 0)) {
         error = lua_tostring(lua, -1);
@@ -297,7 +306,7 @@ bool ModeRuntime::call(const char *method, double dt) {
 }
 void ModeRuntime::snapshot(double time, double dt, const std::array<double, 5> &knobs,
                            const eyesy::Analysis &a, const eyesy::MidiState &midi, bool trig,
-                           const std::vector<eyesy::MidiEvent> &events) {
+                           bool autoClear, const std::vector<eyesy::MidiEvent> &events) {
     if (!lua)
         return;
     if (!audioPixels.isAllocated())
@@ -312,6 +321,8 @@ void ModeRuntime::snapshot(double time, double dt, const std::array<double, 5> &
     number(lua, "dt", dt);
     lua_pushboolean(lua, trig);
     lua_setfield(lua, -2, "trigger");
+    lua_pushboolean(lua, autoClear);
+    lua_setfield(lua, -2, "auto_clear");
     array(lua, knobs);
     lua_setfield(lua, -2, "knobs");
     lua_newtable(lua);
@@ -533,6 +544,18 @@ int ModeRuntime::invoke(lua_State *l, int op) {
                 lua_pushnumber(l, stops[a][i] * (1 - t) + stops[a + 1][i] * t);
         }
         return 3;
+    case PALETTE_FG:
+    case PALETTE_BG: {
+        std::array<float, 3> color{1, 1, 1};
+        if (palettes_global) {
+            double phase = n(1);
+            color = op == PALETTE_FG ? palettes_global->sampleFg(phase)
+                                     : palettes_global->sampleBg(phase);
+        }
+        for (float channel : color)
+            lua_pushnumber(l, channel);
+        return 3;
+    }
     case PALETTE_DEFINE: {
         std::string name = string(1, "palette name");
         table(2, "palette stops");

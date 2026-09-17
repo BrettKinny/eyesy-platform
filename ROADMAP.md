@@ -47,14 +47,18 @@ resolves as:
 
 **EYESY OS v3 parity** — [the parity plan](docs/EYESY-OS-V3-PARITY-PLAN.md).
 
-This engine replaces the stock 30 fps CPU rasterizer with a 60 fps GLES2 engine,
-but the stock *instrument interface* was never ported: trigger-button audio
-synthesis, the shift-button shortcuts, the knob sequencer, the rich OSD, the
-nine-screen menu, `auto_clear` exposed to Lua, hardware LED feedback, and the USB
-storage override. That gap is what stands between a faster renderer and a
-replacement instrument, and closing it is the next milestone. Scope, five
-phases and the porting rule (no sweeping draw-idiom rewrite while the scene
-freeze is active) are in the plan.
+All five phases are implemented and verified: trigger-button audio synthesis,
+the shift-button shortcuts (palette cycling, in-place scene update, hold-to-delete,
+gain takeover), the key repeater, the knob sequencer with scene persistence,
+`ctx.auto_clear` with the two-mode persist pilot, the stock-layout instrument HUD,
+the cosine palette system, and a fullscreen configuration menu. Hardware receipts
+(captured off the HDMI dongle) and the measured corrections to the plan are in
+`docs/EYESY-OS-V3-PARITY-PLAN.md` §7 and
+`evidence/reports/os3-parity-2026-09-17/`.
+
+Still open, deliberately: the fleet-wide persist veil rewrite (waits for the
+next scene-library pass), USB storage override, and stock's WiFi / MIDI-PC-mapping /
+backup / log menu screens (the platform owns those through `eyesyctl`).
 
 ## Next work, in order
 

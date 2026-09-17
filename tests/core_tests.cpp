@@ -1,5 +1,7 @@
 #include "core.h"
 #include "input_workflow.h"
+#include "knob_sequencer.h"
+#include "palette_manager.h"
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -59,6 +61,18 @@ int main() {
     CHECK(event.integers[0] == 10);
     for (size_t n = 0; n < sizeof(osc); ++n)
         CHECK(!decodeOsc(osc, n, event));
+    std::vector<uint8_t> led;
+    CHECK(encodeOscInt("/led", 7, led));
+    CHECK(led.size() == 16 && led[4] == 0 && led[8] == ',' && led[9] == 'i' && led[11] == 0 &&
+          led[15] == 7);
+    CHECK(!encodeOscInt("led", 7, led));
+    for (int32_t code : {7, 6, 1, 3}) {
+        CHECK(encodeOscInt("/led", code, led));
+        OscEvent decoded;
+        CHECK(decodeOsc(led.data(), led.size(), decoded));
+        CHECK(decoded.address == "/led" && decoded.integers.size() == 1 &&
+              decoded.integers[0] == code);
+    }
     MidiState m;
     m.apply({0x90, 0, 60, 100});
     CHECK(m.notes[60] == 100);
@@ -80,5 +94,75 @@ int main() {
     std::string error;
     CHECK(!validReplayEvent({0, "knob", 6, 0, 0, 0, 0, 0, .5}, error));
     CHECK(!error.empty());
+    using Seq = eyesy::KnobSequencer;
+    Seq seq;
+    std::array<double, 5> k{.5, .5, .5, .5, .5};
+    CHECK(seq.state() == Seq::State::Stopped);
+    CHECK(seq.run(k) == k);
+    seq.recordKey(k);
+    CHECK(seq.state() == Seq::State::Enabled && seq.size() == 0);
+    CHECK(seq.run(k) == k && seq.state() == Seq::State::Enabled);
+    k[2] += .004;
+    seq.run(k);
+    CHECK(seq.state() == Seq::State::Enabled);
+    k[2] += .002;
+    seq.run(k);
+    CHECK(seq.state() == Seq::State::Recording && seq.size() == 0);
+    k = {.1, .2, .3, .4, .5};
+    CHECK(seq.run(k) == k && seq.size() == 1);
+    k = {.2, .3, .4, .5, .6};
+    seq.run(k);
+    CHECK(seq.size() == 2);
+    seq.playStopKey();
+    CHECK(seq.state() == Seq::State::Playing);
+    std::array<double, 5> ignored{9, 9, 9, 9, 9};
+    const std::array<double, 5> first{.1, .2, .3, .4, .5};
+    const std::array<double, 5> second{.2, .3, .4, .5, .6};
+    CHECK(seq.run(ignored) == first);
+    CHECK(seq.run(ignored) == second);
+    CHECK(seq.run(ignored) == first);
+    seq.playStopKey();
+    CHECK(seq.state() == Seq::State::Stopped && seq.size() == 2);
+    seq.recordKey(ignored);
+    CHECK(seq.state() == Seq::State::Enabled);
+    seq.playStopKey();
+    CHECK(seq.state() == Seq::State::Stopped);
+    Seq full;
+    full.recordEnable(ignored);
+    ignored[4] += .01;
+    full.run(ignored);
+    for (int i = 0; i < 1000; ++i)
+        full.run(ignored);
+    CHECK(full.state() == Seq::State::Playing && full.size() == 1000);
+    Seq loaded;
+    CHECK(!loaded.load({}, true));
+    CHECK(loaded.load(seq.sequence(), true) && loaded.playing() && loaded.size() == 2);
+    loaded.clear();
+    CHECK(loaded.state() == Seq::State::Stopped && loaded.size() == 0);
+    eyesy::PaletteManager palettes;
+    CHECK(palettes.size() == 43);
+    auto original = palettes.sampleFg(0);
+    CHECK(original[0] == 0 && original[1] == 0 && original[2] == 0);
+    auto originalTop = palettes.sampleBg(1);
+    CHECK(std::abs(originalTop[0] - 1) < 1e-6 && std::abs(originalTop[2] - 1) < 1e-6);
+    palettes.setFg(2);
+    auto redWhite = palettes.sampleFg(0);
+    CHECK(std::abs(redWhite[0] - 1) < 1e-6);
+    CHECK(std::abs(redWhite[1] - .0088565) < 1e-4 && std::abs(redWhite[1] - redWhite[2]) < 1e-6);
+    palettes.nextFg();
+    CHECK(palettes.fg() == 3 and palettes.bg() == 0);
+    palettes.prevFg();
+    CHECK(palettes.fg() == 2);
+    palettes.setFg(0);
+    palettes.prevFg();
+    CHECK(palettes.fg() == palettes.size() - 1);
+    palettes.nextFg();
+    CHECK(palettes.fg() == 0);
+    palettes.nextBg();
+    CHECK(palettes.bg() == 1);
+    palettes.setFg(999);
+    CHECK(palettes.fg() == 999 % palettes.size());
+    CHECK(palettes.preview(true).size() == eyesy::PaletteManager::previewStops);
+    CHECK(!palettes.replace({}));
     std::cout << "audio, FFT, trigger, pickup, OSC, MIDI checks passed\n";
 }

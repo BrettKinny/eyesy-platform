@@ -15,6 +15,8 @@ class AudioInput : public ofBaseSoundInput {
     std::atomic<bool> running{false};
     std::atomic<double> sampleRate{48000};
     std::atomic<float> gain{1};
+    std::atomic<bool> synthesizing{false};
+    double undulatePhase = 0;
     std::shared_ptr<eyesy::WavFile> wav;
     std::mutex mutex;
     eyesy::Analysis latest;
@@ -27,6 +29,10 @@ class AudioInput : public ofBaseSoundInput {
     void setGain(float value) {
         gain = std::clamp(value, 0.0f, 4.0f);
     }
+    // Held trigger button: replace the input with the stock undulating test tone.
+    void setSynthesizing(bool value) {
+        synthesizing = value;
+    }
     void stop();
     void audioIn(ofSoundBuffer &buffer) override;
     eyesy::Analysis snapshot();
@@ -35,6 +41,9 @@ class AudioInput : public ofBaseSoundInput {
     }
     bool isSynthetic() const {
         return synthetic;
+    }
+    bool isSynthesizing() const {
+        return synthesizing.load();
     }
     ~AudioInput() {
         stop();

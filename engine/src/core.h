@@ -75,6 +75,7 @@ struct OscEvent {
     std::string text;
 };
 bool decodeOsc(const uint8_t *data, size_t size, OscEvent &result);
+bool encodeOscInt(const std::string &address, int32_t value, std::vector<uint8_t> &out);
 struct MidiEvent {
     int type = 0, channel = 0, a = 0, b = 0;
     double timestamp = 0;

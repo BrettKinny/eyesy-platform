@@ -1,6 +1,7 @@
 #pragma once
 #include "core.h"
 #include "ofMain.h"
+#include "palette_manager.h"
 #include <filesystem>
 #include <lua.hpp>
 #include <map>
@@ -11,11 +12,15 @@ class ModeRuntime {
     std::string error;
     std::filesystem::path directory;
     std::map<std::string, eyesy::Parameter> parameters;
+    // Global FG/BG palettes exposed to modes as ctx.palette_fg / ctx.palette_bg.
+    void setPalettes(const eyesy::PaletteManager *value) {
+        palettes_global = value;
+    }
     bool load(const std::filesystem::path &folder, int width, int height);
     bool call(const char *method, double dt = 0);
     void snapshot(double time, double dt, const std::array<double, 5> &knobs,
                   const eyesy::Analysis &audio, const eyesy::MidiState &midi, bool trigger,
-                  const std::vector<eyesy::MidiEvent> &events = {});
+                  bool autoClear, const std::vector<eyesy::MidiEvent> &events = {});
     ofJson save();
     bool restore(const ofJson &state);
     bool reloadShaders();
@@ -44,6 +49,7 @@ class ModeRuntime {
     std::map<int, std::filesystem::path> shaderFiles;
     std::map<int, std::shared_ptr<ofVboMesh>> meshes;
     std::map<std::string, std::vector<std::array<float, 3>>> palettes;
+    const eyesy::PaletteManager *palettes_global = nullptr;
     std::vector<int> targetStack;
     static int dispatch(lua_State *L);
     int invoke(lua_State *L, int operation);
