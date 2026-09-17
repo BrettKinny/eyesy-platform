@@ -7,8 +7,9 @@ the evidence lives.
 **Where evidence lives (2026-09-17 split).** The scene catalog and its material
 moved out of this repo into `eyesy-modes-bespoke`, `eyesy-modes-milkdrop` and
 `eyesy-modes-factory`. Paths written as
-`local/reports/...` or `docs/research/...` in the dated entries below were
-correct when the entry was written. Scene material now resolves as:
+`local/reports/...`, `local/<run>/...` or `docs/research/...` in the dated
+entries below were correct when the entry was written. Scene material now
+resolves as:
 
 - design docs -> `eyesy-modes-bespoke/docs/` (bardo-night briefs, scene-library
   blueprint, batch-2 plan), `eyesy-modes-milkdrop/docs/trackB-plan/`
