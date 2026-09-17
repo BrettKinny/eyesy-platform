@@ -81,6 +81,20 @@ def status():
     return {}
 
 
+def ensure_stopped():
+    # This bench unit's button matrix emits spurious key events, which can leave
+    # the sequencer armed; converge on a known state before asserting on it.
+    keys(10, 0); keys(2, 0)
+    for _ in range(6):
+        time.sleep(1.2)              # status.json is rewritten once a second
+        state = status().get('sequencer')
+        if state == 'stopped':
+            return
+        print('sequencer was %s' % state)
+        combo(9)
+    raise SystemExit('sequencer never reached stopped')
+
+
 def wait_for(predicate, label, timeout=5):
     end = time.monotonic() + timeout
     state = {}
@@ -205,7 +219,13 @@ def main():
         }
         print(f'{step}: {report["steps"][step]["status"]}')
 
-    # 0. Baseline: the released instrument must be idle and rendering.
+    # 0. Baseline: the released instrument must be idle and rendering. An
+    # aborted run (or a spurious matrix event) can leave the sequencer armed,
+    # so converge on a known state first.
+    device.json(PRELUDE + '''
+ensure_stopped()
+print(json.dumps({'sequencer': status().get('sequencer')}))
+''')
     baseline = device.wait(
         lambda s: s.get('mode') == 'starter' and s.get('menu_screen') == -1
         and s.get('sequencer') == 'stopped' and s.get('fps', 0) > 40, 'idle baseline')
@@ -367,6 +387,7 @@ print(json.dumps({'screens': screens, 'config': json.load(open(STORE + '/config.
     record('10-menu-screens', device.status())
 
     diagnostics = device.json(PRELUDE + '''
+ensure_stopped()
 combo(1)
 wait_for(lambda s: s.get('menu_screen') == 0, 'menu home')
 for _ in range(3):
@@ -412,6 +433,7 @@ print(json.dumps(json.load(open(STORE + '/config.json'))))
     led = device.json(PRELUDE + '''
 import subprocess
 
+ensure_stopped()
 run = lambda args: subprocess.run(args, check=False, capture_output=True)
 run(['sudo', '-n', 'systemctl', 'stop', 'eyesyhw'])
 try:
