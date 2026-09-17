@@ -305,3 +305,64 @@ success (tmpfs was filling).
 Research: BeatDrop fork (OfficialIncubo) portables assessed in
 docs/research/BeatDropForkPorting.md — FFT/wave shader variables ranked
 first for a post-v1 engine round.
+
+## 2026-09-17 (dawn): bardo night — nine scenes
+
+Nine scenes built in one night and catalog-verified together at dawn. Every
+one is a single Lua mode plus a single fragment pass — no new engine
+machinery, no new pipeline pattern — and all nine pass
+`tools/scene_verify.py` at 300 frames (one sweep, nine `--mode` flags:
+9/9 verdict pass, exit 0, 16 runs per mode — base, base2, knob mid/max pairs,
+audio quiet/loud/freq, and a MIDI note-on — plus a trigger-assisted 17th for
+`koan-terminal`; byte-identical `base` vs `base2` determinism everywhere).
+
+| scene | what it is | llvmpipe p50 |
+| --- | --- | --- |
+| mandala-bardo | Tibetan sand-mandala construction: petal rings grown outward from each base circle, breathing bindu, chalk-guideline fold seams | 16.65 ms |
+| temple-core | TempleOS shrine corridor in exactly sixteen CGA colours, 320x180 ink target upscaled | 16.67 ms |
+| buddha-1kb | the 1k-intro discipline literal: three cos terms = a counter-rotating standing wave, one formula, no mesh | 16.67 ms |
+| wireframe-bardo | retro-CGI chrome idol: 13-vertex icosahedron → 30 screen-space segments, exact hidden-line removal | 16.66 ms |
+| slit-scan-vortex | Belson/Whitney "beings of light": logarithmic-spiral filament layers counter-rotating into a void | 16.65 ms |
+| copper-bar-hymn | Amiga copper bars as liturgy, with a 5x7 dot-matrix scrolltext, analytic in `y` only | 16.66 ms |
+| koan-terminal | teletype dharma machine: koans struck out on a long-persistence phosphor tube, decaying to empty glass | 16.64 ms |
+| tesseract-yidam | the 8-cell rotated in two commuting 4D planes, projected 4D→3D→2D as luminous wires | 16.67 ms |
+| phosphor-seance | spirit photography as video feedback: the phosphor field restamped by blurred face sigils | 16.66 ms |
+
+Verification method and evidence: `local/verify-catalog-bardo-dawn/`
+(whole-sweep `summary.json` + per-mode `<NN-mode>/summary.json`,
+`contact-sheet.png`, `run-*/{replay.json,engine.log,report.json,grabs/}`),
+run in `localhost/eyesy-build:bookworm` with `--xvfb`. Build reports,
+design rationale, and per-scene hashes: `local/reports/bardo-night/01..09-*.md`
+and `dawn-checkpoint.md`. Each scene's first-pass evidence dir
+(`local/bardo-verify-01/00-mandala-bardo/`, `local/verify-temple/`,
+`local/verify-buddha1kb/`, and the per-scene `scene0N-verify/` dirs) is
+unchanged and listed in its report.
+
+**The p50 column is llvmpipe software GL inside the build container, not the
+VC4 device.** It is a same-machine regression baseline, not a performance
+claim: no device tier is asserted for any of the nine until the on-device
+benchmark pass (`tools/benchmark.py`) runs per mode. The structural
+expectation — one 640x360 (or 320x180) fragment pass, ≤ 5 texture taps, one
+upscale, no iteration — puts them at or below the cost of shipped tier A/B
+scenes, but that is untested on hardware.
+
+Facts recorded for the library (also in `docs/SCENE-LIBRARY.md`): knobs rest
+at 0.5, because the engine writes the knob snapshot over every declared
+`e.param` default each frame — the verifier's `base` state is one *extreme*,
+not the resting look; `buddha-1kb`, `wireframe-bardo`, `slit-scan-vortex`,
+`copper-bar-hymn`, `koan-terminal` and `phosphor-seance` deliberately occupy
+non-contract knob slots, documented in each mode header; palette names added
+are `bardo`, `temple`, `buddha1k`, `chrome`, `belson`, `copper`, `yidam` and
+`seance`, and `koan-terminal` re-defines the `phosphor` name the shipped
+phosphor mode already uses (a later `define_palette` overwrites the entry and
+the palette budget only counts new names, so mode switching re-defines it
+correctly; no duplicate-name error exists). Cyclic hue ramps legitimately give
+a zero `knob4-max` A/B diff in `mandala-bardo` and `phosphor-seance` while
+`knob4-mid` stays large.
+
+Docs cutover: README's mode list is now 37 named modes — the nine bardo scenes
+plus `milkdrop`, which the list had been missing since the Track B release —
+and `docs/SCENE-LIBRARY.md` carries the nine knob maps. `./eyesyctl test`
+passed unchanged after the cutover (ctest 5/5, 120 Python tests OK), so no
+catalog-coupled test needed fixing. No commits were made.
+

@@ -28,12 +28,17 @@ a screenshot. Edit Lua or fragment shaders to hot-reload them.
 saves. On the device, Shift+OSD opens settings, Scene buttons select the row, Mode
 buttons change the value, and Save persists it.
 
-Modes (27): `starter`, `stereo-mesh`, `shader`, `feedback`, `aurora`,
+Modes (37): `starter`, `stereo-mesh`, `shader`, `feedback`, `aurora`,
 `prism-mesh`, `echo-feedback`, `phosphor`, `kali-bloom`, `chladni-plate`,
 `outrun-grid`, `rutt-etra`, `plasma-flow`, `whitney-kaleido`, `lorenz-trail`,
 `reaction-diffusion`, `ascii-wave`, `radar-sweep`, `riley-grating`,
 `lyapunov-field`, `flow-field-drift`, `girih-stars`, `penrose-lattice`,
-`facet-terrain`, `wireframe-room`, `complement-flash`, and `textmode-field`.
+`facet-terrain`, `wireframe-room`, `complement-flash`, `textmode-field`,
+`milkdrop` (one engine, twelve presets), and the nine bardo-night scenes
+`mandala-bardo`, `temple-core`, `buddha-1kb`, `wireframe-bardo`,
+`slit-scan-vortex`, `copper-bar-hymn`, `koan-terminal`, `tesseract-yidam`,
+and `phosphor-seance` (all nine catalog-verified at 300 frames at dawn; the
+llvmpipe caveat is in [implementation status](docs/STATUS.md)).
 See [API](docs/API.md), [creative modes](docs/CREATIVE.md), and
 [scene library](docs/SCENE-LIBRARY.md).
 Use [WAV input and event recording](docs/INPUT-WORKFLOW.md) for repeatable sessions.
