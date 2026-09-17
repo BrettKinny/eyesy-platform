@@ -1,0 +1,11 @@
+# `modes/` is an assembly directory, not a source tree.
+#
+# The engine repo owns `starter` (the contract baseline the deployed service
+# starts on). Every other mode arrives here from a sibling mode-pack
+# repository via `./eyesyctl modes sync` -- a collection of mode folders lives
+# in its own repo, the way a PatchStorage upload and `/sdcard/Modes` work.
+*
+!.gitignore
+!README.md
+!starter/
+!starter/**

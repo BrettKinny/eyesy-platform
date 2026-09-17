@@ -3,10 +3,14 @@
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path('/workspace')
 ENGINE = ROOT / 'engine/bin/engine'
+
+sys.path.insert(0, str(ROOT))
+from tools import mode_packs  # noqa: E402  (importable only once ROOT is known)
 
 def run(mode, storage, frames=4, expected=0):
     report = storage / 'report.json'
@@ -72,7 +76,10 @@ return {api_version=1,
         assert_error(scratch, scratch, 'target-cap', targets, 'target exceeds')
 
         for name in ('aurora', 'prism-mesh', 'echo-feedback'):
-            report = run(ROOT / 'modes' / name, scratch / ('mode-' + name), frames=8)
+            folder = mode_packs.find(name)
+            if folder is None:
+                raise AssertionError(f'{name}: pack not mounted (EYESY_MODE_PACKS unset?)')
+            report = run(folder, scratch / ('mode-' + name), frames=8)
             assert not report['error'] and report['mode_errors'] == 0, report
             assert report['resources'] <= 4, report['resources']
     print('Creative tests passed: palette interpolation, compatibility, validation, cap, and modes')

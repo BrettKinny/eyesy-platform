@@ -11,11 +11,15 @@ Run directly (python3 tests/test_milkdrop_evaluator.py) or via unittest/pytest.
 import math
 import shutil
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MILKDROP = ROOT / 'modes' / 'milkdrop'
+sys.path.insert(0, str(ROOT))
+from tools import mode_packs  # noqa: E402  (importable only once ROOT is known)
+
+MILKDROP = mode_packs.find('milkdrop')
 
 
 def _find_lua():
@@ -336,6 +340,8 @@ class LuaCase(unittest.TestCase):
     def setUpClass(cls):
         if LUA is None:
             raise unittest.SkipTest('no Lua interpreter (luajit/lua5.1/lua) on PATH')
+        if MILKDROP is None:
+            raise unittest.SkipTest('eyesy-modes-milkdrop pack not present beside this repo')
 
     def check(self, code, expected, env=None):
         got = self.results(code, env)

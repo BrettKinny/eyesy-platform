@@ -139,7 +139,7 @@ the evidence lives.
 
 - 2026-09-16 (later): clean-checkout re-bench. Curated clean-checkout release
   `dev-b5cf00d32b6c` built (28-mode catalog verified in-package and on
-  device).
+  device; the fleet has since grown to 37 modes with the bardo night).
   Headless re-bench on real GPU: starter 60.00, stereo-mesh 60.00,
   prism-mesh and lyapunov-field also measured. NEW BOOT FACT (reproduced both
   ways, byte-identical binary): engine started while the sink is absent

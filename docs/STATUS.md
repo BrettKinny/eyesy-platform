@@ -372,8 +372,10 @@ The nine bardo-night scenes met the on-device tier gate only after two
 optimization rounds. Release `dev-f2c914333761` is deployed transactionally
 (`previous.json` → `dev-b5cf00d32b6c`), health passed, 60.3 fps on the KMS
 path, zero errors, and the device carries all 37 modes. `modes/zzprobe`
-(scratch diagnostic, "delete after use") is excluded from releases; it stays
-in the repo.
+(scratch diagnostic, "delete after use") carries a `.eyesy-no-ship` marker in
+`eyesy-modes-bespoke`, so `eyesyctl package` excludes it from releases and
+reports it as excluded. Before the mode-pack split the documented exclusion was
+not implemented and the probe shipped in every release.
 
 Device tier (VC4 V3D 2.1, 600 frames offscreen, live platform on
 `stereo-mesh` as GPU neighbour, evidence `local/reports/bardo-device*/`):

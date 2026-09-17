@@ -17,6 +17,8 @@ import tempfile
 import urllib.parse
 import urllib.request
 
+from tools import mode_packs
+
 ROOT = Path(__file__).resolve().parent
 IMAGE = "localhost/eyesy-build:bookworm"
 
@@ -50,6 +52,13 @@ def container(command, graphical=False, arm=False):
                  "-v", "/tmp/.X11-unix:/tmp/.X11-unix:ro"]
         if os.environ.get("XAUTHORITY"):
             args += ["-e", "XAUTHORITY=/tmp/eyesy-xauthority", "-v", f"{os.environ['XAUTHORITY']}:/tmp/eyesy-xauthority:ro"]
+    # Mode packs are sibling repos, so container runs need them mounted and
+    # declared; `mode_packs` reads EYESY_MODE_PACKS ahead of the sibling glob.
+    packs = [pack for pack in mode_packs.pack_roots() if pack.is_dir()]
+    if packs:
+        args += ["-e", "EYESY_MODE_PACKS=" + ":".join(f"/packs/{pack.name}" for pack in packs)]
+        for pack in packs:
+            args += ["-v", f"{pack}:/packs/{pack.name}:ro"]
     return run(args + ["localhost/eyesy-build:armhf" if arm else IMAGE] + command)
 
 def doctor(host=None):
@@ -106,16 +115,25 @@ def package(arm=False):
     expected = 'armhf' if arm else 'amd64'
     if architecture != expected:
         raise RuntimeError(f"Expected {expected} artifact, found: {info}")
-    for path in (ROOT / 'modes').rglob('*'):
+    modes_root = ROOT / 'modes'
+    for path in modes_root.rglob('*'):
         if path.is_symlink():
             raise RuntimeError(f"Package modes must not contain symlinks: {path}")
+    catalog = sorted(p for p in modes_root.iterdir()
+                     if p.is_dir() and (p / 'main.lua').is_file())
+    shipped = [p for p in catalog if mode_packs.shippable(p)]
+    excluded = [p.name for p in catalog if not mode_packs.shippable(p)]
+    if not shipped:
+        raise RuntimeError("No modes assembled; run `./eyesyctl modes sync` first")
     output = ROOT / "dist"
     output.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="eyesy-package-") as temp:
         stage = Path(temp) / 'release'
         stage.mkdir()
         shutil.copy2(binary, stage / "eyesy-engine")
-        shutil.copytree(ROOT / "modes", stage / "modes")
+        (stage / "modes").mkdir()
+        for mode in shipped:
+            shutil.copytree(mode, stage / "modes" / mode.name)
         shutil.copy2(ROOT / "dependencies.lock.json", stage)
         provenance = ROOT / 'build' / f'provenance-{architecture}.json'
         if arm and not provenance.is_file():
@@ -170,6 +188,9 @@ def package(arm=False):
                 with tarfile.open(fileobj=compressed, mode='w', format=tarfile.PAX_FORMAT) as tar:
                     tar.add(stage, arcname=release, filter=reproducible)
         print(f"{target}\nSHA256 {digest(target)}\nHardware validated: false")
+    print(f"Modes shipped ({len(shipped)}): " + ', '.join(mode.name for mode in shipped))
+    if excluded:
+        print('Modes excluded by ' + mode_packs.NO_SHIP + ': ' + ', '.join(excluded))
 
 def ssh_options(args):
     if not re.fullmatch(r'[a-zA-Z0-9_.:-]+', args.host): raise RuntimeError('Invalid hostname')
@@ -225,7 +246,10 @@ def main():
         if name == 'rollback': p.add_argument('--target', choices=['stock', 'previous'], default='stock')
         if name == 'deploy': p.add_argument('archive', type=Path)
     p = sub.add_parser("preview"); p.add_argument("mode", nargs="?", default="starter"); p.add_argument("--frames", type=int, default=0); p.add_argument("--headless", action="store_true"); p.add_argument("--native", action="store_true"); p.add_argument("--probe", action="store_true"); p.add_argument("--switch-every", type=int, default=0); p.add_argument("--replay", type=Path); p.add_argument("--audio-wav", type=Path); p.add_argument("--record", type=Path); p.add_argument("--record-limit", type=int, default=10000)
-    p = sub.add_parser("new-mode"); p.add_argument("name")
+    p = sub.add_parser("new-mode"); p.add_argument("name"); p.add_argument("--pack", help="Pack repo to author in (default: the untracked modes/ assembly dir)")
+    p = sub.add_parser("modes", help="Assemble or inspect the mode pack repos")
+    p.add_argument("action", choices=["sync", "list"])
+    p.add_argument("--pack", action="append", default=[], help="Pack root (repeatable); default: every sibling eyesy-modes-* repo")
     for name in ("status", "logs"):
         p = sub.add_parser(name); p.add_argument("--host", required=True); p.add_argument('--known-hosts', type=Path)
     args = parser.parse_args()
@@ -264,10 +288,16 @@ def main():
         if 'not found' in output: raise RuntimeError(output)
         print('Native runtime ready. Run eyesyctl preview shader --native.')
     elif args.command == "preview":
-        folder = (ROOT / "modes" / args.mode).resolve()
-        if not folder.is_relative_to(ROOT / "modes") or not folder.is_dir():
-            raise RuntimeError("Mode must exist inside modes/")
-        command = ["/workspace/engine/bin/engine", "--mode", f"/workspace/modes/{args.mode}", "--storage", "/workspace/local/preview", "--frames", str(args.frames), "--report", f"/workspace/local/reports/{args.mode}.json", "--switch-every", str(args.switch_every)]
+        folder = mode_packs.find(args.mode)
+        if folder is None:
+            raise RuntimeError(f"Unknown mode {args.mode!r}; run `./eyesyctl modes sync` to assemble the packs")
+        if folder.is_relative_to(ROOT / "modes"):
+            engine_mode = "/workspace/modes/" + args.mode
+            host_mode = str(ROOT / "modes" / args.mode)
+        else:
+            engine_mode = f"/packs/{folder.parent.name}/{args.mode}"
+            host_mode = str(folder)
+        command = ["/workspace/engine/bin/engine", "--mode", engine_mode, "--storage", "/workspace/local/preview", "--frames", str(args.frames), "--report", f"/workspace/local/reports/{args.mode}.json", "--switch-every", str(args.switch_every)]
         if args.probe: command += ["--probe"]
         if args.replay:
             replay = args.replay.resolve().relative_to(ROOT)
@@ -285,14 +315,38 @@ def main():
         if args.native:
             if args.headless: raise RuntimeError("Choose native or headless, not both")
             command = [part.replace('/workspace', str(ROOT)) for part in command]
+            command = [host_mode if part == engine_mode else part for part in command]
             env = os.environ.copy(); env['LD_LIBRARY_PATH'] = f'{ROOT}/local/runtime:{ROOT}/engine/bin'
             run(command, env=env)
         else: container(command, graphical=not args.headless)
     elif args.command == "new-mode":
         if not args.name or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-_" for c in args.name):
             raise RuntimeError("Use lowercase letters, digits, hyphens or underscores")
-        shutil.copytree(ROOT / "modes/starter", ROOT / "modes" / args.name)
-        print(ROOT / "modes" / args.name)
+        destination = Path(args.pack).expanduser().resolve() if args.pack else ROOT / "modes"
+        if not destination.is_dir():
+            raise RuntimeError(f"No such pack directory: {destination}")
+        target = destination / args.name
+        if target.exists():
+            raise RuntimeError(f"Already exists: {target}")
+        shutil.copytree(ROOT / "modes/starter", target)
+        print(target)
+        if not args.pack:
+            print("modes/ is untracked assembly; pass --pack to author in a pack repo, or move "
+                  "this folder into one before it is lost to a later `./eyesyctl modes sync`",
+                  file=sys.stderr)
+    elif args.command == "modes":
+        if args.action == "list":
+            roots = mode_packs.pack_roots(args.pack)
+            if not roots:
+                print("No mode packs found (expected sibling `eyesy-modes-*` repos)")
+            for root in roots:
+                found = mode_packs.discover(root)
+                print(f"{root}: {len(found)} modes")
+                for name in sorted(found):
+                    marker = '' if mode_packs.shippable(found[name]) else f'  [{mode_packs.NO_SHIP}]'
+                    print(f"  {name}{marker}")
+        else:
+            print(json.dumps(mode_packs.sync(args.pack), indent=2))
     elif args.command == "package": package(args.arm)
     elif args.command == 'headless-test':
         if args.frames < 1 or args.frames > 3600: raise RuntimeError('--frames must be 1..3600')

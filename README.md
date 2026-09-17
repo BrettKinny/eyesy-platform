@@ -12,7 +12,6 @@ openFrameworks rendering, stereo analysis, and isolated Bookworm builds.
 ./eyesyctl preview feedback --headless --frames 120
 ./eyesyctl prepare-native
 ./eyesyctl preview shader --native
-./eyesyctl new-mode my-mode
 ```
 
 The SDK archives are checksummed. Build dependencies live in rootless Podman
@@ -28,17 +27,29 @@ a screenshot. Edit Lua or fragment shaders to hot-reload them.
 saves. On the device, Shift+OSD opens settings, Scene buttons select the row, Mode
 buttons change the value, and Save persists it.
 
-Modes (37): `starter`, `stereo-mesh`, `shader`, `feedback`, `aurora`,
-`prism-mesh`, `echo-feedback`, `phosphor`, `kali-bloom`, `chladni-plate`,
-`outrun-grid`, `rutt-etra`, `plasma-flow`, `whitney-kaleido`, `lorenz-trail`,
-`reaction-diffusion`, `ascii-wave`, `radar-sweep`, `riley-grating`,
-`lyapunov-field`, `flow-field-drift`, `girih-stars`, `penrose-lattice`,
-`facet-terrain`, `wireframe-room`, `complement-flash`, `textmode-field`,
-`milkdrop` (one engine, twelve presets), and the nine bardo-night scenes
-`mandala-bardo`, `temple-core`, `buddha-1kb`, `wireframe-bardo`,
-`slit-scan-vortex`, `copper-bar-hymn`, `koan-terminal`, `tesseract-yidam`,
-and `phosphor-seance` (all nine device-tier qualified on VC4 and shipped in
-release `dev-f2c914333761`; history in [implementation status](docs/STATUS.md)).
+## Modes
+
+The engine repo owns one mode, `starter` — the contract baseline the deployed
+service starts on. Every other mode lives in its own repo, each a flat
+collection of mode folders (the shape a PatchStorage upload and the stock
+`/sdcard/Modes` directory use):
+
+| Repo | Contents |
+| --- | --- |
+| `eyesy-modes-bespoke` | 36 original and derived scenes: the platform scenes, batches 1–2, the nine bardo-night scenes, and the `zzprobe` diagnostic |
+| `eyesy-modes-milkdrop` | the MilkDrop preset engine and its 12 presets |
+| `eyesy-modes-factory` | ports of the stock Critter & Guitari library (none ported yet) |
+
+```sh
+./eyesyctl modes sync     # assemble every pack into modes/ (required before package)
+./eyesyctl modes list     # what the packs hold, and what is refused to ship
+./eyesyctl new-mode my-scene --pack ~/dev/eyesy-modes-bespoke
+```
+
+`preview` and `test` resolve modes across the packs directly, so only packaging
+needs a sync. The shipped catalog is 37 modes; all nine bardo scenes are
+device-tier qualified on VC4 (release `dev-f2c914333761`, history in
+[implementation status](docs/STATUS.md)).
 See [API](docs/API.md), [creative modes](docs/CREATIVE.md), and
 [scene library](docs/SCENE-LIBRARY.md).
 Use [WAV input and event recording](docs/INPUT-WORKFLOW.md) for repeatable sessions.

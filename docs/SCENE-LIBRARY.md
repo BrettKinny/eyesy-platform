@@ -3,6 +3,11 @@
 The library-wide contract every scene (engine or variant) must follow.
 Rationale and family taxonomy: `local/reports/scene-library-blueprint/BLUEPRINT.md`.
 
+Mode source lives in the mode-pack repos, not in this repo: the engine repo owns
+`starter` only, and `./eyesyctl modes sync` assembles the packs into `modes/` for
+the packager. `./eyesyctl modes list` reports what the packs hold. See
+`modes/README.md`.
+
 ## Knob contract (all scenes)
 
 | Knob | Meaning |
@@ -154,7 +159,9 @@ Shared facts from the night worth carrying forward:
 ## Scene folder + variant format
 
 - Engines: `modes/<family-name>/main.lua` (+ optional `<family-name>.frag`).
-  The engine catalog auto-discovers any folder with `main.lua`.
+  The engine catalog auto-discovers any folder with `main.lua`. Each engine is
+  authored in its mode-pack repo (`eyesy-modes-bespoke`, `eyesy-modes-milkdrop`,
+  `eyesy-modes-factory`) and assembled into `modes/` by `./eyesyctl modes sync`.
 - Variants: saved scene JSONs (storage/scenes/*.json) — parameters + state,
   never new code. A variant must be recognizable as its family but carry its
   own name, default palette, and trigger behavior.
