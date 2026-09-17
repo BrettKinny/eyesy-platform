@@ -91,6 +91,27 @@ the evidence lives.
   master).
 
 ## Session log
+- 2026-09-16 (later): scene verifier shipped (`tools/scene_verify.py`) —
+  per-scene A/B contract harness over the engine's deterministic replay mode.
+  Engine gained a deterministic `audio` replay event (gain/freq of the
+  synthesized stimulus; main.cpp dispatch/synthesis + input_workflow.cpp
+  validation, covered in tests/input_workflow_tests.py, whose negative-replay
+  tests were also repaired — they used the long-removed `--probe` flag and
+  could not have passed against the current engine). Metric: fraction of
+  pixels differing at all (bit-deterministic engine ⇒ dead stimulus =
+  byte-identical grabs = 0.0), mean-abs reported alongside; contact sheet per
+  scene for the human pass. Full 29-mode catalog: 22 pass, 7 fail — each
+  failure a specific finding: ascii-wave (knob2-max renders pure black; knob5
+  pulse byte-dead), echo-feedback (near-blank output in every state, stddev
+  0.06-0.38 — needs author eyes), lyapunov-field (speed knob byte-dead),
+  outrun-grid (hue + drift declared but never referenced — source-confirmed;
+  decay only marginally alive), radar-sweep + reaction-diffusion (zero audio
+  response despite ctx.audio references), stereo-mesh (speed knob byte-dead).
+  Evidence: `local/verify-catalog-2026-09-16/` (per-scene summary.json +
+  contact-sheet.png + run-*/ evidence). Scene fixes await the next
+  scene-library pass — note outrun-grid's dead hue/drift are visible quality knobs.
+  Desktop engine rebuilt with the audio event; ARM engine needs
+  `./eyesyctl build --arm` before the next device deploy.
 
 - 2026-09-16 (later): stability batch (ROADMAP item 7) done and
   device-verified; deployed `dev-0cae3aba9192`. SIGTERM now exits 0

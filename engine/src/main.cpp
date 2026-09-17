@@ -92,6 +92,7 @@ class EngineApp : public ofBaseApp {
     ofJson replayEvents = ofJson::array();
     size_t replayIndex = 0;
     bool deterministic = false;
+    double replayGain = 1, replayFreq = 1;
     eyesy::InputRecorder recorder;
     std::vector<eyesy::MidiEvent> midiEvents;
     eyesy::Analysis lastAnalysis;
@@ -496,6 +497,9 @@ class EngineApp : public ofBaseApp {
                     v.channel = e.value("channel", 0);
                     v.a = e.value("a", 0);
                     v.b = e.value("b", 0);
+                } else if (v.type == "audio") {
+                    v.gain = e.value("gain", 1.0);
+                    v.freq = e.value("freq", 1.0);
                 }
                 std::string validationError;
                 if (!eyesy::validReplayEvent(v, validationError))
@@ -576,6 +580,9 @@ class EngineApp : public ofBaseApp {
                     if (m.type == 0xb0 && m.a >= 20 && m.a <= 24)
                         knobs[m.a - 20] = std::clamp(m.b / 127.0, 0.0, 1.0);
                 }
+            } else if (type == "audio") {
+                replayGain = std::clamp(e.value("gain", 1.0), 0.0, 4.0);
+                replayFreq = std::clamp(e.value("freq", 1.0), 0.25, 4.0);
             } else
                 throw std::runtime_error("unknown replay event");
         }
@@ -589,8 +596,8 @@ class EngineApp : public ofBaseApp {
             std::array<eyesy::StereoFrame, eyesy::fftSize> samples;
             for (size_t i = 0; i < samples.size(); ++i) {
                 double t = now + i / 48000.0;
-                samples[i] = {float(.5 * std::sin(t * TWO_PI * 220)),
-                              float(.5 * std::sin(t * TWO_PI * 440))};
+                samples[i] = {float(replayGain * .5 * std::sin(t * TWO_PI * 220 * replayFreq)),
+                              float(replayGain * .5 * std::sin(t * TWO_PI * 440 * replayFreq))};
             }
             a = eyesy::analyze(samples, 48000);
             a.timestamp = now;

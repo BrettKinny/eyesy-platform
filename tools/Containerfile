@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     liburiparser-dev libpugixml-dev librtaudio-dev libpulse-dev libgtk-3-dev \
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libmpg123-dev \
     libgles2-mesa-dev libegl1-mesa-dev libdrm-dev libgbm-dev xvfb xauth mesa-utils \
+    python3-pil \
     && dpkg-query -W > /build-packages.lock && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev freeglut3-dev libxxf86vm-dev \

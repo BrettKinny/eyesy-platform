@@ -22,7 +22,7 @@ struct RecordedInput {
     uint64_t frame = 0;
     std::string type;
     int index = 0, key = 0, status = 0, channel = 0, a = 0, b = 0;
-    double value = 0;
+    double value = 0, gain = 1, freq = 1;
 };
 
 class InputRecorder {

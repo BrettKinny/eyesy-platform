@@ -165,6 +165,10 @@ bool validReplayEvent(const RecordedInput &e, std::string &error) {
         if (e.status < 0 || e.status > 255 || e.channel < 0 || e.channel > 15 || e.a < 0 ||
             e.a > 127 || e.b < 0 || e.b > 127)
             error = "invalid MIDI event";
+    } else if (e.type == "audio") {
+        if (!std::isfinite(e.gain) || e.gain < 0 || e.gain > 4 ||
+            !std::isfinite(e.freq) || e.freq < 0.25 || e.freq > 4)
+            error = "invalid audio event";
     } else
         error = "unknown input event";
     return error.empty();

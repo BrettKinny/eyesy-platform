@@ -101,6 +101,27 @@ def main():
         semantic_replay=root/'semantic-replay.json'; semantic_replay.write_text(json.dumps(semantic_events))
         run([str(ENGINE),'--mode',str(semantic_mode),'--storage',str(root/'semantic-store'),
              '--frames','6','--replay',str(semantic_replay)])
-        bad=root/'bad.json'; bad.write_text('[{"frame":0,"type":"not-an-event"}]'); run([str(ENGINE),'--probe','--frames','2','--replay',str(bad),'--storage',str(root/'bad')],1)
+        audio_mode=root/'audio-mode'; audio_mode.mkdir()
+        (audio_mode/'main.lua').write_text('return {api_version=1, draw=function(ctx) eyesy.clear(ctx.audio.rms_left,0,0) end}')
+        audio_events=[]
+        for tag, gain in (('audio-quiet', 0.02), ('audio-loud', 0.9), ('audio-loud2', 0.9)):
+            store=root/tag
+            (root/f'{tag}-replay.json').write_text(json.dumps([{'frame':0,'type':'audio','gain':gain}]))
+            run([str(ENGINE),'--mode',str(audio_mode),'--storage',store,'--frames','40',
+                 '--replay',str(root/f'{tag}-replay.json'),'--report',str(store/'report.json')])
+        ga=next((root/'audio-quiet'/'grabs').glob('*.png')); gb=next((root/'audio-loud'/'grabs').glob('*.png'))
+        gb2=next((root/'audio-loud2'/'grabs').glob('*.png'))
+        assert hashlib.sha256(gb.read_bytes()).digest()==hashlib.sha256(gb2.read_bytes()).digest()
+        assert ga.read_bytes()!=gb.read_bytes()
+        assert json.loads((root/'audio-loud'/'report.json').read_text())['audio_rms_left']>.3
+        assert json.loads((root/'audio-quiet'/'report.json').read_text())['audio_rms_left']<.05
+        bad_audio=root/'bad-audio.json'; bad_audio.write_text('[{"frame":0,"type":"audio","gain":9}]')
+        bad=root/'bad.json'; bad.write_text('[{"frame":0,"type":"not-an-event"}]')
+        prefix=[] if OFFSCREEN else ['xvfb-run','-a','-s','-screen 0 1280x720x24']
+        for replay_path, message in ((bad_audio, 'invalid audio event'), (bad, 'unknown input event')):
+            p=subprocess.run(prefix+[str(ENGINE),'--mode',str(mode),'--frames','2','--replay',
+                                     str(replay_path),'--storage',str(root/replay_path.stem)],
+                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=30)
+            assert p.returncode==1 and message in p.stdout, (message, p.returncode, p.stdout)
     print('Input workflow renderer checks passed')
 if __name__=='__main__': main()

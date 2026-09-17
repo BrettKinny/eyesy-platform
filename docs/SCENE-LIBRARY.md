@@ -57,6 +57,46 @@ milkdrop engine facts (empirical, 2026-09-16):
   values produce flat edge panels — keep per-frame warp/sphere magnitudes
   bounded (see sphere-rush tune).
 
+## bardo-night scenes (2026-09-17, llvmpipe-verified)
+
+Nine scenes built in one night (reports + evidence:
+`local/reports/bardo-night/`, dawn sweep `local/verify-catalog-bardo-dawn/`).
+All nine pass the scene contract at 300 frames in the build container's
+software GL; **no device-tier claim is made here** — p50 in that sweep is
+llvmpipe, and the real tier gate remains the on-device benchmark.
+
+| scene | what it is | knob map |
+| --- | --- | --- |
+| `mandala-bardo` | rotating sacred-geometry mandala: concentric petal rings grown outward from a base circle, breathing bindu, chalk-guideline fold seams, per-ring counter-rotation | 1 `speed` 0..2 ring rotation; 2 `fold` 6..16 radial symmetry; 3 `rings` 1..6 petal rings; 4 `hue` palette phase (0.32 = the authored saffron-petal / vajra-blue-ring look); 5 `bloom` afterglow |
+| `temple-core` | TempleOS shrine corridor: two column rows converging on an altar with a rotating flat-shaded idol, seven-band rainbow backdrop, bell-strike palette rewrite — exactly sixteen CGA colours, no interpolation | 1 `speed` checkerboard scroll (silence-still); 2 `columns` 2..7 pairs per side; 3 `idol` rotation rate; 4 `hue` permutes the six chromatic CGA hues (indices 0 and 7 stay achromatic); 5 `glow` intensity ladder + step-mask halo |
+| `buddha-1kb` | the 1k-intro discipline literal: three radial×angular cos terms = counter-rotating standing wave, one fragment formula, one target, no mesh | 1 `density` k 8..34 spatial frequency; 2 `fold` 3..9 angular harmonic; 3 `speed` phase drift 0.08..1.18; 4 `hue` phase in [0.05, 0.95]; 5 `mix` fringe/body separation |
+| `wireframe-bardo` | retro-CGI chrome idol: 13-vertex icosahedron → 30 screen-space segments with exact 2D point-segment hidden-line removal, over a receding checkerboard | 1 `scale` world radius 0.90..1.90; 2 `tumble` both rotation rates; 3 `glow` wire half-width + halo gain; 4 `hue` slides the `chrome` ramp ±0.12; 5 `depth` floor fog rate |
+| `slit-scan-vortex` | Belson/Whitney optical "beings of light": logarithmically-spaced filament layers, up to six counter-rotating into a central void, harmonic-stack angle offset | 1 `density` 2..6 live layers; 2 `rate` 0.10..0.95 rad/s rotation; 3 `streak` filament exponent 9.0→3.0; 4 `hue` slides the `belson` ramp 0.04..0.92; 5 `void` central void radius |
+| `copper-bar-hymn` | Amiga copper bar as liturgy: closed-form sine bars with six hard colour bands per slab and a 5x7 dot-matrix scrolltext of "OM MANI PADME HUM", analytic in `y` only | 1 `count` 3..7 bars (slab thins as count rises); 2 `rate` 0.15..1.30; 3 `scroll` 0.6..14.6 cells/s × level; 4 `hue` both ramps + fan phase; 5 `glow` bar exposure + phosphor bloom |
+| `koan-terminal` | teletype dharma machine: long-persistence phosphor tube striking out koans character by character, decaying to empty glass — 42 packed 5x7 glyph codes, one fragment pass | 1 `speed` 0.8..22.8 chars/s × level; 2 `scan` 0.14..0.74 raster-line darkness; 3 `glow` 0.30..1.85 bloom + halo; 4 `hue` ink phase 0.24..0.66 on the `phosphor` ramp; 5 `flicker` 0.20..1.30 beam flicker + hum bar |
+| `tesseract-yidam` | four-dimensional meditation idol: the 8-cell's 16 vertices / 32 edges rotated in two commuting 4D planes, perspective-projected 4D→3D→2D and drawn as luminous wires | 1 `scale` 0.70..1.45 world units; 2 `rotate` XW 0.10..1.00 and YZ 0.13..1.18 rad/s (bass/mid scaled); 3 `dissolve` level-scaled wire dropout; 4 `hue` ramp band centre 0.28..0.54; 5 `glow` wire half-width + halo |
+| `phosphor-seance` | spirit photography as video feedback: the field is the phosphor, re-sampled through a breath of rotation/zoom (Rutt/Etra drift) and stamped by blurred face-sigil presences on closed-form orbits | 1 `decay` afterglow clamp 0.970..0.995; 2 `drift` rotation per pass; 3 `ghosts` 2..5 head count, exposure divided by count; 4 `hue` `seance` ramp phase + slow auto-advance; 5 `jitter` per-pixel luminous hash |
+
+Shared facts from the night worth carrying forward:
+
+- **Knobs rest at 0.5, not at the declared `e.param` defaults.** The engine
+  writes the knob snapshot over every declared default each frame, so a
+  headless preview and a fresh device show all five at 0.5; the verifier's
+  `base` zeroes all five instead (one *extreme*, not the resting state).
+- **Deliberate knob-slot deviations** (mode header fixes the assignment, and
+  the decision is documented in each report): `buddha-1kb` (1/3 swapped),
+  `wireframe-bardo` (1 is size, 2 is motion), `slit-scan-vortex` (1 is
+  density, 2 is motion), `copper-bar-hymn` (2/3/5), `koan-terminal` (2/3/5),
+  `phosphor-seance` (1 is afterglow, 5 is jitter).
+- Cyclic hue ramps make the verifier's `knob4-max` diff legitimately 0.0
+  (`mandala-bardo`, `phosphor-seance`); the `mid` diff proves the knob live.
+- Palette names claimed by the night: `bardo`, `temple`, `buddha1k`, `chrome`,
+  `belson`, `copper`, `phosphor`, `yidam`, `seance`. `phosphor` is a
+  re-definition — the shipped phosphor mode owns that name too; a later
+  `define_palette` overwrites the entry and the 32-name cap (four built-ins
+  preloaded) only counts *new* names, so the two modes simply re-define it on
+  load and there is no duplicate-name error.
+
 ## Design law
 
 1. Never add light into the render target you next sample for decay — bloom
@@ -89,3 +129,45 @@ milkdrop engine facts (empirical, 2026-09-16):
   own name, default palette, and trigger behavior.
 - Future manifest fields (tags, tier, palette family) ride inside scene
   `state` until the scene schema gains a `library` block.
+
+## Scene verification (tools/scene_verify.py)
+
+Per-scene contract check built on the engine's deterministic replay mode
+(fixed 60 fps clock, synthesized 220/440 Hz audio). Every check is an A/B pair
+of engine runs whose replays differ only in the stimulus under test; both grab
+their final frame at the same sim time, so the pixel delta contains the effect
+alone -- free-running motion cancels exactly. The engine is bit-deterministic,
+so a dead stimulus produces byte-identical grabs; the effect metric is the
+fraction of pixels differing at all, and thresholds are absolute. Mean-abs
+diff is reported alongside for magnitude.
+
+Runs per scene (N frames each, default 130): `base` + `base2` (identical
+replays -- any nonzero diff invalidates the machine's results), one run per
+declared knob at mid and max (mid catches cyclic params such as hue, where
+0 and 1 are the same palette phase), a trigger-assisted `knobK-trig` run for
+any knob whose mid and max both show no effect (catches trigger-gated
+params), audio quiet/loud/freq variants, and a MIDI note-on 30 frames before
+the grab.
+
+Asserts: survival (exit 0, no mode_errors/shader_warning), determinism
+(base vs base2), no dead knobs (some knob state must change more than
+`--min-fraction`, default 0.001, of pixels -- 0.0 for a dead knob),
+blank/whiteout bounds and flatness (design laws 1-3 as pixel signatures),
+audio reactivity (when the scene references `ctx.audio`), trigger response
+(when it references `ctx.trigger`). Unassigned knobs and unreferenced
+stimuli are reported, not failed. Aesthetics and family resemblance stay a
+human pass over `contact-sheet.png`.
+
+Usage (software GL in the build container; the real-GPU tier gate remains the
+device benchmark):
+
+```sh
+podman run --rm --init --arch amd64 --userns=keep-id \
+  -v "$PWD:/workspace" -v "$PWD/.cache/of:/opt/of" -w /workspace \
+  localhost/eyesy-build:bookworm \
+  python3 tools/scene_verify.py --mode <scene> --output local/verify-NNN --xvfb
+```
+
+Whole catalog: omit `--mode`. Exit 0 iff every selected scene passes.
+Evidence per scene: `summary.json`, `contact-sheet.png`, and
+`run-<name>/{replay.json,engine.log,report.json,grabs/}`.
