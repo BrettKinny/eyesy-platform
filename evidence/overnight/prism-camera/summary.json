@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "utc": "2026-09-12T11:21:30.244782+00:00",
+  "display": ":99",
+  "hardware_acceptance": false,
+  "passed": true,
+  "runs": [
+    {
+      "mode": "prism-mesh",
+      "command": [
+        "/workspace/engine/bin/engine",
+        "--mode",
+        "/workspace/modes/prism-mesh",
+        "--storage",
+        "/workspace/local/overnight/prism-camera/00-prism-mesh",
+        "--frames",
+        "60",
+        "--switch-every",
+        "0",
+        "--report",
+        "/workspace/local/overnight/prism-camera/00-prism-mesh/report.json"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "wall_seconds": 1.252651754010003,
+      "passed": true,
+      "renderer": "llvmpipe (LLVM 15.0.6, 256 bits)",
+      "software_renderer": true,
+      "hardware_acceptance": false,
+      "final": {
+        "audio_available": true,
+        "audio_dropped": 0,
+        "audio_rms_left": 0.4294285774230957,
+        "audio_rms_right": 0.42210856080055237,
+        "audio_sample_rate": 48000.0,
+        "audio_sequence": 78,
+        "audio_source": "synthetic",
+        "error": "",
+        "fps": 68.62679290771484,
+        "frame": 60,
+        "frame_time_samples": 54,
+        "frame_time_window": 4096,
+        "mode": "prism-mesh",
+        "mode_errors": 0,
+        "offscreen": false,
+        "p50_ms": 16.18516445159912,
+        "p95_ms": 18.85920763015747,
+        "p99_ms": 19.257307052612305,
+        "recorded_events": 0,
+        "recording_truncated": false,
+        "release": "development",
+        "reloads": 1,
+        "renderer": "llvmpipe (LLVM 15.0.6, 256 bits)",
+        "resources": 1,
+        "rss_bytes": 170393600,
+        "schema_version": 1,
+        "shader_warning": ""
+      },
+      "memory": {
+        "qualified": false,
+        "reason": "fewer than six post-warmup samples"
+      }
+    }
+  ]
+}

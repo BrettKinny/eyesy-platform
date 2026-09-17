@@ -1,0 +1,17 @@
+== pre-stop soak state ==
+{"i": 446, "elapsed": 3204.369}
+switches: 446
+guard-samples: 642
+status-samples: 1404
+"audio_dropped": 0
+"frame": 167314
+"mode_errors": 0
+"reloads": 447
+"rss_bytes": 73654272
+== stopping soak processes ==
+506 python3 /tmp/soak_guard.py --clone-id <clone-id> --pid 24361 --engine /sdcard/eyesy-platform/current/eyesy-engine --output /sdcard/eyesy-platform/experiments/soak-2026-09-15 --duration 3600
+507 bash /tmp/soak_status_sampler.sh
+after:
+6302 bash -c  pgrep -af "soak_" | grep -v grep || echo no-soak-processes pkill -f "soak_[s]witch_driver"; pkill -f "soak_[s]tatus_sampler"; sudo -n pkill -f "soak_[g]uard.py"; sleep 2 echo after:; pgrep -af "soak_" || echo all-stopped systemctl is-active eyesy-platform; grep -oE "\"(fps|release)\": [0-9.a-z-]+" /sdcard/eyesy-platform/status.json
+active
+"fps": 60.30958938598633

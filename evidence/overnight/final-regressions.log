@@ -1,0 +1,74 @@
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/user/dev/eyesy/build/core
+ninja: no work to do.
+Test project /home/user/dev/eyesy/build/core
+    Start 1: core
+1/5 Test #1: core .............................   Passed    0.00 sec
+    Start 2: wav
+2/5 Test #2: wav ..............................   Passed    0.00 sec
+    Start 3: dsp_regression
+3/5 Test #3: dsp_regression ...................   Passed    0.00 sec
+    Start 4: audio_ring_stress
+4/5 Test #4: audio_ring_stress ................   Passed    0.68 sec
+    Start 5: wav_mutation_stress
+5/5 Test #5: wav_mutation_stress ..............   Passed    0.13 sec
+
+100% tests passed out of 5
+
+Total Test time (real) =   0.82 sec
+....................Remote staging retained for inspection: /tmp/eyesy-headless.ABC
+........................................................
+----------------------------------------------------------------------
+Ran 76 tests in 0.079s
+
+OK
+Remote staging retained for inspection: /tmp/eyesy-platform.ABC123
+{
+  "hardware_acceptance": false,
+  "probe": "independent-offscreen-watchdog",
+  "before": {
+    "MainPID": "101",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "after": {
+    "MainPID": "202",
+    "NRestarts": "1",
+    "ActiveState": "active"
+  },
+  "restart_seconds": 1.0989999282173812e-05,
+  "passed": false,
+  "resumed_frame": 2,
+  "renderer": "VC4",
+  "stock_active_after": true,
+  "cleanup_error": "stop failed"
+}
+{
+  "hardware_acceptance": false,
+  "probe": "independent-offscreen-watchdog",
+  "before": {
+    "MainPID": "101",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "after": {
+    "MainPID": "202",
+    "NRestarts": "1",
+    "ActiveState": "active"
+  },
+  "restart_seconds": 9.099996532313526e-06,
+  "passed": true,
+  "resumed_frame": 2,
+  "renderer": "VC4",
+  "stock_active_after": true
+}
+Graphics tests passed: Lua errors, syntax, API versions, matrix cleanup, scenes, deterministic images
+Creative tests passed: palette interpolation, compatibility, validation, cap, and modes
+Input workflow renderer checks passed
+Runtime robustness tests passed: malformed graphics inputs and callback cleanup
+quadrants [(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 0)]
+quadrants [(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 0)]
+quadrants [(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 0)]
+quadrants [(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 0)]
+Render target pixel regression passed

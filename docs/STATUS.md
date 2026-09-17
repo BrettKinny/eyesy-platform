@@ -15,10 +15,10 @@ resolves as:
 - per-scene evidence (summary + contact sheet) ->
   `eyesy-modes-*/evidence/<scene>/`
 - research corpus -> `eyesy-modes-*/docs/research/` (see `docs/research/README.md`)
-- raw verification runs and optimization sandboxes ->
-  `~/dev/eyesy-scene-evidence/` (untracked archive, manifest inside)
-- platform/engine evidence (bench, HDMI, soak, bootstrap) still lives in
-  `local/reports/` here
+- raw verification runs and optimization sandboxes -> deleted 2026-09-17
+  (regenerable harness output; the durable parts are the two lines above)
+- platform/engine evidence (bench, HDMI, soak, bootstrap, the overnight
+  rounds) is tracked in `evidence/` here; `local/` is scratch
 
 ## Implemented and regression-tested
 
@@ -85,11 +85,11 @@ is attached. Stock boot remains selected and platform services remain disabled.
   and exited without triggering. The revised guard's termination path was also
   tested against an isolated disposable process, not a stock service.
 
-Evidence: `local/overnight/package-round3/`,
-`local/overnight/hardware-round2/`, and `local/overnight/headless-cli-round1/`.
-Native input workflow evidence is in `local/overnight/input-workflow-round1/`.
-Full-run checks and memory analysis: `local/overnight/soak-round1/analysis.json`.
-Final local regression log: `local/overnight/final-regressions-round2.log`
+Evidence: `evidence/overnight/package-round3/`,
+`evidence/overnight/hardware-round2/`, and `evidence/overnight/headless-cli-round1/`.
+Native input workflow evidence is in `evidence/overnight/input-workflow-round1/`.
+Full-run checks and memory analysis: `evidence/overnight/soak-round1/analysis.json`.
+Final local regression log: `evidence/overnight/final-regressions-round2.log`
 (five core executables, 77 Python checks, and five graphics integration scripts).
 The [overnight log](OVERNIGHT.md) records the experiment sequence and caveats.
 
@@ -157,7 +157,7 @@ Xorg conf cleanup and the `bootstrap --arm` defect are fixed.
 
 ## 2026-09-15 (later): bench qualification session
 
-Evidence and phase-by-phase detail: `local/reports/bench-2026-09-15/REPORT.md`.
+Evidence and phase-by-phase detail: `evidence/reports/bench-2026-09-15/REPORT.md`.
 
 - **Rollback qualified live in all four paths**: the Xorg-era previous
   (`dev-dd42a1d3bd86`) is safely rejected (`unknown argument: --kms`) with
@@ -183,7 +183,7 @@ Evidence and phase-by-phase detail: `local/reports/bench-2026-09-15/REPORT.md`.
   switches, all landed (`reloads=447`), zero mode errors, zero audio drops,
   RSS growth **+248 KiB** (69.9 → 70.2 MiB window medians, peak 70.4 MiB),
   SoC peak 58.0 °C.
-- **1080p viability assessed** (`local/reports/1080p-plan-2026-09-15/`):
+- **1080p viability assessed** (`evidence/reports/1080p-plan-2026-09-15/`):
   scanout reachable via EDID 1080p modes, but native 1080p60 is not viable
   for 4/7 modes (they already miss 60 fps at 720p); recommendation is to keep
   720p rendering and calibrate before any native-1080p trial.
@@ -397,8 +397,7 @@ not implemented and the probe shipped in every release.
 
 Device tier (VC4 V3D 2.1, 600 frames offscreen, live platform on
 `stereo-mesh` as GPU neighbour; the per-scene summary and the shipped device
-frame are in `eyesy-modes-bespoke/evidence/<scene>/`, the raw runs in
-`~/dev/eyesy-scene-evidence/reports/bardo-device*/`):
+frame are in `eyesy-modes-bespoke/evidence/<scene>/`):
 
 | scene | first gate p50 | shipped p50 | what changed |
 | --- | --- | --- | --- |

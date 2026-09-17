@@ -71,8 +71,8 @@ per-scene verification summary and contact sheet:
 All nine pass the scene contract at 300 frames in the build container's
 software GL, and all nine now hold tier C on the device after optimization
 (device evidence: the shipped frame per scene in
-`eyesy-modes-bespoke/evidence/<scene>/device-grab.png`, raw runs in
-`~/dev/eyesy-scene-evidence/`; the dawn llvmpipe p50 of 16.6 ms proved
+`eyesy-modes-bespoke/evidence/<scene>/device-grab.png`; the dawn llvmpipe p50
+of 16.6 ms proved
 1.4-4.5x optimistic — llvmpipe timing never predicts VC4).
 
 Device tier (VC4, 600 frames offscreen, tier-A neighbour; release

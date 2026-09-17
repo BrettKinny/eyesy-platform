@@ -1,0 +1,8 @@
+mount-before: ro,noatime
+remount-rw-ok
+rm-ok
+removal-verified
+remount-ro-ok
+mount-after: ro,noatime
+dir-listing-done
+active

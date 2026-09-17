@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "utc": "2026-09-12T11:57:06.062647+00:00",
+  "engine_sha256": "8baf1df9ab8b59f3aa9dcfd5e1c3cc3dc0cfb990dd6854d68183d614b7a33c15",
+  "mode_files": {
+    "radial-kaleidoscope/main.lua": "fd25cb2e5ca95ca48655b0857de462f14b7966def4106923ff53e3cce7623954"
+  },
+  "display": ":99",
+  "hardware_acceptance": false,
+  "passed": true,
+  "runs": [
+    {
+      "mode": "radial-kaleidoscope",
+      "command": [
+        "/workspace/engine/bin/engine",
+        "--mode",
+        "/workspace/local/experiments/radial-kaleidoscope",
+        "--storage",
+        "/workspace/local/overnight/radial-round2/00-radial-kaleidoscope",
+        "--frames",
+        "60",
+        "--switch-every",
+        "0",
+        "--report",
+        "/workspace/local/overnight/radial-round2/00-radial-kaleidoscope/report.json"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "wall_seconds": 1.2526497829967411,
+      "passed": true,
+      "renderer": "llvmpipe (LLVM 15.0.6, 256 bits)",
+      "software_renderer": true,
+      "hardware_acceptance": false,
+      "final": {
+        "audio_available": true,
+        "audio_dropped": 0,
+        "audio_rms_left": 0.4238874316215515,
+        "audio_rms_right": 0.4253680109977722,
+        "audio_sample_rate": 48000.0,
+        "audio_sequence": 79,
+        "audio_source": "synthetic",
+        "error": "",
+        "fps": 67.85264587402344,
+        "frame": 60,
+        "frame_time_samples": 54,
+        "frame_time_window": 4096,
+        "mode": "radial-kaleidoscope",
+        "mode_errors": 0,
+        "offscreen": false,
+        "p50_ms": 16.147911548614502,
+        "p95_ms": 19.57094669342041,
+        "p99_ms": 21.749496459960938,
+        "recorded_events": 0,
+        "recording_truncated": false,
+        "release": "development",
+        "reloads": 1,
+        "renderer": "llvmpipe (LLVM 15.0.6, 256 bits)",
+        "resources": 1,
+        "rss_bytes": 170557440,
+        "schema_version": 1,
+        "shader_warning": ""
+      },
+      "memory": {
+        "qualified": false,
+        "reason": "fewer than six post-warmup samples"
+      },
+      "temperature_peak_c": null
+    }
+  ]
+}

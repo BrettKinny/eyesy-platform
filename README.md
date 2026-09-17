@@ -72,6 +72,11 @@ but share the project source tree and OF packaging hooks.
 No HDMI screen attached? Use the [headless development loop](docs/HEADLESS-DEVELOPMENT.md)
 to test a package on the EYESY GPU and retrieve screenshots without switching services.
 
+Next milestone: [EYESY OS v3 parity](docs/EYESY-OS-V3-PARITY-PLAN.md) — the stock
+instrument interface (trigger audio synthesis, shift shortcuts, knob sequencer,
+full OSD, the nine-screen menu, `auto_clear` in Lua, LED feedback) is not yet
+ported; see [ROADMAP](ROADMAP.md).
+
 This is a working development implementation, not a hardware-qualified release.
 The original EYESY card remains untouched. Follow [deployment](docs/DEPLOYMENT.md)
 to prepare the spare card, establish SSH, and validate the GPU/audio probe before

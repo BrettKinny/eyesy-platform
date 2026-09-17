@@ -1,0 +1,15 @@
+Job for eyesy-platform.service failed because the control process exited with error code.
+See "systemctl status eyesy-platform.service" and "journalctl -xeu eyesy-platform.service" for details.
+Traceback (most recent call last):
+  File "/tmp/eyesy-platform.ZhbFIBfh/release.py", line 315, in <module>
+    result = rollback(clone_id=args.activate_clone, target=args.target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/eyesy-platform.ZhbFIBfh/release.py", line 59, in wrapper
+    return operation(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/eyesy-platform.ZhbFIBfh/release.py", line 300, in rollback
+    subprocess.run(['systemctl', 'start', 'eyesy-platform.service'], check=True)
+  File "/usr/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['systemctl', 'start', 'eyesy-platform.service']' returned non-zero exit status 1.
+eyesyctl: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'UserKnownHostsFile=/home/user/dev/eyesy/local/eyesy_known_hosts', 'music@<device-ip>', 'sudo -n python3 /tmp/eyesy-platform.ZhbFIBfh/release.py rollback --activate-clone <clone-id> --target previous']' returned non-zero exit status 1.

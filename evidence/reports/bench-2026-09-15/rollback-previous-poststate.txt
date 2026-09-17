@@ -1,0 +1,66 @@
+=== 2026-09-14 23:08:14 UTC post-rollback state ===
+eyesy-platform: active=active
+eyesy-platform-fallback: active=failed
+eyesypy: active=inactive
+-- selection --
+/sdcard/eyesy-platform/releases/dev-cf8b1ee8013f
+EYESY_RELEASE=dev-cf8b1ee8013f
+{"release_path": "/sdcard/eyesy-platform/releases/dev-dd42a1d3bd86"}
+-- status.json --
+{
+  "audio_available": true,
+  "audio_dropped": 0,
+  "audio_rms_left": 2.1057592675788328e-05,
+  "audio_rms_right": 2.8172868042020127e-05,
+  "audio_sample_rate": 48000.0,
+  "audio_sequence": 3368,
+  "audio_source": "device",
+  "error": "",
+  "fps": 60.37373352050781,
+  "frame": 2153,
+  "frame_time_samples": 2148,
+  "frame_time_window": 4096,
+  "mode": "starter",
+  "mode_errors": 0,
+  "offscreen":
+-- journal cascade (23:07:25 onward) --
+Sep 15 00:07:36 raspberrypi systemd[1]: Starting eyesy-platform-fallback.service - Restore stock EYESY after platform failure...
+Sep 15 00:07:36 raspberrypi systemctl[4648]: Job for eyesypy.service canceled.
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform-fallback.service: Main process exited, code=exited, status=1/FAILURE
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform-fallback.service: Failed with result 'exit-code'.
+Sep 15 00:07:36 raspberrypi systemd[1]: Failed to start eyesy-platform-fallback.service - Restore stock EYESY after platform failure.
+Sep 15 00:07:36 raspberrypi systemd[1]: Starting eyesy-platform.service - EYESY Lua graphics platform...
+Sep 15 00:07:37 raspberrypi eyesy-engine[4659]: eyesy: unknown argument: --kms
+Sep 15 00:07:37 raspberrypi systemd[1]: eyesy-platform.service: Main process exited, code=exited, status=1/FAILURE
+Sep 15 00:07:37 raspberrypi systemd[1]: eyesy-platform.service: Failed with result 'exit-code'.
+Sep 15 00:07:37 raspberrypi systemd[1]: Failed to start eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:37 raspberrypi systemd[1]: Stopped eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:37 raspberrypi systemd[1]: Starting eyesy-platform.service - EYESY Lua graphics platform...
+Sep 15 00:07:37 raspberrypi eyesy-engine[4674]: KMS: connector HDMI-A mode "1280x720" 1280x720@60 clock 74250 flags 0x5 type 0x40
+Sep 15 00:07:37 raspberrypi eyesy-engine[4674]: KMS: scanout live 1280x720 on crtc 106
+Sep 15 00:07:37 raspberrypi eyesy-engine[4674]: [notice ] Renderer: VC4 V3D 2.1
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp to /tmp/pulse-PKdhtXMmr18n: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: [notice ] Initialing RtAudio Requested API: 1
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp to /tmp/pulse-2L9K88eMlGn7: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiAlsa::getDeviceInfo: snd_pcm_open error for device (default), Invalid argument.
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiAlsa::getDeviceInfo: pcm device (hw:0,0) data format not supported by RtAudio.
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtAudio alsa: _NOT_ running realtime scheduling
+Sep 15 00:07:38 raspberrypi systemd[1]: Started eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp to /tmp/pulse-CcctT9RwKSB1: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: [notice ] Initialing RtAudio Requested API: 1
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp to /tmp/pulse-FebW397VI5uG: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: Failed to symlink /home/music/.config/pulse/2ee35097d6334d5eb362b1d49d9d4ec6-runtime.tmp: Read-only file system
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiAlsa::getDeviceInfo: snd_pcm_open error for device (default), Invalid argument.
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtApiAlsa::getDeviceInfo: pcm device (hw:0,0) data format not supported by RtAudio.
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtAudio alsa: _NOT_ running realtime scheduling

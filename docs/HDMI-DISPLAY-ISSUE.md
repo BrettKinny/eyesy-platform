@@ -45,15 +45,15 @@ visible → stop stock → engine live on VC4 V3D 2.1 at ~60.4 fps with its OSD
 readable through the capture dongle ("EYESY | starter | 59.7 fps") → kill
 engine → stock visible again; `HDMI_VID_CTL` bit 25 never set across 788
 oracle samples (`tools/vidctl_watch.sh`, zero `0xc2000000`), log at
-`local/reports/vidctl-kms-test.txt`, frames in
-`local/reports/hdmi-dongle-stream/`. V2 (platform-owned cold boot via the
+`evidence/reports/vidctl-kms-test.txt`, frames in
+`evidence/reports/hdmi-dongle-stream/`. V2 (platform-owned cold boot via the
 deployed service) remains: package, deploy, flip boot ownership, one power
 cycle.
 
 V2 passed the same night: boot ownership flipped to the platform and the
 device cold-booted into `dev-cf8b1ee8013f` — firmware splash visible, then
 the engine continuously (frames archived as `v2_*` in
-`local/reports/hdmi-dongle-stream/`), `VID_CTL=0xc0000000`, 60.4 fps on
+`evidence/reports/hdmi-dongle-stream/`), `VID_CTL=0xc0000000`, 60.4 fps on
 `VC4 V3D 2.1`, no Xorg process. The black-screen bug is closed for the
 platform path; remaining HDMI-gate work is physical controls, mode
 switching, and latency on the deployed service.
@@ -184,7 +184,7 @@ induced and stock visible after recovery. Power-cycle budget: 3–4 total.
   process ("dongle-live") must run for the whole observation window; two UVC
   clients on the dongle collide fatally (one streamer at a time).
 - Analysis: per-frame mean/max pixel stats; content = mean > 10 with structure;
-  bursts located by content scan. Evidence archive: `local/reports/` (EDID
+  bursts located by content scan. Evidence archive: `evidence/reports/` (EDID
   `dongle-edid.bin`, register dumps `vc4-hdmi-regs-*.txt`, KMS snapshots,
   `hdmi-dongle-stream/`).
 - Device tools (wiped by each boot, restage from repo): `tools/rr_hdmi.py`

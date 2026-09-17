@@ -1,0 +1,14 @@
+== sink state ==
+connected
+== phase5: platform recovery with sink present ==
+start-ok
+eyesy-platform: active=active
+eyesy-platform-fallback: active=inactive
+eyesypy: active=inactive
+MainPID=24361
+Result=success
+NRestarts=0
+  "fps": 60.46082305908203,
+  "frame": 205,
+  "release": "dev-cf8b1ee8013f",
+  "renderer": "VC4 V3D 2.1",

@@ -1,0 +1,9 @@
+{
+  "pid": 1408,
+  "reason": "process completed",
+  "wall_seconds": 3822.1241848090012,
+  "peak_rss_bytes": 80093184,
+  "peak_temperature_c": 60.148,
+  "rss_limit_bytes": 268435456,
+  "temperature_limit_c": 80
+}

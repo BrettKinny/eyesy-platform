@@ -16,10 +16,10 @@ resolves as:
 - per-scene evidence (summary + contact sheet) ->
   `eyesy-modes-*/evidence/<scene>/`
 - research corpus -> `eyesy-modes-*/docs/research/` (see `docs/research/README.md`)
-- raw verification runs and optimization sandboxes ->
-  `~/dev/eyesy-scene-evidence/` (untracked archive, manifest inside)
-- platform/engine evidence (bench, HDMI, soak, bootstrap) still lives in
-  `local/reports/` here
+- raw verification runs and optimization sandboxes -> deleted 2026-09-17
+  (regenerable harness output; the durable parts are the two lines above)
+- platform/engine evidence (bench, HDMI, soak, bootstrap, the overnight
+  rounds) is tracked in `evidence/` here; `local/` is scratch
 
 ## Where things stand
 
@@ -33,7 +33,7 @@ resolves as:
   (see `docs/research/README.md`); blueprint and batch plans in
   `eyesy-modes-bespoke/docs/`.
 - The black-screen bug is closed (V1/V2; `docs/HDMI-DISPLAY-ISSUE.md`).
-- 2026-09-15 bench session (`local/reports/bench-2026-09-15/REPORT.md`):
+- 2026-09-15 bench session (`evidence/reports/bench-2026-09-15/REPORT.md`):
   rollback qualified in all four paths (incompatible-previous rejection,
   stock, and KMS↔KMS both directions); recovery path qualified unattended
   (no-sink engine failure → start-limit → `OnFailure` → stock, ~9 s; platform
@@ -42,6 +42,19 @@ resolves as:
   slim digest → multi-arch OCI index + `EXPECTED_ARCH` build-time assertion).
 - Release manifests still carry `hardware_validated: false` — the remaining
   gates below decide when that flips.
+
+## Next milestone
+
+**EYESY OS v3 parity** — [the parity plan](docs/EYESY-OS-V3-PARITY-PLAN.md).
+
+This engine replaces the stock 30 fps CPU rasterizer with a 60 fps GLES2 engine,
+but the stock *instrument interface* was never ported: trigger-button audio
+synthesis, the shift-button shortcuts, the knob sequencer, the rich OSD, the
+nine-screen menu, `auto_clear` exposed to Lua, hardware LED feedback, and the USB
+storage override. That gap is what stands between a faster renderer and a
+replacement instrument, and closing it is the next milestone. Scope, five
+phases and the porting rule (no sweeping draw-idiom rewrite while the scene
+freeze is active) are in the plan.
 
 ## Next work, in order
 
@@ -80,7 +93,7 @@ resolves as:
    recovery-vs-fallback race ends the fallback unit FAILED (benign,
    convergent).
 8. **1080p — NOT PURSUED** (user decision, 2026-09-15; analysis parked in
-   `local/reports/1080p-plan-2026-09-15/`). Revisit only if re-raised.
+   `evidence/reports/1080p-plan-2026-09-15/`). Revisit only if re-raised.
 9. **Optional upstreamable bisect**: D1/D2 protocol in
    `docs/HDMI-DISPLAY-ISSUE.md` (Xorg latches HDMI_VID_CTL bit 25).
 10. **Longer-term**: read-only restoration qualification after apt changes,
@@ -176,7 +189,7 @@ resolves as:
   table. One flag: same-mode RSS growth ≈ +2.2 MB/h (~73 KB/reload) — 8x
   the prior soak rate, reload-correlated (milkdrop preset loads are new);
   follow-up = switching-disabled vs enabled attribution run. Report:
-  `local/reports/soak-2026-09-16/REPORT.md`. Research: Buddhist × retro-CG
+  `evidence/reports/soak-2026-09-16/REPORT.md`. Research: Buddhist × retro-CG
   scene backlog at `eyesy-modes-bespoke/docs/research/SacredRetroBuddhist.md`
   (flagship four:
   enso, kolam-knot, sri-yantra-exact, sand-dissolution; cultural flags
@@ -203,4 +216,4 @@ resolves as:
 - 2026-09-15 (later): bench qualification session — rollback all paths,
   recovery-path test, provision hygiene, bootstrap arch fix, second KMS
   release deployed, 53.7-min partial soak (+248 KiB), 1080p viability
-  assessed. Evidence: `local/reports/bench-2026-09-15/`.
+  assessed. Evidence: `evidence/reports/bench-2026-09-15/`.

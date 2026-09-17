@@ -1,0 +1,15 @@
+Test project /home/user/dev/eyesy/build/sanitizers
+    Start 1: core
+1/5 Test #1: core .............................   Passed    0.01 sec
+    Start 2: wav
+2/5 Test #2: wav ..............................   Passed    0.01 sec
+    Start 3: dsp_regression
+3/5 Test #3: dsp_regression ...................   Passed    0.01 sec
+    Start 4: audio_ring_stress
+4/5 Test #4: audio_ring_stress ................   Passed    0.80 sec
+    Start 5: wav_mutation_stress
+5/5 Test #5: wav_mutation_stress ..............   Passed    0.55 sec
+
+100% tests passed out of 5
+
+Total Test time (real) =   1.38 sec

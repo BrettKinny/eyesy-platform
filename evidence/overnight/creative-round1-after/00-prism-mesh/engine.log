@@ -1,0 +1,2 @@
+[notice ] Renderer: llvmpipe (LLVM 15.0.6, 256 bits)
+ALSA lib seq_hw.c:466:(snd_seq_hw_open) open /dev/snd/seq failed: No such file or directory

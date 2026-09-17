@@ -1,0 +1,15 @@
+test_backup_inventory_and_destinations_are_protected (tests.test_provision_device.ProvisionDeviceSafetyTests.test_backup_inventory_and_destinations_are_protected) ... ok
+test_cleanup_exit_status_reflects_remount_failure (tests.test_provision_device.ProvisionDeviceSafetyTests.test_cleanup_exit_status_reflects_remount_failure) ... ok
+test_failed_legacy_xorg_conf_removal_is_fatal (tests.test_provision_device.ProvisionDeviceSafetyTests.test_failed_legacy_xorg_conf_removal_is_fatal) ... ok
+test_failed_read_write_remount_is_fatal (tests.test_provision_device.ProvisionDeviceSafetyTests.test_failed_read_write_remount_is_fatal) ... ok
+test_identity_guards_are_not_asserts (tests.test_provision_device.ProvisionDeviceSafetyTests.test_identity_guards_are_not_asserts) ... ok
+test_legacy_xorg_conf_absence_is_idempotent_success (tests.test_provision_device.ProvisionDeviceSafetyTests.test_legacy_xorg_conf_absence_is_idempotent_success) ... ok
+test_legacy_xorg_conf_removed_and_verified (tests.test_provision_device.ProvisionDeviceSafetyTests.test_legacy_xorg_conf_removed_and_verified) ... ok
+test_platform_is_checked_before_package_mutation (tests.test_provision_device.ProvisionDeviceSafetyTests.test_platform_is_checked_before_package_mutation) ... ok
+test_shell_syntax (tests.test_provision_device.ProvisionDeviceSafetyTests.test_shell_syntax) ... ok
+test_write_destination_preflight_precedes_package_mutation (tests.test_provision_device.ProvisionDeviceSafetyTests.test_write_destination_preflight_precedes_package_mutation) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.014s
+
+OK

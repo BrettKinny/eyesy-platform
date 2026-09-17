@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "utc": "2026-09-12T12:53:28.556169+00:00",
+  "engine_sha256": "b473a2eaaa5ca34802f8f284a8fde5158b0fab9eed10c36fef8fe6c97fef11a8",
+  "mode_files": {
+    "starter/main.lua": "7ebf86f78297bcfbe2fc139db0e0f553f29a8d9d86fff050b001eb3f3ea009c7"
+  },
+  "display": null,
+  "hardware_acceptance": false,
+  "passed": false,
+  "runs": [
+    {
+      "mode": "starter",
+      "command": [
+        "/tmp/eyesy-headless.829KX4FL/release/eyesy-engine",
+        "--mode",
+        "/tmp/eyesy-headless.829KX4FL/release/modes/starter",
+        "--storage",
+        "/sdcard/eyesy-platform/experiments/headless-da21bf9d604b40bbb447296518cb61c8/00-starter",
+        "--frames",
+        "60",
+        "--switch-every",
+        "0",
+        "--report",
+        "/sdcard/eyesy-platform/experiments/headless-da21bf9d604b40bbb447296518cb61c8/00-starter/report.json",
+        "--offscreen"
+      ],
+      "returncode": 2,
+      "timed_out": false,
+      "wall_seconds": 2.7737012030002006,
+      "passed": false,
+      "renderer": "VC4 V3D 2.1",
+      "software_renderer": false,
+      "hardware_acceptance": false,
+      "final": {
+        "audio_available": true,
+        "audio_dropped": 0,
+        "audio_rms_left": 0.2712308168411255,
+        "audio_rms_right": 0.2725418508052826,
+        "audio_sample_rate": 48000.0,
+        "audio_sequence": 141,
+        "audio_source": "synthetic",
+        "error": "draw: /tmp/eyesy-headless.829KX4FL/release/modes/starter/main.lua:2: negative-test: intentional draw failure",
+        "fps": 39.011253356933594,
+        "frame": 60,
+        "frame_time_samples": 54,
+        "frame_time_window": 4096,
+        "mode": "starter",
+        "mode_errors": 1,
+        "offscreen": true,
+        "p50_ms": 25.925874710083008,
+        "p95_ms": 26.729106903076172,
+        "p99_ms": 26.923418045043945,
+        "recorded_events": 0,
+        "recording_truncated": false,
+        "release": "development",
+        "reloads": 1,
+        "renderer": "VC4 V3D 2.1",
+        "resources": 0,
+        "rss_bytes": 71172096,
+        "schema_version": 1,
+        "shader_warning": ""
+      },
+      "memory": {
+        "qualified": false,
+        "reason": "fewer than six post-warmup samples"
+      },
+      "temperature_peak_c": 60.148
+    }
+  ]
+}

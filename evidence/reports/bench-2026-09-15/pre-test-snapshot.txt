@@ -1,0 +1,55 @@
+=== 2026-09-14 23:05:54 UTC pre-test snapshot ===
+-- services --
+eyesy-platform: active=active enabled=enabled
+eyesy-platform-fallback: active=inactive enabled=static
+eyesypy: active=inactive enabled=disabled
+n/a
+-- platform mainpid --
+MainPID=327
+Result=success
+ActiveEnterTimestamp=Sat 2026-09-12 11:57:30 BST
+-- selection --
+/sdcard/eyesy-platform/releases/dev-cf8b1ee8013f
+EYESY_RELEASE=dev-cf8b1ee8013f
+{"release_path": "/sdcard/eyesy-platform/releases/dev-dd42a1d3bd86"}
+-- releases --
+dev-cf8b1ee8013f
+dev-dd42a1d3bd86
+-- connectors --
+/sys/class/drm/card0-Composite-1/status: unknown
+/sys/class/drm/card0-HDMI-A-1/status: disconnected
+/sys/class/drm/card0-Writeback-1/status: unknown
+-- xorg conf --
+total 12
+drwxr-xr-x 2 root root 4096 Sep 13 07:16 .
+drwxr-xr-x 8 root root 4096 Sep 12 11:55 ..
+-rw-r--r-- 1 root root  191 Sep 13 07:43 10-eyesy-720p.conf
+-- mounts --
+ro,noatime
+-- status.json --
+{
+  "audio_available": true,
+  "audio_dropped": 0,
+  "audio_rms_left": 2.1860047127120197e-05,
+  "audio_rms_right": 2.7377798687666655e-05,
+  "audio_sample_rate": 48000.0,
+  "audio_sequence": 255821,
+  "audio_source": "device",
+  "error": "",
+  "fps": 60.41752243041992,
+  "frame": 163530,
+  "frame_time_samples": 3781,
+  "frame_time_window": 4096,
+  "mode": "starter",
+  "mode_errors": 0,
+  "offscreen": false,
+  "recorded_events": 0,
+  "recording_truncated": false,
+  "release": "dev-cf8b1ee8013f",
+  "reloads": 1,
+  "renderer": "VC4 V3D 2.1",
+  "resources": 0,
+  "rss_bytes": 71303168,
+  "schema_version": 1,
+  "shader_warning": ""
+}

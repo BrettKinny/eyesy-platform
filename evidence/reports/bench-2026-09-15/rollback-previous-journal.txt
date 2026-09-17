@@ -1,0 +1,32 @@
+Sep 15 00:07:36 raspberrypi systemd[1]: Stopping eyesy-platform.service - EYESY Lua graphics platform...
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform.service: Main process exited, code=exited, status=15/n/a
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform.service: Failed with result 'exit-code'.
+Sep 15 00:07:36 raspberrypi systemd[1]: Stopped eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform.service: Triggering OnFailure= dependencies.
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform.service: Consumed 9min 24.761s CPU time.
+Sep 15 00:07:36 raspberrypi systemd[1]: Starting eyesy-platform-fallback.service - Restore stock EYESY after platform failure...
+Sep 15 00:07:36 raspberrypi systemctl[4648]: Job for eyesypy.service canceled.
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform-fallback.service: Main process exited, code=exited, status=1/FAILURE
+Sep 15 00:07:36 raspberrypi systemd[1]: eyesy-platform-fallback.service: Failed with result 'exit-code'.
+Sep 15 00:07:36 raspberrypi systemd[1]: Failed to start eyesy-platform-fallback.service - Restore stock EYESY after platform failure.
+Sep 15 00:07:36 raspberrypi systemd[1]: Starting eyesy-platform.service - EYESY Lua graphics platform...
+Sep 15 00:07:37 raspberrypi eyesy-engine[4659]: eyesy: unknown argument: --kms
+Sep 15 00:07:37 raspberrypi systemd[1]: eyesy-platform.service: Main process exited, code=exited, status=1/FAILURE
+Sep 15 00:07:37 raspberrypi systemd[1]: eyesy-platform.service: Failed with result 'exit-code'.
+Sep 15 00:07:37 raspberrypi systemd[1]: Failed to start eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:37 raspberrypi systemd[1]: Stopped eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:37 raspberrypi systemd[1]: Starting eyesy-platform.service - EYESY Lua graphics platform...
+Sep 15 00:07:37 raspberrypi eyesy-engine[4674]: KMS: connector HDMI-A mode "1280x720" 1280x720@60 clock 74250 flags 0x5 type 0x40
+Sep 15 00:07:37 raspberrypi eyesy-engine[4674]: KMS: scanout live 1280x720 on crtc 106
+Sep 15 00:07:37 raspberrypi eyesy-engine[4674]: [notice ] Renderer: VC4 V3D 2.1
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: [notice ] Initialing RtAudio Requested API: 1
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtAudio alsa: _NOT_ running realtime scheduling
+Sep 15 00:07:38 raspberrypi systemd[1]: Started eyesy-platform.service - EYESY Lua graphics platform.
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: [notice ] Initialing RtAudio Requested API: 1
+Sep 15 00:07:38 raspberrypi eyesy-engine[4674]: RtAudio alsa: _NOT_ running realtime scheduling
+== reset fallback failed state ==
+fallback-reset-ok
+== current unit results ==
+Result=success
+NRestarts=0
+inactive

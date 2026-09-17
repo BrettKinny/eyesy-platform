@@ -1,0 +1,12 @@
+{
+  "pid": 2124,
+  "reason": "guard error",
+  "target_exit_status": null,
+  "guard_triggered": true,
+  "wall_seconds": 8.009059916999831,
+  "peak_rss_bytes": 1572864,
+  "peak_temperature_c": 59.072,
+  "rss_limit_bytes": 268435456,
+  "temperature_limit_c": 80,
+  "error": "[Errno 2] No such file or directory: '/proc/2124/exe'; target stop failed: [Errno 2] No such file or directory: '/proc/2124/exe'"
+}

@@ -14,7 +14,7 @@ physical audio/MIDI signals, and latency remain explicit bench gates.
 
 ## Evidence so far
 
-- `local/overnight/baseline/summary.json`: existing four modes each completed
+- `evidence/overnight/baseline/summary.json`: existing four modes each completed
   900 frames on desktop llvmpipe with no errors and zero measured median RSS
   growth after warmup (short 15-second runs, not a soak).
 - Real spare-card surfaceless EGL probe: `VC4 V3D 2.1`, Broadcom,
@@ -52,7 +52,7 @@ this log is not a declaration of completion.
   `libstdc++.so.6` and `libgcc_s.so.1` fixed both the traversal and all seven modes.
   The exact internal ABI difference is not established. System libraries were
   not replaced. The integrated release now carries private copies.
-- `local/overnight/hardware-round2/modes-abi-round2/summary.json`: seven native
+- `evidence/overnight/hardware-round2/modes-abi-round2/summary.json`: seven native
   VC4 offscreen runs, 600 frames each, no mode errors and no measured median RSS
   growth after warmup. Shader-heavy modes do not yet sustain 60 fps at full
   resolution alongside stock video. These short runs are not a soak or HDMI test.
@@ -80,20 +80,20 @@ this log is not a declaration of completion.
   is exactly `$ORIGIN/libs:$ORIGIN` on both binaries. ARM `ldd` resolves the private
   C++ runtime pair from the package without an injected library search path.
 - All seven packaged modes passed 900 frames each on real VC4, with stock video
-  active: `local/overnight/package-round3/summary.json`. Frame-time medians span
+  active: `evidence/overnight/package-round3/summary.json`. Frame-time medians span
   about 15.7–29.7 ms; full-resolution feedback remains below 60 fps in this setup.
 - The complete `headless-test` CLI passed verified upload, native rendering, and
-  local report retrieval: `local/overnight/headless-cli-round1/`. Its brief run
+  local report retrieval: `evidence/overnight/headless-cli-round1/`. Its brief run
   overlapped the soak and must not be used as standalone throughput evidence.
 - Its negative path also passed on-device using a separately named intentional
   draw-error fixture: the engine rendered its error state through frame 60,
   returned exit 2, and the CLI returned exit 1 after retrieving all diagnostics.
-  Evidence: `local/overnight/headless-negative-round1/`. The fixture builder is
+  Evidence: `evidence/overnight/headless-negative-round1/`. The fixture builder is
   retained alongside the reports; negative archives must never be activated.
 - A temporary independent watchdog unit recovered a deliberately SIGSTOP-ed
   engine in 4.6269 seconds, with a changed PID, restart count 1, and advancing
   VC4 heartbeat. Stock remained active and the test unit was stopped afterward.
-  Evidence: `local/overnight/hardware-round2/watchdog-report.json`.
+  Evidence: `evidence/overnight/hardware-round2/watchdog-report.json`.
 - Five core executables pass normal and ASan/UBSan/leak checks. The audio ring
   stress test transfers three million frames across three capacities and passes
   ThreadSanitizer. Expanded WAV checks include duplicate chunks, invalid/truncated
@@ -113,11 +113,11 @@ this log is not a declaration of completion.
   smooth mesh kaleidoscope, shader tunnel, and reduced-resolution echo feedback.
   Desktop and native images were inspected; all prototypes passed 600 native
   frames under shared load. Any promotion decision is separate from the frozen
-  seven-mode soak. Evidence: `local/overnight/prototypes-shared-round1/`.
+  seven-mode soak. Evidence: `evidence/overnight/prototypes-shared-round1/`.
 - Native input integration passed on the packaged engine: generated 44.1 kHz WAV
   analysis (RMS 0.258), EOF behavior, OSC recording, MIDI replay semantics, and
   matching PNG hashes across repeated control replays. Evidence:
-  `local/overnight/input-workflow-round1/`. No physical MIDI signal was used.
+  `evidence/overnight/input-workflow-round1/`. No physical MIDI signal was used.
 - Final local checkpoint: five core tests, 77 Python tests, and all five graphics
   integration scripts pass. Packaging still reproduces the hashes above after
   the test/tool refinements; no production engine or mode changes were introduced.
@@ -125,7 +125,7 @@ this log is not a declaration of completion.
   process on the spare. Round 1 correctly terminated it but misclassified the
   disappearing executable link as an error; a regression test and fix followed.
   Round 2 recorded `duration limit` without an error, and the parent independently
-  observed SIGTERM exit. Evidence: `local/overnight/guard-duration-round1/` and
+  observed SIGTERM exit. Evidence: `evidence/overnight/guard-duration-round1/` and
   `guard-duration-round2/`. The 5-second polling interval plus cleanup means a
   1-second requested limit is not a 1-second response-time guarantee.
 
@@ -150,7 +150,7 @@ the initial mode. The frozen package/archive hash above identifies the full test
 catalog. The current harness now hashes all traversed modes and fails on transient
 sampled warnings/errors as well as final status. Final soak analysis applies
 those checks retrospectively to its stored samples. That recheck passed:
-`local/overnight/soak-round1/analysis.json`, generated by
+`evidence/overnight/soak-round1/analysis.json`, generated by
 `local/overnight/analyze_soak.py`.
 
 Post-warmup first/last-window median RSS was 72,282,112 / 72,364,032 bytes:
@@ -178,7 +178,7 @@ without errors or measured median RSS growth. Median frame times were
 extra soak engine was no longer running. The reduced-resolution variant has
 roughly 27% lower median frame cost in this setup, with visibly coarser edges;
 it remains outside the release as an explicit quality tradeoff.
-Evidence: `local/overnight/echo-abba-round1/summary.json`.
+Evidence: `evidence/overnight/echo-abba-round1/summary.json`.
 
 Final read-only device check: stock Python, hardware daemon, MIDI bridge, web
 editor, and SSH active; platform service disabled; root `ro,noatime`;
@@ -191,7 +191,7 @@ The actual cleanup function is tested under strict Bash flags with inert
 mount/sync stubs. This fixes error reporting, not the underlying busy-remount
 condition, which remains a bench/provisioning follow-up.
 
-Final regression evidence: `local/overnight/final-regressions-round2.log`,
+Final regression evidence: `evidence/overnight/final-regressions-round2.log`,
 `final-sanitizers.log`, and `final-thread-sanitizer.log` (all under that directory).
 The remaining physical and production-service gates are in
 [BENCH-CHECKLIST.md](BENCH-CHECKLIST.md); manifests remain hardware-unvalidated.

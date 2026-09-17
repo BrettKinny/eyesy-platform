@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "utc": "2026-09-12T12:06:58.925992+00:00",
+  "engine_sha256": "8baf1df9ab8b59f3aa9dcfd5e1c3cc3dc0cfb990dd6854d68183d614b7a33c15",
+  "mode_files": {
+    "radial-kaleidoscope/main.lua": "c592d2b4bcc05047c5ace5c2ced0bfeec1b6d0a986146d0e69f0c772b66c7315"
+  },
+  "display": ":99",
+  "hardware_acceptance": false,
+  "passed": true,
+  "runs": [
+    {
+      "mode": "radial-kaleidoscope",
+      "command": [
+        "/workspace/engine/bin/engine",
+        "--mode",
+        "/workspace/local/experiments/radial-kaleidoscope",
+        "--storage",
+        "/workspace/local/overnight/radial-petals/00-radial-kaleidoscope",
+        "--frames",
+        "600",
+        "--switch-every",
+        "0",
+        "--report",
+        "/workspace/local/overnight/radial-petals/00-radial-kaleidoscope/report.json"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "wall_seconds": 10.258095082012005,
+      "passed": true,
+      "renderer": "llvmpipe (LLVM 15.0.6, 256 bits)",
+      "software_renderer": true,
+      "hardware_acceptance": false,
+      "final": {
+        "audio_available": true,
+        "audio_dropped": 0,
+        "audio_rms_left": 0.37768983840942383,
+        "audio_rms_right": 0.38203856348991394,
+        "audio_sample_rate": 48000.0,
+        "audio_sequence": 924,
+        "audio_source": "synthetic",
+        "error": "",
+        "fps": 60.00202178955078,
+        "frame": 600,
+        "frame_time_samples": 594,
+        "frame_time_window": 4096,
+        "mode": "radial-kaleidoscope",
+        "mode_errors": 0,
+        "offscreen": false,
+        "p50_ms": 16.664505004882812,
+        "p95_ms": 16.983285546302795,
+        "p99_ms": 17.251253128051758,
+        "recorded_events": 0,
+        "recording_truncated": false,
+        "release": "development",
+        "reloads": 1,
+        "renderer": "llvmpipe (LLVM 15.0.6, 256 bits)",
+        "resources": 12,
+        "rss_bytes": 171917312,
+        "schema_version": 1,
+        "shader_warning": ""
+      },
+      "memory": {
+        "qualified": true,
+        "samples": 7,
+        "first_window_median_bytes": 171917312,
+        "last_window_median_bytes": 171917312,
+        "delta_bytes": 0,
+        "peak_bytes": 171917312
+      },
+      "temperature_peak_c": null
+    }
+  ]
+}

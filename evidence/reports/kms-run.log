@@ -1,0 +1,35 @@
+KMS: connector HDMI-A mode "1280x720" 1280x720@60 clock 74250 flags 0x5 type 0x40
+KMS: scanout live 1280x720 on crtc 106
+[notice ] Renderer: VC4 V3D 2.1
+
+RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+
+ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+[notice ] Initialing RtAudio Requested API: 1
+
+RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+
+ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+
+RtApiAlsa::getDeviceInfo: snd_pcm_open error for device (default), Invalid argument.
+
+
+RtApiAlsa::getDeviceInfo: pcm device (hw:0,0) data format not supported by RtAudio.
+
+RtAudio alsa: running realtime scheduling
+
+RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+
+ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+[notice ] Initialing RtAudio Requested API: 1
+
+RtApiPulse::DeviceInfo pa_context_connect() failed: Connection refused
+
+ALSA lib pcm_asym.c:105:(_snd_pcm_asym_open) capture slave is not defined
+
+RtApiAlsa::getDeviceInfo: snd_pcm_open error for device (default), Invalid argument.
+
+
+RtApiAlsa::getDeviceInfo: pcm device (hw:0,0) data format not supported by RtAudio.
+
+RtAudio alsa: running realtime scheduling

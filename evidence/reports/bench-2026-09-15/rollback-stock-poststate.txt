@@ -1,0 +1,13 @@
+=== 2026-09-14 23:11:59 UTC post-stock-rollback ===
+eyesy-platform: active=failed
+eyesy-platform-fallback: active=inactive
+eyesypy: active=active
+MainPID=14914
+Result=success
+-- selection --
+current: ABSENT
+active.env: ABSENT
+{"release_path": "/sdcard/eyesy-platform/releases/dev-dd42a1d3bd86"}
+-- stock process --
+  PID     ELAPSED COMMAND
+14914       00:17 python

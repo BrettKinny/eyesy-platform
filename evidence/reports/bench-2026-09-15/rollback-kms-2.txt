@@ -1,0 +1,27 @@
+{
+  "audio_available": true,
+  "audio_dropped": 0,
+  "audio_rms_left": 3.922083124052733e-05,
+  "audio_rms_right": 4.2780477087944746e-05,
+  "audio_sample_rate": 48000.0,
+  "audio_sequence": 132,
+  "audio_source": "device",
+  "error": "",
+  "fps": 59.07953643798828,
+  "frame": 84,
+  "frame_time_samples": 79,
+  "frame_time_window": 4096,
+  "mode": "starter",
+  "mode_errors": 0,
+  "offscreen": false,
+  "recorded_events": 0,
+  "recording_truncated": false,
+  "release": "dev-c2f150be2380",
+  "reloads": 1,
+  "renderer": "VC4 V3D 2.1",
+  "resources": 0,
+  "rss_bytes": 73007104,
+  "schema_version": 1,
+  "shader_warning": ""
+}
+Remote staging retained for inspection: /tmp/eyesy-platform.2K9Gs0sw
