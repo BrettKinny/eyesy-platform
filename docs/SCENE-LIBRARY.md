@@ -79,6 +79,7 @@ Device tier (VC4, 600 frames offscreen, tier-A neighbour; release
 | mandala-bardo | 30.3 | 352x198, 2-ring eval + exact ink early-outs |
 | copper-bar-hymn | 30.5 | 640x360 composite + 8x360 y-only raster |
 | slit-scan-vortex | 30.9 | 320x180 |
+| koan-terminal | 31.3 | 320x180 pass, 1.5 layout px |
 
 | scene | what it is | knob map |
 | --- | --- | --- |

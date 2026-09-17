@@ -390,6 +390,13 @@ Device tier (VC4 V3D 2.1, 600 frames offscreen, live platform on
 | slit-scan-vortex | 46.1 | 30.9 | 320x180 content, per-layer phase pre-expansion (identity refactor) |
 | koan-terminal | 74.1 | 31.3 | 320x180 pass at 1.5 layout px, hum/corner substitutions, flyback branch-gated, tints folded |
 
+Baseline caveat: the "first gate" column was measured before the neighbour
+drift was discovered, so the round-1 numbers for the late-measured scenes
+(phosphor-seance, koan-terminal) may carry some of the same +5-7 ms skew.
+The shipped column is the authoritative tier evidence: every number in it
+was measured under the verified tier-A neighbour condition, matching how
+the batch 1/2 fleet was gated.
+
 All pass `tools/scene_verify.py` at 130 and 300 frames; the restructured
 shaders carry same-sim-frame equivalence A/Bs (mandala and the seance trig
 are pixel-exact; the substitutions are bounded and measured in
