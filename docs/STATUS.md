@@ -3,6 +3,22 @@
 Updated after the 2026-09-12 overnight iteration. This is a capable development
 platform, **not yet a fully bench-qualified replacement for stock EYESY**.
 
+**Where evidence lives (2026-09-17 split).** The scene catalog and its material
+moved out of this repo into `eyesy-modes-bespoke`, `eyesy-modes-milkdrop` and
+`eyesy-modes-factory`. Paths written as
+`local/reports/...` or `docs/research/...` in the dated entries below were
+correct when the entry was written. Scene material now resolves as:
+
+- design docs -> `eyesy-modes-bespoke/docs/` (bardo-night briefs, scene-library
+  blueprint, batch-2 plan), `eyesy-modes-milkdrop/docs/trackB-plan/`
+- per-scene evidence (summary + contact sheet) ->
+  `eyesy-modes-*/evidence/<scene>/`
+- research corpus -> `eyesy-modes-*/docs/research/` (see `docs/research/README.md`)
+- raw verification runs and optimization sandboxes ->
+  `~/dev/eyesy-scene-evidence/` (untracked archive, manifest inside)
+- platform/engine evidence (bench, HDMI, soak, bootstrap) still lives in
+  `local/reports/` here
+
 ## Implemented and regression-tested
 
 - Desktop and ARM openFrameworks 0.12.1/LuaJIT builds; seven shipping modes:
@@ -206,8 +222,8 @@ shared trajectory (uniform gray).
 ## 2026-09-15 (night): scene library batch 1 shipped
 
 Eight more Lua scenes built from the research swarm (blueprint:
-`local/reports/scene-library-blueprint/BLUEPRINT.md`, raw corpus in
-`docs/research/`). Release `dev-95ed836e02d1` live (transactional, health
+`eyesy-modes-bespoke/docs/scene-library-blueprint/BLUEPRINT.md`, raw corpus in
+the mode-pack repos' `docs/research/`). Release `dev-95ed836e02d1` live (transactional, health
 passed, ~59.5 fps on the KMS path, real codec audio). 17 modes total.
 
 | scene | family | on-device p50 |
@@ -249,7 +265,8 @@ scenes need the translate, top-left-origin particle fields do not;
 `e.palette` stop spacing remains unreliable for palette-critical color
 (riley/lyapunov/outrun hardcode authored pairs); equal-luminance opponent
 pairs are luma-normalized to 0.45 by an iso() helper, not `1-c` complements.
-Research corpus: `docs/research/` (15 docs).
+Research corpus: `docs/research/` (15 docs at the time; now in the mode-pack
+repos — see `docs/research/README.md`).
 
 ## Remaining acceptance gates
 
@@ -303,8 +320,8 @@ presets get individual device tier runs; remote staging now cleans up on
 success (tmpfs was filling).
 
 Research: BeatDrop fork (OfficialIncubo) portables assessed in
-docs/research/BeatDropForkPorting.md — FFT/wave shader variables ranked
-first for a post-v1 engine round.
+`eyesy-modes-milkdrop/docs/research/BeatDropForkPorting.md` — FFT/wave shader
+variables ranked first for a post-v1 engine round.
 
 ## 2026-09-17 (dawn): bardo night — nine scenes
 
@@ -332,8 +349,8 @@ Verification method and evidence: `local/verify-catalog-bardo-dawn/`
 (whole-sweep `summary.json` + per-mode `<NN-mode>/summary.json`,
 `contact-sheet.png`, `run-*/{replay.json,engine.log,report.json,grabs/}`),
 run in `localhost/eyesy-build:bookworm` with `--xvfb`. Build reports,
-design rationale, and per-scene hashes: `local/reports/bardo-night/01..09-*.md`
-and `dawn-checkpoint.md`. Each scene's first-pass evidence dir
+design rationale, and per-scene hashes: `eyesy-modes-bespoke/docs/bardo-night/`
+(`01..09-*.md` and `dawn-checkpoint.md`). Each scene's first-pass evidence dir
 (`local/bardo-verify-01/00-mandala-bardo/`, `local/verify-temple/`,
 `local/verify-buddha1kb/`, and the per-scene `scene0N-verify/` dirs) is
 unchanged and listed in its report.
@@ -378,7 +395,9 @@ reports it as excluded. Before the mode-pack split the documented exclusion was
 not implemented and the probe shipped in every release.
 
 Device tier (VC4 V3D 2.1, 600 frames offscreen, live platform on
-`stereo-mesh` as GPU neighbour, evidence `local/reports/bardo-device*/`):
+`stereo-mesh` as GPU neighbour; the per-scene summary and the shipped device
+frame are in `eyesy-modes-bespoke/evidence/<scene>/`, the raw runs in
+`~/dev/eyesy-scene-evidence/reports/bardo-device*/`):
 
 | scene | first gate p50 | shipped p50 | what changed |
 | --- | --- | --- | --- |

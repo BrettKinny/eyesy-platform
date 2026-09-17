@@ -4,6 +4,22 @@ Updated 2026-09-16 after two scene-library batches. Point of this file: a
 fresh session starts here and knows what is done, what is next, and where
 the evidence lives.
 
+**Where evidence lives (2026-09-17 split).** The scene catalog and its material
+moved out of this repo into `eyesy-modes-bespoke`, `eyesy-modes-milkdrop` and
+`eyesy-modes-factory`. Paths written as
+`local/reports/...` or `docs/research/...` in the dated entries below were
+correct when the entry was written. Scene material now resolves as:
+
+- design docs -> `eyesy-modes-bespoke/docs/` (bardo-night briefs, scene-library
+  blueprint, batch-2 plan), `eyesy-modes-milkdrop/docs/trackB-plan/`
+- per-scene evidence (summary + contact sheet) ->
+  `eyesy-modes-*/evidence/<scene>/`
+- research corpus -> `eyesy-modes-*/docs/research/` (see `docs/research/README.md`)
+- raw verification runs and optimization sandboxes ->
+  `~/dev/eyesy-scene-evidence/` (untracked archive, manifest inside)
+- platform/engine evidence (bench, HDMI, soak, bootstrap) still lives in
+  `local/reports/` here
+
 ## Where things stand
 
 - The device runs `dev-fd196b8b39cf` (27 modes: 7 reference + 20 library
@@ -12,8 +28,9 @@ the evidence lives.
   live-proven in both directions. Boot ownership is the platform.
 - Scene library: batches 1-2 shipped (2026-09-15/16) — 20 new scenes
   across 11 families, all tier-measured on device; conventions and tier
-  table in `docs/SCENE-LIBRARY.md`; research corpus in `docs/research/`
-  (15 docs); blueprint and batch plans under `local/reports/`.
+  table in `docs/SCENE-LIBRARY.md`; research corpus in the mode-pack repos
+  (see `docs/research/README.md`); blueprint and batch plans in
+  `eyesy-modes-bespoke/docs/`.
 - The black-screen bug is closed (V1/V2; `docs/HDMI-DISPLAY-ISSUE.md`).
 - 2026-09-15 bench session (`local/reports/bench-2026-09-15/REPORT.md`):
   rollback qualified in all four paths (incompatible-previous rejection,
@@ -35,7 +52,7 @@ the evidence lives.
    equations -> Lua (tiny AVS-expression evaluator), per-pixel warp ->
    ~30 canonical ES2 fragments, comp -> display pass, blur -> multi-tap
    gather. Source: milkdrop2077/MilkDrop3 (BSD-3). Plan:
-   `local/reports/batch2-plan/PLAN.md` Track B; licensing note: community
+   `eyesy-modes-bespoke/docs/batch2-plan/PLAN.md` Track B; licensing note: community
    preset packs are third-party artwork — user-supplied content unless
    cleared.
 2. **Variant pass**: saved-scene JSONs per family (palette/regime/motion
@@ -159,20 +176,22 @@ the evidence lives.
   the prior soak rate, reload-correlated (milkdrop preset loads are new);
   follow-up = switching-disabled vs enabled attribution run. Report:
   `local/reports/soak-2026-09-16/REPORT.md`. Research: Buddhist × retro-CG
-  scene backlog at `docs/research/SacredRetroBuddhist.md` (flagship four:
+  scene backlog at `eyesy-modes-bespoke/docs/research/SacredRetroBuddhist.md`
+  (flagship four:
   enso, kolam-knot, sri-yantra-exact, sand-dissolution; cultural flags
   documented).
 
 - 2026-09-16 (later): Track B shipped and deployed (`dev-e46f786ab44d`,
   28 modes, 60.3 fps KMS path). One milkdrop engine, 12 self-authored
   presets, built by tower task agents against
-  `local/reports/trackB-plan/BRIEF.md`. Device tier evidence per preset:
+  `eyesy-modes-milkdrop/docs/trackB-plan/BRIEF.md`. Device tier evidence per preset:
   10/12 tier C, glow pair waived (docs/SCENE-LIBRARY.md). QC caught five
   real defects by measurement (clamp off-by-one, comp_glow centering +
   gather count, blur1 texel inversion, per-point env sync). Tooling:
   headless-test/benchmark --replay passthrough for in-mode preset tiers;
   staging cleanup on success. BeatDrop-fork portables assessed
-  (docs/research/BeatDropForkPorting.md) for the next engine round.
+  (`eyesy-modes-milkdrop/docs/research/BeatDropForkPorting.md`) for the
+  next engine round.
 - 2026-09-13: first live activation; black screen observed through the
   then-unqualified capture chain; two service fixes (DPMS, eyesyhw Wants=).
 - 2026-09-14: observer chain qualified (HPD↔streaming coupling found);

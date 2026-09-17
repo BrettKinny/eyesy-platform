@@ -1,7 +1,8 @@
 # Scene Library Conventions
 
 The library-wide contract every scene (engine or variant) must follow.
-Rationale and family taxonomy: `local/reports/scene-library-blueprint/BLUEPRINT.md`.
+Rationale and family taxonomy:
+`eyesy-modes-bespoke/docs/scene-library-blueprint/BLUEPRINT.md`.
 
 Mode source lives in the mode-pack repos, not in this repo: the engine repo owns
 `starter` only, and `./eyesyctl modes sync` assembles the packs into `modes/` for
@@ -64,12 +65,15 @@ milkdrop engine facts (empirical, 2026-09-16):
 
 ## bardo-night scenes (2026-09-17, device-qualified; release dev-f2c914333761)
 
-Nine scenes built in one night (reports + evidence:
-`local/reports/bardo-night/`, dawn sweep `local/verify-catalog-bardo-dawn/`).
+Nine scenes built in one night (reports: `eyesy-modes-bespoke/docs/bardo-night/`;
+per-scene verification summary and contact sheet:
+`eyesy-modes-bespoke/evidence/<scene>/`).
 All nine pass the scene contract at 300 frames in the build container's
 software GL, and all nine now hold tier C on the device after optimization
-(device evidence `local/reports/bardo-device*/`; the dawn llvmpipe p50 of
-16.6 ms proved 1.4-4.5x optimistic — llvmpipe timing never predicts VC4).
+(device evidence: the shipped frame per scene in
+`eyesy-modes-bespoke/evidence/<scene>/device-grab.png`, raw runs in
+`~/dev/eyesy-scene-evidence/`; the dawn llvmpipe p50 of 16.6 ms proved
+1.4-4.5x optimistic — llvmpipe timing never predicts VC4).
 
 Device tier (VC4, 600 frames offscreen, tier-A neighbour; release
 `dev-f2c914333761`):
