@@ -21,6 +21,12 @@ now direct KMS (engine flag `--kms`): no Xorg runs, the engine takes DRM master
 and selects a kernel-EDID mode itself. A live activation health check must show
 advancing frames plus a hardware renderer (`VC4 V3D 2.1`, never llvmpipe).
 
+Before any headless benchmark or tier gate, confirm the live service is on a
+tier-A scene at ~60 fps (`./eyesyctl status`): a heavy GPU neighbour inflates
+every offscreen p50 by 5-7 ms (measured 2026-09-17). Note the engine routes OSC
+`/key` events to the settings menu while it is open — key 1 exits — so a stuck
+menu silently blocks mode switching and neighbour control.
+
 The HDMI→USB capture dongle is a qualified A/B observer when its UVC pipeline
 streams continuously (its HPD line follows its streaming state; without a
 client it asserts no HPD and the device sees no display — the engine fails
