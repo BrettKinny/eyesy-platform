@@ -89,11 +89,11 @@ through `eyesyctl`).
    `evidence/reports/bench-auto-2026-09-18/`). What remains needs hands:
    physical knob/button feel, a known stereo line-in signal through the codec,
    and HDMI-visible latency.
-4. **Full-formality 60-min soak rerun** with an **observe-only poller**
-   (status.json `rss_bytes` + thermal temp at ~5 s — not `soak_guard.py`,
-   which kills its target; `tools/soak_guard.py:92-103`). The 27-mode
-   library changes what "formality" means: per-mode p50s are already
-   recorded in `docs/SCENE-LIBRARY.md`.
+4. **Full-formality 60-min soak** with the **observe-only poller** — **done
+   2026-09-18** on `dev-8fcb282d8437` (720 samples, 30 modes, flat thermal,
+   flat per-mode RSS; `evidence/reports/soak-2026-09-18/`). Re-run after any
+   engine change: `tools/soak_observe.py` (status.json `rss_bytes` + thermal at
+   ~5 s; never `soak_guard.py`, which kills its target).
 5. **Cold-boot recovery confirmation**: one user power-cycle after the
    no-sink failure → stock → platform sequence.
 6. **Engine tooling & robustness**: the `scenes/` re-scan and the

@@ -508,3 +508,10 @@ redeploy clears it), and MIDI input stops being applied after a long session
 with many transient ALSA clients — likely `pollMidi()`'s
 `midi.notes.fill(0)` on every client-set change; a restart restores it.
 Full finding: `evidence/reports/bench-auto-2026-09-18/REPORT.md`.
+
+**60-minute soak (observe-only).** `tools/soak_observe.py` ran 720 samples over
+3595 s on `dev-8fcb282d8437`, cycling 30 modes. Thermal flat (55.3–62.3 °C),
+per-mode RSS delta 0.00–0.13 MiB over each 120 s visit, `starter` at 60.3 fps
+and the rest matching the tier table. One transient mode-load error at the
+`kali-bloom → koan-terminal` switch (not reproduced in the bench sweep).
+Full finding: `evidence/reports/soak-2026-09-18/REPORT.md`.

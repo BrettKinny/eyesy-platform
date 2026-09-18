@@ -30,6 +30,7 @@ scene (`evidence/<scene>/`) instead of per workstream.
 | `reports/os3-parity-2026-09-17/` | The OS v3 instrument layer's hardware receipts: HUD states, palette and hardware-test menu screens |
 | `reports/device-parity-2026-09-18/` | The automated 13-step device parity re-run on `dev-8fcb282d8437` and the bench scene-directory cleanup; `REPORT.md` is the finding |
 | `reports/bench-auto-2026-09-18/` | The automated bench acceptance: latch oracle, MIDI (CC→knobs, notes, transport, reconnect) and the 41-mode render smoke; `REPORT.md` is the finding |
+| `reports/soak-2026-09-18/` + `samples.jsonl` | The 60-minute observe-only soak on `dev-8fcb282d8437`: flat per-mode RSS, flat thermal, tier-matching fps |
 | `reports/1080p-plan-2026-09-15/` | The 1080p viability assessment (parked) |
 | `reports/hdmi-dongle-stream/`, `reports/vidctl-*.txt`, `reports/vc4-hdmi-regs-*.txt`, `reports/kms-*.{log,txt}`, `reports/stock-after-x-full.txt` | The HDMI_VID_CTL latched-bit investigation |
 | `reports/bootstrap-arm-2026-09-15/`, `reports/provision-hygiene-2026-09-15/` | Card provisioning and the ARM bootstrap |
