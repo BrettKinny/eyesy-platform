@@ -86,7 +86,8 @@ class EngineApp : public ofBaseApp {
     ofFbo canvas;
     int selected = 0, sceneIndex = -1, selectedKnob = 0, sock = -1, ledSock = -1, ledState = -1;
     uint64_t frame = 0, triggerCount = 0, reloads = 0, modeErrors = 0;
-    double lastFrame = 0, lastWatch = 0, lastStatus = 0;
+    double lastFrame = 0, lastWatch = 0, lastStatus = 0, lastSceneScan = 0;
+    fs::file_time_type sceneStamp{};
     bool trigger = false, osd = true, autoClear = true, shift = false;
     std::array<int, 11> keyHeldTicks{};
     double savePressTime = 0;
@@ -391,6 +392,39 @@ class EngineApp : public ofBaseApp {
                 if (entry.path().extension() == ".json")
                     scenes.push_back(entry.path());
         std::sort(scenes.begin(), scenes.end());
+    }
+    // Directory mtime, so an external add/remove is noticed without touching
+    // every scene file each frame.
+    fs::file_time_type scenesStamp() {
+        std::error_code error;
+        auto folder = options.storage / "scenes";
+        if (!fs::exists(folder, error) || error)
+            return fs::file_time_type{};
+        auto stamp = fs::last_write_time(folder, error);
+        return error ? fs::file_time_type{} : stamp;
+    }
+    // refreshScenes() alone runs only from saveScene()/recallScene(), so files
+    // added or removed behind the engine's back (a host-side copy, a USB drop,
+    // a glitch-residue cleanup) stayed invisible to status.json and the HUD
+    // until a Scene-key step. Re-scan on an external change; keep the loaded
+    // scene by path when it survives, else clamp the index without reloading.
+    void reconcileScenes() {
+        auto loaded = (sceneIndex >= 0 && sceneIndex < int(scenes.size()))
+                          ? scenes[sceneIndex] : fs::path{};
+        refreshScenes();
+        if (scenes.empty()) {
+            sceneIndex = -1;
+            return;
+        }
+        if (!loaded.empty()) {
+            auto it = std::find(scenes.begin(), scenes.end(), loaded);
+            if (it != scenes.end()) {
+                sceneIndex = it - scenes.begin();
+                return;
+            }
+        }
+        if (sceneIndex >= int(scenes.size()))
+            sceneIndex = int(scenes.size()) - 1;
     }
     void saveScene() {
         try {
@@ -814,6 +848,8 @@ class EngineApp : public ofBaseApp {
             std::sort(catalog.begin(), catalog.end());
             auto it = std::find(catalog.begin(), catalog.end(), options.mode);
             loadMode(it == catalog.end() ? 0 : it - catalog.begin());
+            refreshScenes();
+            sceneStamp = scenesStamp();
         }
         for (int k = 0; k < 5; ++k)
             recordEvent({0, "knob", k + 1, 0, 0, 0, 0, 0, knobs[k]});
@@ -946,6 +982,14 @@ class EngineApp : public ofBaseApp {
                     watchFiles();
                 } else
                     loadMode(selected);
+            }
+        }
+        if (wall - lastSceneScan > 1.0 && !options.probe) {
+            lastSceneScan = wall;
+            auto stamp = scenesStamp();
+            if (stamp != sceneStamp) {
+                sceneStamp = stamp;
+                reconcileScenes();
             }
         }
         if (options.switchEvery && frame && frame % options.switchEvery == 0)

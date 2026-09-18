@@ -299,10 +299,10 @@ repos — see `docs/research/README.md`).
    modes carry the `ctx.auto_clear` veil idiom; the remaining canvas modes
    still call `e.clear()` unconditionally, so toggling persist has no visible
    effect outside the pilots.
-8. Engine scene-directory re-scan: `refreshScenes()` runs only from
-   `saveScene()`/`recallScene()`, so files added or removed behind the engine's
-   back are invisible to `status.json` and the HUD until a Scene-key step or a
-   restart (measured 2026-09-18).
+8. Engine scene-directory re-scan: **fixed 2026-09-18** — `refreshScenes()` now
+   also runs at startup and `update()` polls the `scenes/` directory mtime, so
+   files added or removed behind the engine's back are reflected without a
+   Scene-key step.
 
 Release manifests intentionally retain `hardware_validated: false`.
 Use the [next-session bench checklist](BENCH-CHECKLIST.md) for the remaining gates.
@@ -476,3 +476,35 @@ to 3 with a baseline scene loaded. A 120 s watch afterwards recorded zero new
 files and zero OSD events, so the unit is quiet right now, not fixed.
 
 Full finding: `evidence/reports/device-parity-2026-09-18/REPORT.md`.
+
+## 2026-09-18 (later): scene re-scan, fallback-race fix, and automated bench acceptance
+
+**Engine re-scans `scenes/` on its own.** `refreshScenes()` ran only from
+`saveScene()`/`recallScene()`, so files added or removed behind the engine's
+back stayed invisible to `status.json` and the HUD until a Scene-key step, and
+the scene list was not even seeded at startup. `engine/src/main.cpp` now scans
+once in `setup()` and, in `update()`, polls the `scenes/` directory mtime every
+second and reconciles by path (keeping a still-present loaded scene, clamping
+the index otherwise). Verified on the CM3+ by running the freshly built ARM
+binary offscreen against a temp storage: startup `scene_count` 3, external add
+→ 4, external delete → 3, emptied directory → 0, all without a key press.
+
+**Fallback unit no longer ends FAILED in the benign race.** When the platform
+is mid-`Restart=` (`ActiveState=activating`) the fallback's stock start is
+canceled by `Conflicts=eyesypy.service`; the unit then exited nonzero even
+though the platform was converging. `deploy/eyesy-platform-fallback.service`
+now treats `activating` as success while still exiting nonzero for a genuinely
+parked platform with a dead stock client. `tests/test_fallback_unit.py` runs
+the real `ExecStart` against a mock `systemctl` and pins the exit contract
+(including the old→3 / new→0 regression).
+
+**Automated bench acceptance.** `tests/device_bench_auto.py` covers the
+no-hands half of the bench checklist: the HDMI latch oracle, MIDI (CC 20–24 →
+knobs read off the HUD sliders, notes 60/62/64 → the hardware-test row,
+transport, disconnect/reconnect), and a 41-mode render smoke. It passed all
+seven gates on `dev-8fcb282d8437`. Two findings: `kirlian-aura` ships without
+its `kirlian.frag` in the deployed release (already fixed in the pack; a
+redeploy clears it), and MIDI input stops being applied after a long session
+with many transient ALSA clients — likely `pollMidi()`'s
+`midi.notes.fill(0)` on every client-set change; a restart restores it.
+Full finding: `evidence/reports/bench-auto-2026-09-18/REPORT.md`.

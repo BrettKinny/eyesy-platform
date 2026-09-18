@@ -850,8 +850,11 @@ class PresetLibraryTests(LuaCase):
         for name, preset in sorted(self.by_name.items()):
             fields = preset['fields']
             with self.subTest(preset=name):
-                self.assertIn(fields['warp'], ('default', 'sphere', 'sector'))
-                self.assertIn(fields['comp'], ('default', 'glow'))
+                # warp/comp dispatch in modes/milkdrop/main.lua: warp branches on
+                # sphere/sector/kaleido/blur/diffuse (else default); comp branches
+                # on glow/softmax/plasma/rotoblur (else default).
+                self.assertIn(fields['warp'], ('default', 'sphere', 'sector', 'kaleido', 'blur', 'diffuse'))
+                self.assertIn(fields['comp'], ('default', 'glow', 'softmax', 'plasma', 'rotoblur'))
                 self.assertIn(int(fields['wave_mode']), range(4))
                 self.assertGreater(float(fields['decay']), 0.0)
                 self.assertLessEqual(float(fields['decay']), 1.0)

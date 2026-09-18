@@ -9,8 +9,9 @@ Type=oneshot
 # (Conflicts=eyesypy.service) and this unit ended FAILED -- benign and
 # convergent but noisy (bench-2026-09-15 phase 1/2). Give the platform a
 # short window to recover on its own first; only then hand the display to
-# stock. Nonzero exit now means neither display client is up: a genuine
-# total display failure.
+# stock. A platform still activating is the convergent end state, so it counts
+# as success; a nonzero exit now means the platform parked failed AND stock
+# would not start -- a genuine total display failure.
 ExecStart=/bin/sh -ec 'i=0; \
 while [ "$i" -lt 10 ]; do \
   state=$(systemctl show eyesy-platform.service -p ActiveState --value); \
@@ -20,10 +21,12 @@ while [ "$i" -lt 10 ]; do \
   [ "$state" = failed ] && break; \
   i=$((i+1)); sleep 1; \
 done; \
-# Platform did not recover on its own (transient restarts converge within a \
-# couple of start-limit cycles). Hand the display to stock, then succeed only \
-# if exactly one display client ended up active. \
+# Platform did not recover on its own within the poll window. Hand the display \
+# to stock, then succeed if any display client is up or the platform is still \
+# recovering (a pending Restart= cancels the stock start via Conflicts=, so an \
+# activating platform is convergent, not a failure). \
 systemctl start eyesypy.service || true; \
 sleep 2; \
-if systemctl is-active --quiet eyesy-platform.service; then exit 0; fi; \
+state=$(systemctl show eyesy-platform.service -p ActiveState --value); \
+case "$state" in active|activating) exit 0;; esac; \
 systemctl is-active --quiet eyesypy.service'

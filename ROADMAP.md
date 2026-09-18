@@ -84,8 +84,11 @@ through `eyesyctl`).
    only — flam3 is GPL-3.0, no transliteration), DLA growth, Buddhabrot-lite
    accumulation, Whitney fans, Lissajous weaver.
 3. **Physical bench acceptance** (`docs/BENCH-CHECKLIST.md` sections 3–4, 6):
-   knobs/trigger/scene/MIDI, known stereo signal through the codec,
-   visible-latency feel across all 27 modes. Needs hands.
+   the automated half landed 2026-09-18 (`tests/device_bench_auto.py`: latch
+   oracle, MIDI CC/notes/transport/reconnect, 41-mode render smoke —
+   `evidence/reports/bench-auto-2026-09-18/`). What remains needs hands:
+   physical knob/button feel, a known stereo line-in signal through the codec,
+   and HDMI-visible latency.
 4. **Full-formality 60-min soak rerun** with an **observe-only poller**
    (status.json `rss_bytes` + thermal temp at ~5 s — not `soak_guard.py`,
    which kills its target; `tools/soak_guard.py:92-103`). The 27-mode
@@ -93,13 +96,13 @@ through `eyesyctl`).
    recorded in `docs/SCENE-LIBRARY.md`.
 5. **Cold-boot recovery confirmation**: one user power-cycle after the
    no-sink failure → stock → platform sequence.
-6. **Engine tooling & robustness**: the engine should re-scan `scenes/` when
-   files change behind its back — `refreshScenes()` runs only from
-   `saveScene()`/`recallScene()` (`engine/src/main.cpp:386-401, 447`), so an
-   external deletion is invisible until a Scene-key step or a restart
-   (measured 2026-09-18). Also: the recovery-vs-fallback race ends the
-   fallback unit FAILED (benign, convergent). Landed 2026-09-16: SIGTERM
-   exits 0, the KMS `modes[0]` fallback is loud
+6. **Engine tooling & robustness**: the `scenes/` re-scan and the
+   recovery-vs-fallback race are fixed (2026-09-18 — `engine/src/main.cpp`,
+   `deploy/eyesy-platform-fallback.service`, `tests/test_fallback_unit.py`).
+   Open: MIDI input stops being applied after a long session with many transient
+   ALSA clients — `pollMidi()` runs `midi.notes.fill(0)` on every client-set
+   change, clearing a held note within one 2 s scan; clear only stale notes.
+   Landed 2026-09-16: SIGTERM exits 0, the KMS `modes[0]` fallback is loud
    (`engine/src/kms_window.cpp:253-263`), and `rollback --target stock`
    re-entry re-selects the installed release.
 7. **Platform hardening**: read-only root restoration qualification after apt
