@@ -133,11 +133,16 @@ Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode 
 
 ---
 
-## 3. Standing Constraints & Standing Freezes
+## 3. Standing Constraints
 
-Per `ROADMAP.md:36-37` and `ROADMAP.md:119-120`:
-- **Scene-library pacing**: Scene code fixes and rewrites ride the scene-library batches.
-- **Rule for porting**: Do **not** execute a sweeping 37-mode draw-idiom rewrite while the scene freeze is active. Keep initial persist work to the engine-side enabler (`ctx.auto_clear` + OSD indicator) and a 1–2 mode pilot (`starter` / `stereo-mesh`). Defer full fleet migration until after physical bench qualification.
+- **Scene-library pacing**: scene code fixes and rewrites ride the scene-library
+  batches; they are not done as an ad-hoc sweep. Land the engine-side persist
+  enabler (`ctx.auto_clear` + OSD indicator) and a 1–2 mode pilot
+  (`starter` / `stereo-mesh`) first, then migrate the rest of the fleet in the
+  next scene-library pass after physical bench acceptance (ROADMAP items 1–3).
+- **Rule for porting**: Do **not** execute a sweeping 37-mode draw-idiom rewrite
+  in one pass — restructure the canvas modes per batch with per-scene tier
+  evidence (`docs/SCENE-LIBRARY.md`).
 
 ---
 
@@ -411,7 +416,7 @@ plan constants were wrong and the implementation follows the instrument:
 - **The menu covers the plan's four sub-screens.** Stock's remaining screens
   (WiFi, PC mapping, backups, logs) are not ported; the platform already owns
   those through `eyesyctl` and the editor.
-- **Scene freeze respected**: only the two pilot modes carry the veil idiom
+- **Persist pilot only**: only the two pilot modes carry the veil idiom
   (`modes/starter`, and `eyesy-modes-bespoke/stereo-mesh`); the fleet rewrite
   rides the next scene-library pass.
 
@@ -421,8 +426,11 @@ plan constants were wrong and the implementation follows the instrument:
 (from the device itself), asserts against `status.json` and the scene/config
 files, watches the daemon's LED socket, and snapshots the HDMI capture stream at
 every step. It needs an HDMI→USB streamer already writing a rolling PNG, because
-the dongle only asserts HPD while it streams. Measured 2026-09-17 on release
-`dev-8fcb282d8437`: 13 steps green in 75 s (`local/reports/device-parity-*`).
+the dongle only asserts HPD while it streams. Measured on release
+`dev-8fcb282d8437`: 13 steps green in 75 s on 2026-09-17, and again in 85 s on
+2026-09-18 — that second run's captures and machine-readable receipt are in
+`evidence/reports/device-parity-2026-09-18/`, alongside the scene-directory
+cleanup it performed.
 
 One bench-unit hazard the run must tolerate: the CM3+ spare's button matrix
 emits spurious key events in bursts, and a spurious save-bit pair writes a

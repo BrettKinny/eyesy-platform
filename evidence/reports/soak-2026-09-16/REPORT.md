@@ -7,7 +7,7 @@ new boot rule, capture dongle EDID (1080p-capable sink, 720p chosen by the
 mode chooser), no streamer held during the run (HPD toggling — proven harmless
 to a correctly-started engine). **Tooling:** `tools/soak_observe.py`
 (observe-only: samples status.json + thermal at 5 s, OSC /key 5 mode switch
-every 120 s; never signals or kills the engine — ROADMAP item 5). Data:
+every 120 s; never signals or kills the engine — ROADMAP item 4). Data:
 `local/soak-2026-09-16-samples.jsonl` (720 samples, 3595 s, single monotonic
 series; stale 7-line prefix from a killed pre-fix instance trimmed on device).
 
@@ -30,7 +30,7 @@ series; stale 7-line prefix from a killed pre-fix instance trimmed on device).
    measured on repeat visits of the *same* mode (rules out mode-dependent
    baseline confounds). ≈73 KB/reload × 30 reloads. Prior bench soak
    (+248 KiB/53.7 min, fewer switches) ran ~4.6 KB/min vs ~38 KB/min here.
-   Over a 3 h session this is ~7 MB — not a threat, but a regression vs the
+   At extended-run length (3+ h) this is ~7 MB — not a threat, but a regression vs the
    previous rate worth attribution: candidate causes are per-reload
    LuaJIT/allocation churn (30 reloads this run) and the milkdrop engine's
    preset JSON loads (new since the last soak). **Follow-up:** rerun with
@@ -41,7 +41,7 @@ series; stale 7-line prefix from a killed pre-fix instance trimmed on device).
 
 ## Gate status
 
-ROADMAP item 5 (full-formality soak with observe-only poller): **done**.
+ROADMAP item 4 (full-formality soak with observe-only poller): **done**.
 Remaining gates for `hardware_validated`: physical bench items (BENCH-CHECKLIST
 §3/4/6), cold-boot recovery confirmation, and the leak-attribution follow-up
 above (advisory, not a gate).

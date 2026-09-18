@@ -3,7 +3,7 @@
 
 Samples status.json + thermal at a fixed interval and cycles modes via OSC
 /key events (key 5 = next mode). NEVER signals, restarts, or kills the
-engine -- that is soak_guard.py's job, and ROADMAP item 5 forbids it here.
+engine -- that is soak_guard.py's job, and ROADMAP item 4 forbids it here.
 
     sudo -n python3 soak_observe.py --duration 3600 --interval 5 \
         --output /sdcard/eyesy-platform/experiments/soak-<date> --mode-seconds 120

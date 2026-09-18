@@ -1,7 +1,11 @@
 # Implementation status
 
-Updated after the 2026-09-12 overnight iteration. This is a capable development
-platform, **not yet a fully bench-qualified replacement for stock EYESY**.
+Updated 2026-09-18. This is a capable development platform, **not yet a fully
+bench-qualified replacement for stock EYESY**. The device runs
+`dev-8fcb282d8437` (41 modes) on a direct-KMS path at 720p60 with hardware GL
+(`VC4 V3D 2.1`); the EYESY OS v3 instrument layer is delivered and the 13-step
+device parity suite is green. What remains is the physical bench acceptance, the
+read-only/pinned provisioning gates, and the platform-hygiene items below.
 
 **Where evidence lives (2026-09-17 split).** The scene catalog and its material
 moved out of this repo into `eyesy-modes-bespoke`, `eyesy-modes-milkdrop` and
@@ -291,6 +295,14 @@ repos — see `docs/research/README.md`).
    The 2026-09-13 "never shows Xorg output" reading was the latched VID_CTL
    bit, not the chain. A real display remains recommended for final visual
    and latency acceptance.
+7. Fleet-wide persist veil migration: only the `starter`/`stereo-mesh` pilot
+   modes carry the `ctx.auto_clear` veil idiom; the remaining canvas modes
+   still call `e.clear()` unconditionally, so toggling persist has no visible
+   effect outside the pilots.
+8. Engine scene-directory re-scan: `refreshScenes()` runs only from
+   `saveScene()`/`recallScene()`, so files added or removed behind the engine's
+   back are invisible to `status.json` and the HUD until a Scene-key step or a
+   restart (measured 2026-09-18).
 
 Release manifests intentionally retain `hardware_validated: false`.
 Use the [next-session bench checklist](BENCH-CHECKLIST.md) for the remaining gates.
@@ -442,3 +454,25 @@ New measurement facts for the library:
   runs must start from the verified condition: live platform on a tier-A
   scene at ~60 fps (`./eyesyctl status` + OSC key check on the device).
 
+
+## 2026-09-18: OS v3 parity re-proven on hardware; bench scene residue cleared
+
+`tests/device_parity_tests.py` ran end to end against the CM3+ spare
+(<device-ip>) on `dev-8fcb282d8437` and passed all 13 steps in 85 s —
+convergence to an idle baseline, the trigger tone (mono, RMS 0.538), the knob
+sequencer arming/recording/playing, save-with-sequence, recall, in-place update,
+hold-Save delete, palette cycling in both directions, the four menu screens with
+live diagnostics, the daemon LED sequence `[6, 1, 3, 7]` on port 4001, and a
+clean return to idle. Six scanout captures, the per-step `status.json` values and
+the machine-readable receipt are in `evidence/reports/device-parity-2026-09-18/`.
+
+The same session removed the scene residue the bench unit's button matrix had
+produced: 47 files dated `2026-09-17`/`2026-09-18` beside the three genuine
+`2026-09-13` baselines, all validated as scene JSON first, backed up host-side,
+and quarantined on the device. The engine does **not** re-scan `scenes/` on its
+own — `refreshScenes()` runs only from `saveScene()` and `recallScene()` — so
+`status.json` kept reporting `scene_count=50` until one Scene-key step brought it
+to 3 with a baseline scene loaded. A 120 s watch afterwards recorded zero new
+files and zero OSD events, so the unit is quiet right now, not fixed.
+
+Full finding: `evidence/reports/device-parity-2026-09-18/REPORT.md`.

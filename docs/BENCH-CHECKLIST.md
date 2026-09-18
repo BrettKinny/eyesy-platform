@@ -56,6 +56,14 @@ renderer, audio-open failure, or failure to recover the stock service.
   temperature, or a marginal ribbon contact are candidates; treat a nonzero
   spurious rate as a fail for the save/delete gates and for any test that
   asserts exact scene counts.
+- Clearing glitch residue needs the engine's cooperation: `refreshScenes()` runs
+  only from `saveScene()` and `recallScene()` (`engine/src/main.cpp`), so
+  `status.json` keeps reporting the old `scene_count` after files are removed
+  until a Scene key (6/7) steps once or the engine restarts. Measured
+  2026-09-18 on the CM3+ spare: 47 glitch files removed, `scene_count` stayed at
+  50 until one step press brought it to 3 with a baseline scene loaded; a 120 s
+  watch after that recorded zero new files and zero OSD events — a quiet window,
+  not a fix. See `evidence/reports/device-parity-2026-09-18/REPORT.md`.
 - With the platform preview/test path running, exercise all five knobs, trigger,
   scene save/recall, mode navigation, OSD, and settings changes.
 - Verify soft takeover after scene recall and confirm the selected trigger source

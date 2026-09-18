@@ -151,7 +151,7 @@ reduced-resolution render path (as aurora already does by default via its
    status.json sampler (1Hz) for a bounded window per mode at 1080p scanout
    — with the 2026-09-15 caveat: use an observe-only poller, not the
    kill-capable soak_guard, when pointed at the deployed service (see
-   ROADMAP.md item 2). Verify p50/p95 from status.json, page-flip regularity
+   ROADMAP.md item 4). Verify p50/p95 from status.json, page-flip regularity
    via the frame-time window, and check dmesg/journal for any HVS underrun or
    CMA allocation failures; compare 720p-vs-1080p visually via the dongle
    capture (frame grabs like dongle/live-phase5/*.png) for text/geometry
