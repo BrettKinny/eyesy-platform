@@ -23,12 +23,12 @@ resolves as:
 
 ## Where things stand
 
-- The device runs `dev-8fcb282d8437` (41 modes: the reference set, library
-  batches 1-2, the nine bardo scenes and `milkdrop`), which carries the whole
-  OS v3 instrument layer; `previous.json` points at `dev-8460b87739f5`. Direct
-  KMS engine (`--kms`), hardware GL (`VC4 V3D 2.1`) at ~60 fps, no Xorg in the
-  display path. Rollback via `previous.json` is live-proven in both directions.
-  Boot ownership is the platform.
+- The device runs `dev-f1ad163561e9` (92 modes across `bespoke`, `factory`,
+  and `milkdrop`), carrying the OS v3 instrument layer and the live
+  automatic `scenes/` directory rescan; `previous.json` points at
+  `dev-8fcb282d8437`. Direct KMS engine (`--kms`), hardware GL (`VC4 V3D 2.1`)
+  at ~60 fps, no Xorg in the display path. Rollback via `previous.json` is
+  live-proven in both directions. Boot ownership is the platform.
 - Scene library: batches 1-2 shipped (2026-09-15/16) — 20 new scenes
   across 11 families, all tier-measured on device; conventions and tier
   table in `docs/SCENE-LIBRARY.md`; research corpus in the mode-pack repos

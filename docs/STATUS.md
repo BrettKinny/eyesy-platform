@@ -2,9 +2,9 @@
 
 Updated 2026-09-18. This is a capable development platform, **not yet a fully
 bench-qualified replacement for stock EYESY**. The device runs
-`dev-8fcb282d8437` (41 modes) on a direct-KMS path at 720p60 with hardware GL
-(`VC4 V3D 2.1`); the EYESY OS v3 instrument layer is delivered and the 13-step
-device parity suite is green. What remains is the physical bench acceptance, the
+`dev-f1ad163561e9` (92 modes) on a direct-KMS path at 720p60 with hardware GL
+(`VC4 V3D 2.1`); the EYESY OS v3 instrument layer is delivered and the live
+`scenes/` directory rescan is active. What remains is the physical bench acceptance, the
 read-only/pinned provisioning gates, and the platform-hygiene items below.
 
 **Where evidence lives (2026-09-17 split).** The scene catalog and its material
