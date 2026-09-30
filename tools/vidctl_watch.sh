@@ -4,11 +4,11 @@
 # 0xc2000000 (bit 25) = sync-with-blanked-pixels, persists until power cycle.
 # See docs/HDMI-DISPLAY-ISSUE.md.
 #
-# Usage: tools/vidctl_watch.sh [HOST] > local/reports/vidctl-<label>.txt
+# Usage: tools/vidctl_watch.sh HOST > local/reports/vidctl-<label>.txt
 # Stop with Ctrl-C. Runs a device-side loop over one ssh connection.
 
 set -euo pipefail
-HOST="${1:-<device-ip>}"
+HOST="${1:?usage: tools/vidctl_watch.sh HOST}"
 cd "$(dirname "$0")/.."
 exec ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=yes \
     -o UserKnownHostsFile=local/eyesy_known_hosts "music@${HOST}" \

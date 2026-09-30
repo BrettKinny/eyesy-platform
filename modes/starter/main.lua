@@ -9,7 +9,7 @@ return {
     if ctx.auto_clear then
       e.clear(0.025, 0.035, 0.06)
     else
-      -- Persist off: decay the previous frame instead of wiping it.
+      -- Persist on: decay the previous frame instead of wiping it.
       e.color(0.025, 0.035, 0.06, 0.08)
       e.rect(0, 0, ctx.width, ctx.height)
     end

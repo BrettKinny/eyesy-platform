@@ -20,7 +20,7 @@ here is what the device sees at `/sdcard/Modes`.
 `modes/` survives — but it is untracked. Author in a pack repo instead:
 
 ```sh
-./eyesyctl new-mode my-scene --pack ~/dev/eyesy-modes-bespoke
+./eyesyctl new-mode my-scene --pack ../eyesy-modes-mine
 ```
 
 A mode folder containing `.eyesy-no-ship` is copied but excluded from releases

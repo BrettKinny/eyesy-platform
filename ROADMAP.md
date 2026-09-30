@@ -134,8 +134,8 @@ Parked, not pursued:
   `tools/rr_flags.py`, `tools/xshot.py`.
 - Device facts: `sudo -n` works; `/` is read-only (remount dance for
   `systemctl enable/disable`); device clock drifts ~2 days at boot until
-  sync — trust `uptime -s` after sync; assistant must not reboot the device
-  (user power-cycles); stop-then-start services (restart races vt/DRM
+  sync — trust `uptime -s` after sync; never reboot the device remotely
+  (power-cycle it by hand); stop-then-start services (restart races vt/DRM
   master).
 
 ## Session log

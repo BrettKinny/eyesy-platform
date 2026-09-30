@@ -1,5 +1,9 @@
 # EYESY Source Research: Architecture
 
+> **Background research, 2026-07.** Written before this engine existed, to decide
+> what to build. It is kept for context and is not updated; for what the platform
+> does now, see the [README](../../README.md) and the [mode API](../API.md).
+
 Repos examined (cloned to /tmp/eyesy-research, 2026-07):
 
 - `critterandguitari/EYESY_OS` — the "operating system": Python engine + web editor + Raspberry Pi CM3/CM4 platform layer

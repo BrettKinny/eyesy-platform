@@ -1,6 +1,10 @@
 # The "other" OS: EYESY_OF (openFrameworks + Lua)
 
-You remembered right. Before (and alongside) the Python/pygame OS v3, there was an
+> **Background research, 2026-07.** Written before this engine existed, to decide
+> what to build. It is kept for context and is not updated; for what the platform
+> does now, see the [README](../../README.md) and the [mode API](../API.md).
+
+Before (and alongside) the Python/pygame OS v3, there was an
 **openFrameworks-based engine** that runs **Lua scripts** — and it *is* the OpenGL one.
 
 Repos:
@@ -29,7 +33,7 @@ Full openFrameworks surface, including things the Python OS can't do:
 
 ## Status / caveats
 
-- Timeline: `EYESY_OF` created 2020-04, last pushed 2022-08. `EYESY_oFLua_Examples` pushed 2023-01. Python OS v3 (current shipping) is the newer line — the OF engine was the **earlier/beta** generation, which matches what you remembered. It's "part of EYESY_OS" per its README, but the current v3 image ships the Python engine.
+- Timeline: `EYESY_OF` created 2020-04, last pushed 2022-08. `EYESY_oFLua_Examples` pushed 2023-01. Python OS v3 (current shipping) is the newer line — the OF engine was the **earlier/beta** generation. It's "part of EYESY_OS" per its README, but the current v3 image ships the Python engine.
 - Only 14 examples, all basic (mostly "draw a shape that reacts to `inL[i]`")
 - The `eyesy.lua` shared library isn't published — you'd need it from a v1/v2 image or to reimplement it (the examples show exactly what it must provide: `colorPickHsb`, and the globals `w,h,w2,...`, `knob1..5`, `trig`, `inL`)
 - Audio is mono-only (right channel commented out), and the buffer is OF's sound buffer (per-frame samples, not the 100-sample trick) — actually *finer-grained* than the Python OS

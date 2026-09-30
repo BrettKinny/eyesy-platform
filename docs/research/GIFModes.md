@@ -214,7 +214,7 @@ means.
 
 - **Original `EYESY_OF` (openFrameworks + Lua) had a `VIDEO` example** that plays a `.mov` via
   OF's own player — i.e. the OF generation supported video-in as a first-class object because OF
-  ships a player. That is the reference point for §4, *not* for GIF. (`03-of-lua-engine.md`:
+  ships a player. That is the reference point for §4, *not* for GIF. (`docs/background/eyesy-of-engine.md`:
   "**Video in**: a `VIDEO` example (plays a .mov) — the Python OS has no video input at all.").
 - **Stock Python eyesy (`EYESY_OS` / `EYESY_Modes_OSv3`) has no GIF/video texture path** — its
   modes are procedural (pygame immediate drawing / vector); this project's Lua API is richer
@@ -262,4 +262,4 @@ Repo-grounded (paths under the repo root):
 - `tools/provision_device.sh` (read-only root remount dance; GStreamer/mpg123 as passive deps).
 - `docs/DEPLOYMENT.md`, `docs/SCENE-LIBRARY.md` (tier budget, composite design law),
   `docs/CREATIVE.md`, `ROADMAP.md` (read-only `/tmp` tmpfs, VC4 V3D 2.1, 60 fps),
-  `docs/03-of-lua-engine.md` (old OF `VIDEO` precedent).
+  `docs/background/eyesy-of-engine.md` (old OF `VIDEO` precedent).

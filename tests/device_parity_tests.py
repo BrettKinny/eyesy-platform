@@ -14,7 +14,7 @@ Requirements:
     instrument's output goes black (uniform 0,0,0 frames).
 
 Usage:
-    tests/device_parity_tests.py --host <device-ip> \
+    tests/device_parity_tests.py --host DEVICE_IP \
         --frames local/hdmi/latest.png --output local/reports/device-parity-<label>
 """
 import argparse
