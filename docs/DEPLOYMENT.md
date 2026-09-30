@@ -1,5 +1,11 @@
 # Development clone and deployment
 
+The platform targets a CM3+ EYESY running EYESY OS v3.0 (Raspbian Bookworm, with
+the `vc4-kms-v3d,composite` and `wm8731-spi` overlays). To read those details
+from your unit without changing anything, run
+`./eyesyctl doctor --host DEVICE_IP`. It uses the stock web editor's file-read
+API.
+
 ARM releases carry the matching Debian build's `libstdc++.so.6` and
 `libgcc_s.so.1` privately under `libs/`. The binary uses
 `$ORIGIN/libs:$ORIGIN`, not the launch directory, to find bundled libraries.
@@ -8,10 +14,6 @@ replacing Raspbian system libraries. `build --arm` extracts the matching pair
 from its container; package creation requires their build-provenance hashes.
 SDK patches, source hashes, package inventory, and container identity are also
 recorded. GPU/audio libraries still come from the device's provisioned OS.
-
-No device was modified during initial desktop development. The original device was
-identified through read-only editor requests at <device-ip> as a CM3+, EYESY v3.0,
-Raspbian Bookworm, with `vc4-kms-v3d,composite` and `wm8731-spi` overlays.
 
 ## Prepare the spare card
 
@@ -41,6 +43,7 @@ then verify the SSH host fingerprint before accepting it on the workstation.
 ```sh
 ./eyesyctl bootstrap --arm
 ./eyesyctl build --arm
+./eyesyctl modes sync
 ./eyesyctl package --arm
 python3 tools/release.py dist/dev-<payload-id>-armhf.tar.gz --architecture armhf  # actual name printed by `package`
 ```
@@ -55,12 +58,22 @@ Provision only the prepared spare:
 ./eyesyctl provision --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
 ```
 
-This installs Xorg/runtime packages, saves package and Xwrapper configuration
-records, installs disabled platform services, and attempts to restore the prior
-root mount mode. It does not stop stock video. The first spare-card provision
-completed, but immediate read-only remount failed after apt; a controlled reboot
-restored `ro,noatime`. Treat this cleanup limitation as unresolved, not a successful
-read-only restoration. Stock boot and disabled platform services were verified.
+This installs the runtime libraries the engine links against and installs the
+platform's systemd units, disabled. It records the package inventory before and
+after, and backs up anything it replaces. It then attempts to restore the prior
+root mount mode. It does not stop stock video.
+
+The provisioner also still installs the Xorg packages, and writes an
+`Xwrapper.config`, from the platform's earlier X-based display path. The current
+service never starts X. It draws with direct KMS, because on this board any Xorg
+session leaves HDMI blanked until the next power cycle; see
+[HDMI display issue](HDMI-DISPLAY-ISSUE.md). The provisioner also removes the
+legacy `/etc/X11/xorg.conf.d/10-eyesy-720p.conf` if an earlier run left it.
+
+On the first spare-card provision, the read-only remount failed immediately after
+apt, and a controlled reboot restored `ro,noatime`. Treat this cleanup limitation
+as unresolved, not a successful read-only restoration. Stock boot and the disabled
+platform services were verified.
 
 The current provisioner refuses active/enabled platform services, symlinked write
 destinations, and existing provision backups. A repeated invocation will not
@@ -68,12 +81,33 @@ overwrite the first inventory, including after an interrupted attempt. Review th
 saved state before planning a repair; do not delete backups just to bypass this
 guard. These newer checks are locally tested, not a second live apt qualification.
 
-Before full activation, run `eyesy-armhf --probe --fullscreen --audio-device auto`
-in the new X session after stopping stock Python. Confirm GLES renderer identity,
-720p60 output, codec capture, and clean return to stock. This is a physical gate;
-emulated rendering does not satisfy it.
+## Check the package on the device
 
-After that gate:
+Before activating a release, run it on the device's GPU without touching the
+display:
+
+```sh
+./eyesyctl headless-test dist/dev-<payload-id>-armhf.tar.gz \
+  --host DEVICE_IP --clone-id UUID_FROM_RECEIPT \
+  --mode starter --frames 600 --output local/device-test-001
+```
+
+This renders offscreen on the real VC4 GPU with synthetic audio while stock keeps
+running. It then retrieves the report, the log and screenshots. Confirm that the
+renderer is `VC4 V3D 2.1` (never `llvmpipe`), and that the run has no mode
+errors. See [headless development](HEADLESS-DEVELOPMENT.md).
+
+Do not use `tools/probe_device.sh`. It is the older first-hardware probe, and it
+starts Xorg, which triggers the HDMI blanking described above.
+
+## Activate
+
+Connect the display before you deploy, and keep it connected. If you use an
+HDMI capture dongle, keep its stream running. The engine picks its mode from the
+display's EDID when it starts. If no display is present, the engine fails its
+start check, and the fallback unit hands the instrument back to stock. A start
+with the display missing can also leave output degraded until the engine
+restarts with the display present.
 
 ```sh
 ./eyesyctl deploy dist/dev-<payload-id>-armhf.tar.gz --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
@@ -94,22 +128,48 @@ or starts stock if there was no prior platform release.
 
 To manually select the last known-good platform release, use
 `./eyesyctl rollback --host DEVICE_IP --clone-id UUID_FROM_RECEIPT --target previous`.
-Use `--target stock` for stock recovery (also the default target). These commands
-do not alter boot selection. The CLI invokes the guarded release helper over SSH
-and reports failed service starts. A missing or tampered `previous.json` is a hard
-error when selecting the previous release. Boot selection
-remains stock until separately validated and enabled.
+Use `--target stock` for stock recovery (also the default target). If you later
+deploy the same archive after a rollback to stock, deployment selects the
+installed release again, after verifying its checksum. The CLI invokes the
+guarded release helper over SSH and reports failed service starts. A missing or
+tampered `previous.json` is a hard error when selecting the previous release.
 
-The stock web editor still controls `eyesypy`, not the Lua platform. Its start/stop
-buttons should not be used during a platform test. Service conflicts enforce
-exclusive ownership. Mode development uses local editing and SSH deployment.
+If the engine keeps failing, systemd stops restarting it. `OnFailure` then runs
+`eyesy-platform-fallback.service`, which waits briefly for the platform to
+recover and otherwise starts stock.
+
+## Boot selection
+
+Deployment and rollback switch the running service; they do not change what
+starts at boot. A freshly provisioned card still boots into stock. To make the
+platform start at boot, run these commands on the device. The root filesystem is
+read-only, so remount it read-write first, then restore it:
+
+```sh
+sudo mount -o remount,rw /
+sudo systemctl disable eyesypy.service
+sudo systemctl enable eyesy-platform.service
+sudo mount -o remount,ro /
+```
+
+To hand boot back to stock, reverse the two `systemctl` lines. Services conflict,
+so only one engine owns the display at a time.
+
+The stock web editor still controls `eyesypy`, not the Lua platform. Don't use
+its start/stop buttons while the platform is running. Mode development uses
+local editing and SSH deployment.
 
 ## Hardware acceptance still required
 
-- Minimal GPU/audio probe and confirmed 720p60 output.
-- Physical knob/button, scene, screenshot, and error-recovery checks.
-- 60-minute reference-mode soak and 500-switch memory-growth measurement.
-- Interrupted transfer, failed activation, process hang, restart, and rollback tests.
-- Real audio, physical MIDI, and captured display latency when equipment is available.
+Deployment, rollback in all four paths, unattended recovery to stock, and
+60-minute soaks have been exercised on hardware; see
+[implementation status](STATUS.md). What remains needs a person at the bench:
 
-No `hardware_validated` release flag should be set based on desktop/emulated tests.
+- Physical knob and button feel.
+- A known stereo signal on the line input, to check channel separation and
+  response.
+- HDMI display latency on a real display.
+- Cold-boot recovery: one power cycle after a no-display failure.
+
+The [bench checklist](BENCH-CHECKLIST.md) covers these. No `hardware_validated`
+release flag should be set based on desktop/emulated tests.

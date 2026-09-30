@@ -62,10 +62,10 @@ used for deployment; normal release artifacts remain under `dist/`.
 
 ## What still needs the bench
 
-- HDMI output mode, orientation, visible controls, and display latency.
-- Known stereo input signals for channel separation, response, and signal quality.
-- Physical MIDI notes/clock, disconnect/reconnect behavior, and knob/button feel.
-- Full display-service activation and both previous-release/stock recovery.
+Display-service activation, rollback to the previous release or stock, and
+unattended recovery have since been exercised on hardware through the direct-KMS
+service; see [implementation status](STATUS.md). What still needs a person:
 
-The independent headless watchdog test does not qualify the Xorg-backed production
-service's complete recovery path. Stock boot remains selected until that gate passes.
+- Visible physical controls and HDMI display latency on a real display.
+- Known stereo input signals for channel separation, response, and signal quality.
+- Knob and button feel.

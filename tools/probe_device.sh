@@ -1,5 +1,8 @@
 #!/bin/bash
 # Bounded first-hardware probe; always restore stock video afterward.
+# LEGACY: this probe runs the engine under Xorg. On the CM3+ any Xorg session
+# leaves HDMI blanked until the next power cycle (docs/HDMI-DISPLAY-ISSUE.md).
+# Use `eyesyctl headless-test` instead (docs/DEPLOYMENT.md).
 set -euo pipefail
 [[ $EUID == 0 && $# == 2 ]] || { echo 'Usage: sudo bash probe_device.sh CLONE_ID ENGINE'; exit 2; }
 python3 - "$1" <<'PY'
