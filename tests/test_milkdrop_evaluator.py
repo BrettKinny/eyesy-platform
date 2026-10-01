@@ -843,7 +843,7 @@ class PresetLibraryTests(LuaCase):
 
     def test_library_shape(self):
         self.assertGreaterEqual(self.count, 2, 'no presets in the library')
-        for name in ('darken-drift', 'sector-shards'):
+        for name in ('darken-drift', 'spirolateral'):
             self.assertIn(name, self.by_name, 'missing seed preset %r' % name)
 
     def test_preset_fields_match_the_schema(self):
@@ -851,10 +851,10 @@ class PresetLibraryTests(LuaCase):
             fields = preset['fields']
             with self.subTest(preset=name):
                 # warp/comp dispatch in modes/milkdrop/main.lua: warp branches on
-                # sphere/sector/kaleido/blur/diffuse (else default); comp branches
-                # on glow/softmax/plasma/rotoblur/reflect (else default).
-                self.assertIn(fields['warp'], ('default', 'sphere', 'sector', 'kaleido', 'blur', 'diffuse'))
-                self.assertIn(fields['comp'], ('default', 'glow', 'softmax', 'plasma', 'rotoblur', 'reflect'))
+                # sphere/kaleido/blur/diffuse (else default); comp branches on
+                # softmax/plasma/rotoblur (else default).
+                self.assertIn(fields['warp'], ('default', 'sphere', 'kaleido', 'blur', 'diffuse'))
+                self.assertIn(fields['comp'], ('default', 'softmax', 'plasma', 'rotoblur'))
                 self.assertIn(int(fields['wave_mode']), range(4))
                 self.assertGreater(float(fields['decay']), 0.0)
                 self.assertLessEqual(float(fields['decay']), 1.0)
@@ -916,8 +916,8 @@ class PresetLibraryTests(LuaCase):
             with self.subTest(preset=name):
                 failure = init_determinism_failure(name, preset['det'])
                 self.assertIsNone(failure, failure)
-                if name in ('darken-drift', 'sector-shards'):
-                    # the two seed presets exist to reseed per trigger
+                if name in ('darken-drift', 'spirolateral'):
+                    # both reseed per trigger: their init draws from the seed
                     det = preset['det']
                     self.assertGreater(det[11][0]['draws'], 0,
                                        '%s: per_frame_init must draw from the seed' % name)
@@ -977,49 +977,6 @@ class PresetLibraryTests(LuaCase):
                 self.close(values['x'], sample, 'wave x')
                 self.close(values['y'],
                            0.5 + 0.22 * math.sin(sample * 6.28318 + q3 * 1.4), 'wave y')
-
-    def test_sector_shards_ports_the_crystal_shards_math(self):
-        preset = self.by_name['sector-shards']
-        fields = preset['fields']
-        self.assertEqual(fields['warp'], 'sector')
-        self.assertEqual(fields['comp'], 'glow')
-        self.assertEqual(int(fields['sectors']), 8)
-        self.assertEqual(int(fields['waves']), 3, 'three additive petals')
-        self.assertGreater(int(fields['per_pixel_len']), 0, 'sector archetype needs per-pixel code')
-
-        # per_frame: sector uniforms and the petal phase advances
-        out = preset['out']
-        self.assertGreater(out['q1'], 0.0)
-        self.assertGreater(out['q2'], 0.0)
-        self.assertGreater(out['q3'], 0.0)
-        self.close(out['sw'], 1.0, 'sw = above(bass_att, 0.3)')
-        self.close(out['sa'], 0.35 + 0.3 * 0.5, 'sa = 0.35 + 0.3*bass_att')
-        self.close(out['sector_zoom'], 1.0 + 0.25 * math.sin(out['q3'] * 3.0) * 0.5,
-                   'sector_zoom')
-
-        # wave 1: xa/xb petals, if()-switched blend, reflection about the new x
-        t1, t2, sa, sw = preset['init']['t1'], preset['init']['t2'], out['sa'], out['sw']
-        self.assertGreaterEqual(t1, 0.2)
-        self.assertLessEqual(t1, 0.8)
-        for index, values in sorted(preset['points'].items()):
-            u = index / 7.0
-            xa = 0.25 + 0.25 * math.sin(out['q1'] * t1)
-            xb = 0.25 + 0.25 * math.sin(out['q2'] * t2)
-            x = xa * u + sa * xb if sw != 0 else xb * u + sa * xa
-            with self.subTest(point=index):
-                self.close(values['x'], x, 'petal x')
-                self.close(values['y'], 0.5 - sa * 0.5 * (0.5 - x) * 2, 'petal y')
-
-        # per_pixel: seg = int((ang + pi)/(2*pi)*num); dx = above(seg,0)*(x - ox)
-        px, py = 0.9, 0.3
-        ang = math.atan2(py - 0.5, px - 0.5)
-        seg = math.trunc((ang + math.pi) / (2 * math.pi) * 8)
-        rise = 1.0 if seg > 0 else 0.0
-        pixel = preset['pixel']
-        self.assertEqual(pixel.get('seg'), float(seg))
-        self.close(pixel.get('rise'), rise, 'per_pixel rise')
-        self.close(pixel.get('dx'), rise * (px - 0.5), 'per_pixel dx')
-        self.close(pixel.get('dy'), rise * (py - 0.5), 'per_pixel dy')
 
 
 if __name__ == '__main__':
