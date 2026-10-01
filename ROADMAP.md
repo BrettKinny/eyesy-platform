@@ -13,13 +13,12 @@ resolves as:
 
 - design docs -> `eyesy-modes-bespoke/docs/` (bardo-night briefs, scene-library
   blueprint, batch-2 plan), `eyesy-modes-milkdrop/docs/trackB-plan/`
-- per-scene evidence (summary + contact sheet) ->
-  `eyesy-modes-*/evidence/<scene>/`
+- per-scene evidence (summary + contact sheet) -> kept privately, outside the public repos
 - research corpus -> `eyesy-modes-*/docs/research/` (see `docs/research/README.md`)
 - raw verification runs and optimization sandboxes -> deleted 2026-09-17
   (regenerable harness output; the durable parts are the two lines above)
 - platform/engine evidence (bench, HDMI, soak, bootstrap, the overnight
-  rounds) is tracked in `evidence/` here; `local/` is scratch
+  rounds) is kept privately, outside the public repos; `local/` is scratch
 
 ## Where things stand
 
@@ -35,7 +34,7 @@ resolves as:
   (see `docs/research/README.md`); blueprint and batch plans in
   `eyesy-modes-bespoke/docs/`.
 - The black-screen bug is closed (V1/V2; `docs/HDMI-DISPLAY-ISSUE.md`).
-- 2026-09-15 bench session (`evidence/reports/bench-2026-09-15/REPORT.md`):
+- 2026-09-15 bench session:
   rollback qualified in all four paths (incompatible-previous rejection,
   stock, and KMS↔KMS both directions); recovery path qualified unattended
   (no-sink engine failure → start-limit → `OnFailure` → stock, ~9 s; platform
@@ -55,10 +54,8 @@ gain takeover), the key repeater, the knob sequencer with scene persistence,
 `ctx.auto_clear` with the two-mode persist pilot, the stock-layout instrument HUD,
 the cosine palette system, and a fullscreen configuration menu. Hardware receipts
 (captured off the HDMI dongle) and the measured corrections to the plan are in
-`docs/EYESY-OS-V3-PARITY-PLAN.md` §7 and
-`evidence/reports/os3-parity-2026-09-17/`; the automated 13-step device suite was
-re-run green on 2026-09-18 and left the bench scene directory clean
-(`evidence/reports/device-parity-2026-09-18/`).
+`docs/EYESY-OS-V3-PARITY-PLAN.md` §7; the automated 13-step device suite was
+re-run green on 2026-09-18 and left the bench scene directory clean.
 
 Still open, deliberately: the fleet-wide persist veil rewrite (only the
 `starter`/`stereo-mesh` pilot modes carry it), USB storage override, and stock's
@@ -85,13 +82,12 @@ through `eyesyctl`).
    accumulation, Whitney fans, Lissajous weaver.
 3. **Physical bench acceptance** (`docs/BENCH-CHECKLIST.md` sections 3–4, 6):
    the automated half landed 2026-09-18 (`tests/device_bench_auto.py`: latch
-   oracle, MIDI CC/notes/transport/reconnect, 41-mode render smoke —
-   `evidence/reports/bench-auto-2026-09-18/`). What remains needs hands:
+   oracle, MIDI CC/notes/transport/reconnect, 41-mode render smoke). What remains needs hands:
    physical knob/button feel, a known stereo line-in signal through the codec,
    and HDMI-visible latency.
 4. **Full-formality 60-min soak** with the **observe-only poller** — **done
    2026-09-18** on `dev-8fcb282d8437` (720 samples, 30 modes, flat thermal,
-   flat per-mode RSS; `evidence/reports/soak-2026-09-18/`). Re-run after any
+   flat per-mode RSS). Re-run after any
    engine change: `tools/soak_observe.py` (status.json `rss_bytes` + thermal at
    ~5 s; never `soak_guard.py`, which kills its target).
 5. **Cold-boot recovery confirmation**: one user power-cycle after the
@@ -111,8 +107,8 @@ through `eyesyctl`).
 
 Parked, not pursued:
 
-- **1080p** — user decision 2026-09-15; analysis in
-  `evidence/reports/1080p-plan-2026-09-15/`. Revisit only if re-raised.
+- **1080p** — user decision 2026-09-15 (viability analysis in
+  `docs/STATUS.md`). Revisit only if re-raised.
 - **Optional upstreamable bisect**: D1/D2 protocol in
   `docs/HDMI-DISPLAY-ISSUE.md` (Xorg latches HDMI_VID_CTL bit 25).
 
@@ -208,8 +204,7 @@ Parked, not pursued:
   flat 51.5-55.8 °C, backbone 60.3 fps, per-mode fps reproduces the tier
   table. One flag: same-mode RSS growth ≈ +2.2 MB/h (~73 KB/reload) — 8x
   the prior soak rate, reload-correlated (milkdrop preset loads are new);
-  follow-up = switching-disabled vs enabled attribution run. Report:
-  `evidence/reports/soak-2026-09-16/REPORT.md`. Research: Buddhist × retro-CG
+  follow-up = switching-disabled vs enabled attribution run. Research: Buddhist × retro-CG
   scene backlog at `eyesy-modes-bespoke/docs/research/SacredRetroBuddhist.md`
   (flagship four:
   enso, kolam-knot, sri-yantra-exact, sand-dissolution; cultural flags
@@ -236,4 +231,4 @@ Parked, not pursued:
 - 2026-09-15 (later): bench qualification session — rollback all paths,
   recovery-path test, provision hygiene, bootstrap arch fix, second KMS
   release deployed, 53.7-min partial soak (+248 KiB), 1080p viability
-  assessed. Evidence: `evidence/reports/bench-2026-09-15/`.
+  assessed.

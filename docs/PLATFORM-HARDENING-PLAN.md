@@ -80,8 +80,7 @@ identified* — that attribution is [INFERENCE]; only the EBUSY-vs-reboot behavi
 is measured.
 
 **Where "qualified" currently stands.** The failure-detection side is
-mechanically proven but unproven live: `evidence/reports/provision-hygiene-2026-09-15/`
-shows 10 passing `tests/test_provision_device.py` cases, including
+mechanically proven but unproven live: a recorded run shows 10 passing `tests/test_provision_device.py` cases, including
 `test_cleanup_exit_status_reflects_remount_failure`,
 `test_failed_read_write_remount_is_fatal`, and the preflight guard tests. Those
 are mocked/local filesystem tests, not a live apt run — `docs/DEPLOYMENT.md`
@@ -100,8 +99,7 @@ What is already pinned and recorded:
   `bootstrap --arm`, see `docs/STATUS.md:181-185`).
 - **SDK archive by digest** — `dependencies.lock.json` `openframeworks.armhf_sha256`
   and `sdk_lock.archive_sha256` = `e4b2a135…d90f2e0` (0.12.1).
-- **Build provenance manifest** —
-  `evidence/reports/bootstrap-arm-2026-09-15/provenance_json.txt` records the
+- **Build provenance manifest** — the bootstrap's `provenance_json` records the
   resolved image digest/ID, `sdk_lock`, `engine_sources` per-file SHA-256,
   `private_runtime_libraries` (libstdc++/libgcc), patches, and
   `build_packages_lock.contents` + its `sha256`.
@@ -183,8 +181,8 @@ already `ro,noatime`:
      still disabled.
    **Fail** if the script exits nonzero, or the root is still `rw` at exit
    (requiring a reboot), matching the current known limitation.
-4. Record the receipt under `evidence/reports/provision-qualified-YYYY-MM-DD/`
-   and flip the read-only claim in the gates list.
+4. Record the receipt with the private device evidence
+   (`provision-qualified-YYYY-MM-DD/`) and flip the read-only claim in the gates list.
 
 *Deliverable:* a dated evidence report with the raw terminal transcript, the
 `findmnt` line, and the two package inventories; the `hardware_validated: false`
@@ -222,8 +220,7 @@ reference is empty.
 In the build step (or a tiny `tools/verify_apt_lock.py` invoked by the packager),
 after installing, recompute `bash -c 'dpkg-query -W | sha256sum'` and fail the
 build if it does not equal the committed reference `sha256`. The existing
-provenance path already records `build_packages_lock.contents`/`sha256`
-(`evidence/reports/bootstrap-arm-2026-09-15/provenance_json.txt`) — this step
+provenance path already records `build_packages_lock.contents`/`sha256` — this step
 makes a mismatch a hard error instead of a note.
 
 *Verification:* a deliberate version bump in `sources.list`'s snapshot date makes

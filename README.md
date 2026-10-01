@@ -73,7 +73,7 @@ The controls follow the EYESY OS v3 manual:
 A 13-step automated suite drives these controls on the device over OSC. It
 checks the result at every step and captures the HDMI output.
 
-![The stock-layout HUD over the starter mode, captured from the EYESY's HDMI output](evidence/reports/bench-auto-2026-09-18/00-baseline.png)
+![The stock-layout HUD over the starter mode, captured from the EYESY's HDMI output](docs/images/hud-starter.png)
 <sub>The stock-layout HUD on the instrument, captured from its HDMI output: knob sliders, the MIDI note grid, VU meters and palette swatches, at 60 fps.</sub>
 
 ### A mode error won't stop the show
@@ -114,8 +114,7 @@ stays installed, and only one of the two runs at a time.
 
 ### Backed by recorded runs
 
-The claims above come from recorded runs on real hardware, which are kept in
-[`evidence/`](evidence/):
+The claims above come from recorded runs on real hardware:
 
 - 60-minute soaks across 30 modes, with no crashes and a flat temperature
 - A 216,000-frame run with 1,800 mode reloads, which grew memory by 80 KiB
@@ -304,7 +303,6 @@ sequencer ports.
 | `deploy/` | systemd units for the platform and its fallback to stock |
 | `tools/` | Release, provisioning, benchmarking, scene-verification and hardware probe tools |
 | `tests/` | Native C++ tests (CTest) and Python tests: unit tests, graphics integration and device suites |
-| `evidence/` | Records of device runs that back the claims in the docs |
 | `docs/` | API, workflow and hardware documentation; see the list below |
 
 The switch to direct KMS came out of a hardware bug. On this board, any Xorg

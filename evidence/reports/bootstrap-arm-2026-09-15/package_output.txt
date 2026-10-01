@@ -1,3 +1,0 @@
-/home/user/dev/eyesy/dist/dev-c2f150be2380-armhf.tar.gz
-SHA256 20e439d44615c70c43c06ca0ad6790b06b0d705e6e6b2eac0aea9385bfc1c72a
-Hardware validated: false

@@ -373,8 +373,7 @@ Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode 
 All five phases are implemented. Verification is the automated suites
 (`./eyesyctl test --graphics`: native ctest, 120 Python unit tests, and the
 container renderer checks) plus hardware receipts from the CM3+ at
-<device-ip>, captured through the HDMI dongle
-(`evidence/reports/os3-parity-2026-09-17/`).
+<device-ip>, captured through the HDMI dongle.
 
 | Phase | Delivered | Evidence |
 |---|---|---|
@@ -428,9 +427,8 @@ files, watches the daemon's LED socket, and snapshots the HDMI capture stream at
 every step. It needs an HDMI→USB streamer already writing a rolling PNG, because
 the dongle only asserts HPD while it streams. Measured on release
 `dev-8fcb282d8437`: 13 steps green in 75 s on 2026-09-17, and again in 85 s on
-2026-09-18 — that second run's captures and machine-readable receipt are in
-`evidence/reports/device-parity-2026-09-18/`, alongside the scene-directory
-cleanup it performed.
+2026-09-18. That second run recorded its captures and a machine-readable
+receipt, and cleaned up the scene directory.
 
 One bench-unit hazard the run must tolerate: the CM3+ spare's button matrix
 emits spurious key events in bursts, and a spurious save-bit pair writes a

@@ -16,13 +16,12 @@ resolves as:
 
 - design docs -> `eyesy-modes-bespoke/docs/` (bardo-night briefs, scene-library
   blueprint, batch-2 plan), `eyesy-modes-milkdrop/docs/trackB-plan/`
-- per-scene evidence (summary + contact sheet) ->
-  `eyesy-modes-*/evidence/<scene>/`
+- per-scene evidence (summary + contact sheet) -> kept privately, outside the public repos
 - research corpus -> `eyesy-modes-*/docs/research/` (see `docs/research/README.md`)
 - raw verification runs and optimization sandboxes -> deleted 2026-09-17
   (regenerable harness output; the durable parts are the two lines above)
 - platform/engine evidence (bench, HDMI, soak, bootstrap, the overnight
-  rounds) is tracked in `evidence/` here; `local/` is scratch
+  rounds) is kept privately, outside the public repos; `local/` is scratch
 
 ## Implemented and regression-tested
 
@@ -89,12 +88,8 @@ is attached. Stock boot remains selected and platform services remain disabled.
   and exited without triggering. The revised guard's termination path was also
   tested against an isolated disposable process, not a stock service.
 
-Evidence: `evidence/overnight/package-round3/`,
-`evidence/overnight/hardware-round2/`, and `evidence/overnight/headless-cli-round1/`.
-Native input workflow evidence is in `evidence/overnight/input-workflow-round1/`.
-Full-run checks and memory analysis: `evidence/overnight/soak-round1/analysis.json`.
-Final local regression log: `evidence/overnight/final-regressions-round2.log`
-(five core executables, 77 Python checks, and five graphics integration scripts).
+The final local regression run covered five core executables, 77 Python checks,
+and five graphics integration scripts.
 The [overnight log](OVERNIGHT.md) records the experiment sequence and caveats.
 
 ## 2026-09-13 live deployment and HDMI investigation
@@ -161,8 +156,6 @@ Xorg conf cleanup and the `bootstrap --arm` defect are fixed.
 
 ## 2026-09-15 (later): bench qualification session
 
-Evidence and phase-by-phase detail: `evidence/reports/bench-2026-09-15/REPORT.md`.
-
 - **Rollback qualified live in all four paths**: the Xorg-era previous
   (`dev-dd42a1d3bd86`) is safely rejected (`unknown argument: --kms`) with
   automatic sub-2-second restore; `--target stock` restores visible stock;
@@ -187,7 +180,7 @@ Evidence and phase-by-phase detail: `evidence/reports/bench-2026-09-15/REPORT.md
   switches, all landed (`reloads=447`), zero mode errors, zero audio drops,
   RSS growth **+248 KiB** (69.9 → 70.2 MiB window medians, peak 70.4 MiB),
   SoC peak 58.0 °C.
-- **1080p viability assessed** (`evidence/reports/1080p-plan-2026-09-15/`):
+- **1080p viability assessed**:
   scanout reachable via EDID 1080p modes, but native 1080p60 is not viable
   for 4/7 modes (they already miss 60 fps at 720p); recommendation is to keep
   720p rendering and calibrate before any native-1080p trial.
@@ -408,8 +401,7 @@ reports it as excluded. Before the mode-pack split the documented exclusion was
 not implemented and the probe shipped in every release.
 
 Device tier (VC4 V3D 2.1, 600 frames offscreen, live platform on
-`stereo-mesh` as GPU neighbour; the per-scene summary and the shipped device
-frame are in `eyesy-modes-bespoke/evidence/<scene>/`):
+`stereo-mesh` as GPU neighbour):
 
 | scene | first gate p50 | shipped p50 | what changed |
 | --- | --- | --- | --- |
@@ -454,7 +446,6 @@ New measurement facts for the library:
   runs must start from the verified condition: live platform on a tier-A
   scene at ~60 fps (`./eyesyctl status` + OSC key check on the device).
 
-
 ## 2026-09-18: OS v3 parity re-proven on hardware; bench scene residue cleared
 
 `tests/device_parity_tests.py` ran end to end against the CM3+ spare
@@ -463,8 +454,8 @@ convergence to an idle baseline, the trigger tone (mono, RMS 0.538), the knob
 sequencer arming/recording/playing, save-with-sequence, recall, in-place update,
 hold-Save delete, palette cycling in both directions, the four menu screens with
 live diagnostics, the daemon LED sequence `[6, 1, 3, 7]` on port 4001, and a
-clean return to idle. Six scanout captures, the per-step `status.json` values and
-the machine-readable receipt are in `evidence/reports/device-parity-2026-09-18/`.
+clean return to idle. The run recorded six scanout captures, the per-step
+`status.json` values and a machine-readable receipt.
 
 The same session removed the scene residue the bench unit's button matrix had
 produced: 47 files dated `2026-09-17`/`2026-09-18` beside the three genuine
@@ -474,8 +465,6 @@ own — `refreshScenes()` runs only from `saveScene()` and `recallScene()` — s
 `status.json` kept reporting `scene_count=50` until one Scene-key step brought it
 to 3 with a baseline scene loaded. A 120 s watch afterwards recorded zero new
 files and zero OSD events, so the unit is quiet right now, not fixed.
-
-Full finding: `evidence/reports/device-parity-2026-09-18/REPORT.md`.
 
 ## 2026-09-18 (later): scene re-scan, fallback-race fix, and automated bench acceptance
 
@@ -507,11 +496,10 @@ its `kirlian.frag` in the deployed release (already fixed in the pack; a
 redeploy clears it), and MIDI input stops being applied after a long session
 with many transient ALSA clients — likely `pollMidi()`'s
 `midi.notes.fill(0)` on every client-set change; a restart restores it.
-Full finding: `evidence/reports/bench-auto-2026-09-18/REPORT.md`.
 
 **60-minute soak (observe-only).** `tools/soak_observe.py` ran 720 samples over
 3595 s on `dev-8fcb282d8437`, cycling 30 modes. Thermal flat (55.3–62.3 °C),
 per-mode RSS delta 0.00–0.13 MiB over each 120 s visit, `starter` at 60.3 fps
 and the rest matching the tier table. One transient mode-load error at the
 `kali-bloom → koan-terminal` switch (not reproduced in the bench sweep).
-Full finding: `evidence/reports/soak-2026-09-18/REPORT.md`.
+

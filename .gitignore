@@ -6,5 +6,7 @@ engine/obj/
 __pycache__/
 *.pyc
 # local is a working directory (SDK runtime trees, preview scratch, image grabs,
-# full run output). The durable platform evidence is tracked in evidence/.
+# full run output).
 local/
+# device evidence is kept privately, outside the public repos
+evidence/

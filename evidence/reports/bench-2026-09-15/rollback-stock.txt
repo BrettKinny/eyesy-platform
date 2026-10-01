@@ -1,4 +1,0 @@
-{
-  "target": "stock"
-}
-Remote staging retained for inspection: /tmp/eyesy-platform.ueOnkkCA

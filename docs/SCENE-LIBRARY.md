@@ -65,13 +65,10 @@ milkdrop engine facts (empirical, 2026-09-16):
 
 ## bardo-night scenes (2026-09-17, device-qualified; release dev-f2c914333761)
 
-Nine scenes built in one night (reports: `eyesy-modes-bespoke/docs/bardo-night/`;
-per-scene verification summary and contact sheet:
-`eyesy-modes-bespoke/evidence/<scene>/`).
+Nine scenes built in one night (reports: `eyesy-modes-bespoke/docs/bardo-night/`).
 All nine pass the scene contract at 300 frames in the build container's
 software GL, and all nine now hold tier C on the device after optimization
-(device evidence: the shipped frame per scene in
-`eyesy-modes-bespoke/evidence/<scene>/device-grab.png`; the dawn llvmpipe p50
+(the dawn llvmpipe p50
 of 16.6 ms proved
 1.4-4.5x optimistic — llvmpipe timing never predicts VC4).
 

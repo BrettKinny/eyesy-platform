@@ -79,7 +79,7 @@ Every batch of new or re-tuned variants must pass, in order:
    `docs/SCENE-LIBRARY.md` performance tiers) on the device, 600 frames
    offscreen with a tier-A neighbour, per preset; the two glow-comp presets
    stay under the documented waiver, everything new ships at or under tier C.
-3. **Contact sheet per batch**: `evidence/` in `eyesy-modes-milkdrop` gets a
+3. **Contact sheet per batch**: the batch's private evidence gets a
    `contact-sheet.png` (from `tools/scene_verify.py` in this repo) plus per
    preset `summary.json` from the deterministic A/B contract verdict, and a
    human visual pass over the sheet — aesthetics and family resemblance are a
@@ -105,7 +105,7 @@ Every batch of new or re-tuned variants must pass, in order:
 
 Preset authoring, the pack gates, and per-batch evidence all live in the
 `eyesy-modes-milkdrop` sibling repo (`main.lua`, `lib/evaluator.lua`,
-`presets/presets.lua`, `frag/`, `tools/`, `evidence/`). This repo consumes
+`presets/presets.lua`, `frag/`, `tools/`). This repo consumes
 the assembled mode via `./eyesyctl modes sync` and owns the engine-side
 contracts (`docs/SCENE-LIBRARY.md`, `tests/test_milkdrop_evaluator.py`) and
 the device tier verification of each shipment. Never edit `modes/` directly:

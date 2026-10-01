@@ -63,7 +63,7 @@ renderer, audio-open failure, or failure to recover the stock service.
   2026-09-18 on the CM3+ spare: 47 glitch files removed, `scene_count` stayed at
   50 until one step press brought it to 3 with a baseline scene loaded; a 120 s
   watch after that recorded zero new files and zero OSD events — a quiet window,
-  not a fix. See `evidence/reports/device-parity-2026-09-18/REPORT.md`.
+  not a fix.
 - With the platform preview/test path running, exercise all five knobs, trigger,
   scene save/recall, mode navigation, OSD, and settings changes.
 - Verify soft takeover after scene recall and confirm the selected trigger source
