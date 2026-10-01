@@ -164,8 +164,8 @@ Current limitations:
 ### Run it on your desktop
 
 ```sh
-git clone https://github.com/BrettKinny/Eyesy.git
-cd Eyesy
+git clone https://github.com/BrettKinny/eyesy-platform.git
+cd eyesy-platform
 ./eyesyctl bootstrap                               # build container + checksummed openFrameworks SDK
 ./eyesyctl build
 ./eyesyctl test
@@ -207,7 +207,7 @@ directory that sits next to this repo.
 
 | Pack | Contents |
 | --- | --- |
-| [`eyesy-modes-factory`](https://github.com/BrettKinny/eyesy-modes-factory) | Lua ports of the stock Critter & Guitari OS v3 library (53 of 108 so far) |
+| [`eyesy-modes-factory`](https://github.com/BrettKinny/eyesy-modes-factory) | Lua ports of the stock Critter & Guitari OS v3 library (87 of 108 so far) |
 | [`eyesy-modes-milkdrop`](https://github.com/BrettKinny/eyesy-modes-milkdrop) | A MilkDrop-style preset engine: one mode that plays a catalog of Lua-defined presets through warp and composite shader passes |
 
 The author's collection of original scenes is kept private. Some docs in this
@@ -218,7 +218,7 @@ and performance.
 cd ..
 git clone https://github.com/BrettKinny/eyesy-modes-factory.git
 git clone https://github.com/BrettKinny/eyesy-modes-milkdrop.git
-cd Eyesy
+cd eyesy-platform
 ./eyesyctl modes list
 ./eyesyctl preview milkdrop --native
 ```
