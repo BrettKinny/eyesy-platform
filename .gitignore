@@ -10,3 +10,9 @@ __pycache__/
 local/
 # device evidence is kept privately, outside the public repos
 evidence/
+# editor, agent and tool state
+.claude/
+.ruff_cache/
+.vscode/
+.idea/
+compile_commands.json
