@@ -109,21 +109,24 @@ RM_RC=RM_RC_VALUE
         )
         self.assertLess(inventory, first_inventory_write)
         for name in (
-            "packages.before", "packages.after", "Xwrapper.config",
+            "packages.before", "packages.after",
             "eyesy-platform.service",
             "eyesy-platform-fallback.service",
         ):
             self.assertIn(name, self.source[inventory:first_inventory_write])
         self.assertIn('[[ -L "$task_backup_dir" ]]', self.source)
         self.assertIn('[[ -L "$task_unit_path" ]]', self.source)
-        self.assertIn("path.is_symlink()", self.source)
-        self.assertIn("backup.is_symlink()", self.source)
         self.assertNotIn("10-eyesy-720p.conf", self.source[inventory:first_inventory_write])
 
     def test_write_destination_preflight_precedes_package_mutation(self):
         apt = self.source.index("apt-get update")
         self.assertLess(self.source.index('[[ -L "$task_unit_path" ]]'), apt)
-        self.assertLess(self.source.index("-L /etc/X11/Xwrapper.config"), apt)
+
+    def test_no_xorg_display_stack(self):
+        # The engine draws with direct KMS; any Xorg session blanks HDMI on this
+        # board, and Xwrapper.config with needs_root_rights=yes is a root X hole.
+        for name in ("xserver-xorg", "xinit", "xauth", "Xwrapper.config"):
+            self.assertNotIn(name, self.source)
 
     def test_cleanup_exit_status_reflects_remount_failure(self):
         # Execute only the actual cleanup function, with inert mount/sync stubs.

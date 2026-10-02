@@ -56,7 +56,7 @@ fi
 
 # A second run must never overwrite the inventory from an earlier run (including
 # an interrupted run).  Leaving it intact makes the original state recoverable.
-for task_backup in packages.before packages.after Xwrapper.config \
+for task_backup in packages.before packages.after \
     eyesy-platform.service eyesy-platform-fallback.service; do
     if [[ -e "$task_backup_dir/$task_backup" || -L "$task_backup_dir/$task_backup" ]]; then
         echo "Refusing provisioning: existing backup $task_backup" >&2
@@ -74,10 +74,6 @@ for task_unit in eyesy-platform.service eyesy-platform-fallback.service; do
         exit 1
     fi
 done
-if [[ -L /etc/X11/Xwrapper.config ]]; then
-    echo 'Refusing symlinked /etc/X11/Xwrapper.config' >&2
-    exit 1
-fi
 dpkg-query -W > "$task_base/provision-backup/packages.before"
 task_mount_options=$(findmnt -n -o OPTIONS /)
 task_restore_ro=false
@@ -113,7 +109,7 @@ cleanup() {
 }
 trap cleanup EXIT
 apt-get update
-apt-get install -y --no-install-recommends xserver-xorg-core xserver-xorg-legacy xinit xauth \
+apt-get install -y --no-install-recommends \
     libglfw3 libglew2.2 libfreeimage3 libfreetype6 libopenal1 libsndfile1 \
     liburiparser1 libpugixml1v5 librtaudio6 libpulse0 libgtk-3-0 \
     libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libmpg123-0 \
@@ -131,19 +127,6 @@ for task_unit in eyesy-platform.service eyesy-platform-fallback.service; do
     fi
     install -m 644 "$task_script_dir/../deploy/$task_unit" "$task_unit_path"
 done
-python3 - <<'PY'
-from pathlib import Path
-import shutil
-path = Path('/etc/X11/Xwrapper.config')
-backup = Path('/sdcard/eyesy-platform/provision-backup/Xwrapper.config')
-if path.is_symlink():
-    raise SystemExit('Refusing symlinked /etc/X11/Xwrapper.config')
-if backup.exists() or backup.is_symlink():
-    raise SystemExit('Refusing provisioning: existing backup Xwrapper.config')
-if path.exists():
-    shutil.copy2(path, backup)
-path.write_text('allowed_users=anybody\nneeds_root_rights=yes\n')
-PY
 chown music:music "$task_base"
 systemctl daemon-reload
 dpkg-query -W > "$task_base/provision-backup/packages.after"
