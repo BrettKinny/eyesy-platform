@@ -14,6 +14,12 @@ use plain function calls, not Lua colon syntax. Assets resolve within the mode f
 0..1. `ctx.trigger` is a one-frame boolean. Tables are frame snapshots; do not retain
 them across frames. `setup` should create parameters/resources, not consume input.
 
+`ctx.auto_clear` is the Persist setting: `true` (the default) means the mode should
+clear each frame; `false` means Persist is on and the mode should let the previous
+frame show through, for example by drawing a translucent rectangle instead of
+clearing. The engine cannot do this for the mode, so a mode that calls `clear()`
+unconditionally ignores the button. `modes/starter/main.lua` shows the idiom.
+
 `ctx.audio` contains 1024 normalized samples per `left`/`right` channel, 513
 one-sided Hann-window amplitude bins per `fft_left`/`fft_right`, `sample_rate`,
 `rms_left/right`, `peak_left/right`, three `bands` (20–250, 250–4000, 4000–20000 Hz),
@@ -34,6 +40,10 @@ MIDI-note, combined, or quarter-note MIDI-clock triggers.
   Knob 1..5 maps to hardware; 0 leaves it unassigned. Read `ctx.params[name]`.
   Scene recall applies soft takeover until the physical knob crosses its saved value.
 - `eyesy.palette(phase)` returns three color channels in 0..1 from a cosine palette.
+- `ctx.palette_fg(phase)` and `ctx.palette_bg(phase)` return three channels from the
+  instrument's current foreground and background palettes, which the player cycles
+  with Shift + Mode and Shift + Scene and which scenes save. They default to the 43
+  stock EYESY cosine palettes; `System/palettes.json` in storage overrides the list.
 - `eyesy.palette(name, phase)` samples `sunset`, `ocean`, `ember`, `mint`, or a
   custom palette. Phase wraps modulo 1; adjacent RGB stops interpolate linearly.
 - `eyesy.define_palette(name, {{r,g,b},...})` defines 2–16 RGB stops, clamped to
@@ -91,9 +101,24 @@ waveforms when that precision is insufficient.
 
 `save()` may return a string-keyed table containing booleans, strings, finite
 numbers, and nested tables; arrays, userdata, cycles, and depth >16 are rejected.
-`restore(state)` receives that table after setup. The current scene schema is
-`schema_version`, `mode`, `parameters`, `auto_clear`, and `state`.
+`restore(state)` receives that table after setup.
+
+A scene file is JSON with these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `schema_version` | `1`; other versions are rejected |
+| `mode` | the mode folder name; the scene fails to load if that mode is missing |
+| `parameters` | declared parameter values by name; knob-bound ones use soft takeover |
+| `state` | the table returned by the mode's `save()` |
+| `auto_clear` | the Persist setting (default `true` when absent) |
+| `fg_palette`, `bg_palette` | indexes of the foreground and background palettes |
+| `knob_sequence` | optional: the knob sequencer's recording, an array of five-value frames. It is written only while the sequence is playing, and playback resumes on recall |
 
 Lua errors show an error screen while mode navigation and reload remain available.
-Hardware systemd watchdog recovery is implemented in the service but not yet bench
-validated. Lua is trusted local code, not a security sandbox.
+Lua is trusted local code, not a security sandbox.
+
+On the device the service runs under a systemd watchdog (`WatchdogSec=10`), and
+when the engine keeps failing, `OnFailure` hands the instrument back to stock.
+That recovery path has been exercised on hardware with the display disconnected;
+recovery across a cold boot is still to be checked.
