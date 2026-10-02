@@ -6,10 +6,9 @@ with OpenGL ES 2 at up to 60 fps, with full stereo audio analysis, shaders and
 video feedback. The knobs, buttons, scenes, knob sequencer and on-screen display
 work the same way they do on the stock OS.
 
-![The kaleido-fold preset from the MilkDrop pack, its feedback mirror blooming on each trigger](docs/images/milkdrop-kaleido-fold.gif)
-<sub>The `kaleido-fold` preset from the [MilkDrop pack](#mode-packs), driven by a
-scripted audio input. This and the stills below are desktop renders from the
-same engine; the HUD shot further down is captured from the instrument's HDMI.</sub>
+![The spirolateral preset from the MilkDrop pack, two spiral arms turning through a feedback trail](docs/images/hw-milkdrop-spirolateral.gif)
+<sub>The `spirolateral` preset from the [MilkDrop pack](#mode-packs), captured from
+the EYESY's HDMI output, where it runs at 29 fps.</sub>
 
 > [!NOTE]
 > **This is an unofficial project.** It is not affiliated with or endorsed by
@@ -32,7 +31,7 @@ This platform keeps the instrument and replaces the engine underneath it.
 | | Stock EYESY OS v3 | EYESY_OF (first generation) | **This platform** |
 | --- | --- | --- | --- |
 | Rendering | pygame, on the CPU | OpenGL ES 2 via the legacy Broadcom libraries | **OpenGL ES 2 on the VC4 GPU (Mesa), scanned out directly with KMS** |
-| Frame rate | Capped at 30 fps | No 30 fps cap | **Up to 60 fps**: simple modes hold 60, and heavy shader scenes run at about 25–50 |
+| Frame rate | Capped at 30 fps | No 30 fps cap | **Up to 60 fps**: simple modes hold 60, and heavy shader scenes run at about 17–50 |
 | Mode language | Python | Lua with raw openFrameworks bindings | **Lua (LuaJIT) with a versioned, documented API** |
 | Shaders and feedback | None | Possible through raw openFrameworks | **Fragment shaders with hot reload, 8 render targets for feedback, reusable meshes, 3D camera and depth** |
 | Audio given to modes | 100 averaged samples per channel | 256 samples at 11 kHz, left channel only | **1,024 samples per channel at 48 kHz, a 513-bin FFT per channel, 3 bands, RMS/peak, and a waveform texture for shaders** |
@@ -51,7 +50,7 @@ targets for feedback, meshes, images, and a perspective camera with depth
 testing. This makes reaction–diffusion, fractal zooms and MilkDrop-style
 feedback practical on a Compute Module 3+. Shipped modes are benchmarked on the
 device itself, because desktop timings don't predict VC4 performance. Simple
-modes run at 60 fps, and heavy shader scenes run at about 25 to 50 fps. See [the
+modes run at 60 fps, and heavy shader scenes run at about 17 to 50 fps; most MilkDrop presets hold about 30. See [the
 performance tiers](docs/SCENE-LIBRARY.md#performance-tiers).
 
 ### Detailed stereo audio
@@ -74,6 +73,8 @@ The controls follow the EYESY OS v3 manual:
 - A test tone while the trigger button is held
 - The 43 stock palettes, or your own set from `System/palettes.json`
 - A configuration menu with a hardware test screen
+
+![The configuration menu on the instrument: Video Settings, Audio & MIDI, Palettes and Hardware Test](docs/images/hw-config-menu.png)
 
 A 13-step automated suite drives these controls on the device over OSC. It
 checks the result at every step and captures the HDMI output.
@@ -231,8 +232,12 @@ directory that sits next to this repo.
 | --- | --- | --- |
 | ![Arcway](docs/images/factory-arcway.png) | ![Amp Color 5-gon Filled](docs/images/factory-amp-color-5gon-filled.png) | ![Grid Triangles Unfilled Column Color](docs/images/factory-grid-triangles-unfilled-column-color.png) |
 | Factory: `s-arcway` | Factory: `s-amp-color-5gon-filled` | Factory: `s-grid-triangles-unfilled-column-color` |
-| ![MilkDrop kaleido-fold](docs/images/milkdrop-kaleido-fold-violet.png) | ![MilkDrop spirolateral](docs/images/milkdrop-spirolateral.png) | |
-| MilkDrop: `kaleido-fold` | MilkDrop: `spirolateral` | |
+| ![MilkDrop kaleido-fold](docs/images/hw-milkdrop-kaleido-fold.png) | ![MilkDrop painterly-flow](docs/images/hw-milkdrop-painterly-flow.png) | |
+| MilkDrop: `kaleido-fold`, 33 fps | MilkDrop: `painterly-flow`, 33 fps | |
+
+<sub>The MilkDrop stills are captured from the EYESY's HDMI output, driven by
+its trigger test tone. The factory stills are desktop renders from the same
+engine.</sub>
 
 The author's collection of original scenes is kept private. Some docs in this
 repo mention it (as `eyesy-modes-bespoke`) when they describe scene conventions
