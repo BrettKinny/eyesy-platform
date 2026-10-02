@@ -20,10 +20,7 @@ Usage:
 import argparse
 import hashlib
 import json
-import os
 import pathlib
-import re
-import shutil
 import subprocess
 import sys
 import time
@@ -246,7 +243,7 @@ print(json.dumps(state))
     assert tone['audio_synthesizing'] is True and tone['audio_rms_left'] > .3, tone
     assert abs(tone['audio_rms_left'] - tone['audio_rms_right']) < 1e-6, 'tone must be mono'
     record('02-trigger-tone', tone, capture.snapshot('02-trigger-tone'))
-    released = device.wait(lambda s: not s.get('audio_synthesizing'), 'tone release')
+    device.wait(lambda s: not s.get('audio_synthesizing'), 'tone release')
 
     # 2. Sequencer: arm, record from a knob move, then play.
     recording = device.json(PRELUDE + '''

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Renderer-level input workflow checks (run in the OF build container)."""
-import argparse, hashlib, json, math, os, shutil, socket, struct, subprocess, tempfile, time, wave
+import argparse, hashlib, json, math, socket, struct, subprocess, tempfile, time, wave
 from contextlib import nullcontext
 from pathlib import Path
 ROOT = Path('/workspace'); ENGINE = ROOT / 'engine/bin/engine'; OFFSCREEN=False; PORT=45123
@@ -103,7 +103,6 @@ def main():
              '--frames','6','--replay',str(semantic_replay)])
         audio_mode=root/'audio-mode'; audio_mode.mkdir()
         (audio_mode/'main.lua').write_text('return {api_version=1, draw=function(ctx) eyesy.clear(ctx.audio.rms_left,0,0) end}')
-        audio_events=[]
         for tag, gain in (('audio-quiet', 0.02), ('audio-loud', 0.9), ('audio-loud2', 0.9)):
             store=root/tag
             (root/f'{tag}-replay.json').write_text(json.dumps([{'frame':0,'type':'audio','gain':gain}]))

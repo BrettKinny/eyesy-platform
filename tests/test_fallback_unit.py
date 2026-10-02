@@ -16,7 +16,6 @@ still exits nonzero.
 """
 import os
 import pathlib
-import re
 import subprocess
 import tempfile
 import unittest
