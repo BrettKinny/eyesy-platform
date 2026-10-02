@@ -273,13 +273,22 @@ class EngineApp : public ofBaseApp {
         if (eyesy::encodeOscInt("/led", color, packet))
             send(ledSock, packet.data(), packet.size(), MSG_NOSIGNAL);
     }
+    // Editors create and delete scratch files beside the ones they save, so any
+    // entry can vanish between listing and stat: never let that throw.
     void watchFiles() {
         watched.clear();
-        if (!fs::is_directory(runtime.directory))
+        std::error_code error;
+        if (!fs::is_directory(runtime.directory, error))
             return;
-        for (auto &entry : fs::recursive_directory_iterator(runtime.directory))
-            if (entry.is_regular_file())
-                watched[entry.path()] = entry.last_write_time();
+        for (fs::recursive_directory_iterator it(runtime.directory, error), end;
+             !error && it != end; it.increment(error)) {
+            std::error_code stat;
+            if (!it->is_regular_file(stat) || stat)
+                continue;
+            auto stamp = it->last_write_time(stat);
+            if (!stat)
+                watched[it->path()] = stamp;
+        }
     }
     void loadMode(int index) {
         if (catalog.empty())
@@ -968,11 +977,14 @@ class EngineApp : public ofBaseApp {
         if (wall - lastWatch > .3) {
             lastWatch = wall;
             bool changed = false, onlyShaders = true;
-            for (auto &p : watched)
-                if (!fs::exists(p.first) || fs::last_write_time(p.first) != p.second) {
+            for (auto &p : watched) {
+                std::error_code error;
+                auto stamp = fs::last_write_time(p.first, error);
+                if (error || stamp != p.second) {
                     changed = true;
                     onlyShaders = onlyShaders && (p.first.extension() == ".frag");
                 }
+            }
             if (changed) {
                 if (onlyShaders) {
                     runtime.reloadShaders();
