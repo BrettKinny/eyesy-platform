@@ -328,20 +328,259 @@ def remote(args):
     print(f"Remote staging retained for inspection: {staging}")
 
 
-def main():
+def cmd_doctor(args):
+    doctor(args.host)
+
+
+def cmd_bootstrap(args):
+    expected_arch = "armhf" if args.arm else "amd64"
+    sdk(args.arm)
+    run(
+        [
+            "podman",
+            "build",
+            "--arch",
+            "arm" if args.arm else "amd64",
+            "--build-arg",
+            f"EXPECTED_ARCH={expected_arch}",
+            "-t",
+            "localhost/eyesy-build:armhf" if args.arm else IMAGE,
+            "-f",
+            ROOT / "tools/Containerfile",
+            ROOT,
+        ]
+    )
+
+
+def cmd_build(args):
+    sdk(args.arm)
+    if args.arm:
+        # Keep desktop and target output separate; OF uses platform-specific object dirs.
+        container(
+            [
+                "make",
+                "-C",
+                "engine",
+                "-j8",
+                "JOBS=-j8",
+                "Release",
+                "PLATFORM_ARCH=armv6l",
+                "CROSS_COMPILING=0",
+                "USE_PI_LEGACY=0",
+                "APPNAME=eyesy-armhf",
+            ],
+            arm=True,
+        )
+        runtime = ROOT / "local/runtime-arm"
+        runtime.mkdir(parents=True, exist_ok=True)
+        container(
+            [
+                "cp",
+                "-L",
+                "/usr/lib/arm-linux-gnueabihf/libstdc++.so.6",
+                "/usr/lib/arm-linux-gnueabihf/libgcc_s.so.1",
+                "/workspace/local/runtime-arm/",
+            ],
+            arm=True,
+        )
+    else:
+        container(["make", "-C", "engine", "-j6", "Release"])
+    run(
+        [sys.executable, ROOT / "tools/build_provenance.py"] + (["--arm"] if args.arm else []),
+        stdout=subprocess.DEVNULL,
+    )
+
+
+def cmd_test(args):
+    run(["cmake", "-S", ROOT, "-B", ROOT / "build/core", "-G", "Ninja"])
+    run(["cmake", "--build", ROOT / "build/core"])
+    run(["ctest", "--test-dir", ROOT / "build/core", "--output-on-failure"])
+    run([sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests"), "-p", "test_*.py"])
+    if args.graphics:
+        for script in (
+            "graphics_tests.py",
+            "creative_tests.py",
+            "input_workflow_tests.py",
+            "runtime_robustness_tests.py",
+            "render_target_tests.py",
+        ):
+            if (ROOT / "tests" / script).is_file():
+                container(["python3", "/workspace/tests/" + script])
+
+
+def cmd_prepare_native(args):
+    destination = ROOT / "local/runtime"
+    destination.mkdir(parents=True, exist_ok=True)
+    libraries = [
+        "libglfw.so.3",
+        "librtaudio.so.6",
+        "libGLEW.so.2.2",
+        "libfreeimage.so.3",
+        "liburiparser.so.1",
+        "libjxrglue.so.0",
+        "libjpeg.so.62",
+        "libraw.so.20",
+        "libOpenEXR-3_1.so.30",
+        "libIex-3_1.so.30",
+        "libImath-3_1.so.29",
+        "libjpegxr.so.0",
+        "libIlmThread-3_1.so.30",
+    ]
+    container(
+        ["cp", "-L"]
+        + ["/usr/lib/x86_64-linux-gnu/" + name for name in libraries]
+        + ["/workspace/local/runtime/"]
+    )
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = f"{destination}:{ROOT}/engine/bin"
+    output = subprocess.check_output(["ldd", ROOT / "engine/bin/engine"], env=env, text=True)
+    if "not found" in output:
+        raise RuntimeError(output)
+    print("Native runtime ready. Run ./eyesyctl preview starter --native.")
+
+
+def cmd_preview(args):
+    folder = mode_packs.find(args.mode)
+    if folder is None:
+        raise RuntimeError(f"Unknown mode {args.mode!r}; run `./eyesyctl modes sync` to assemble the packs")
+    if folder.is_relative_to(ROOT / "modes"):
+        engine_mode = "/workspace/modes/" + args.mode
+        host_mode = str(ROOT / "modes" / args.mode)
+    else:
+        engine_mode = f"/packs/{folder.parent.name}/{args.mode}"
+        host_mode = str(folder)
+    command = [
+        "/workspace/engine/bin/engine",
+        "--mode",
+        engine_mode,
+        "--storage",
+        "/workspace/local/preview",
+        "--frames",
+        str(args.frames),
+        "--report",
+        f"/workspace/local/reports/{args.mode}.json",
+        "--switch-every",
+        str(args.switch_every),
+    ]
+    if args.replay:
+        replay = args.replay.resolve().relative_to(ROOT)
+        command += ["--replay", "/workspace/" + str(replay)]
+    if args.audio_wav:
+        wav = args.audio_wav.resolve().relative_to(ROOT)
+        command += ["--audio-wav", "/workspace/" + str(wav)]
+    if args.record:
+        record = args.record.resolve().relative_to(ROOT)
+        command += ["--record", "/workspace/" + str(record)]
+    if args.record_limit != 10000:
+        if args.record_limit < 1 or args.record_limit > 100000:
+            raise RuntimeError("--record-limit must be 1..100000")
+        command += ["--record-limit", str(args.record_limit)]
+    if args.headless:
+        command = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"] + command
+    if args.native:
+        if args.headless:
+            raise RuntimeError("Choose native or headless, not both")
+        command = [part.replace("/workspace", str(ROOT)) for part in command]
+        command = [host_mode if part == engine_mode else part for part in command]
+        env = os.environ.copy()
+        env["LD_LIBRARY_PATH"] = f"{ROOT}/local/runtime:{ROOT}/engine/bin"
+        run(command, env=env)
+    else:
+        container(command, graphical=not args.headless)
+
+
+def cmd_new_mode(args):
+    if not args.name or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-_" for c in args.name):
+        raise RuntimeError("Use lowercase letters, digits, hyphens or underscores")
+    destination = Path(args.pack).expanduser().resolve() if args.pack else ROOT / "modes"
+    if not destination.is_dir():
+        raise RuntimeError(f"No such pack directory: {destination}")
+    target = destination / args.name
+    if target.exists():
+        raise RuntimeError(f"Already exists: {target}")
+    shutil.copytree(ROOT / "modes/starter", target)
+    print(target)
+    if not args.pack:
+        print(
+            "modes/ is untracked assembly; pass --pack to author in a pack repo, or move "
+            "this folder into one before it is lost to a later `./eyesyctl modes sync`",
+            file=sys.stderr,
+        )
+
+
+def cmd_modes(args):
+    if args.action == "list":
+        roots = mode_packs.pack_roots(args.pack)
+        if not roots:
+            print("No mode packs found (expected sibling `eyesy-modes-*` repos)")
+        for root in roots:
+            found = mode_packs.discover(root)
+            print(f"{root}: {len(found)} modes")
+            for name in sorted(found):
+                marker = "" if mode_packs.shippable(found[name]) else f"  [{mode_packs.NO_SHIP}]"
+                print(f"  {name}{marker}")
+    else:
+        print(json.dumps(mode_packs.sync(args.pack), indent=2))
+
+
+def cmd_package(args):
+    package(args.arm)
+
+
+def cmd_headless_test(args):
+    if args.frames < 1 or args.frames > 3600:
+        raise RuntimeError("--frames must be 1..3600")
+    from tools.headless_test import execute
+
+    result = execute(
+        args.archive.resolve(),
+        args.host,
+        args.clone_id,
+        args.mode,
+        args.frames,
+        args.output,
+        ssh_options(args),
+        replay=args.replay,
+    )
+    print(json.dumps(result, indent=2))
+
+
+def cmd_device_read(args):
+    if args.command == "status":
+        command = "cat /sdcard/eyesy-platform/status.json"
+    else:
+        command = "journalctl -u eyesy-platform -n 100 --no-pager"
+    run(["ssh"] + ssh_options(args) + [f"music@{args.host}", command])
+
+
+def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
+    # `command` stays on the namespace: remote() and cmd_device_read() branch on it.
     sub = parser.add_subparsers(dest="command", required=True)
+
     p = sub.add_parser("doctor")
     p.add_argument("--host")
+    p.set_defaults(func=cmd_doctor)
+
     p = sub.add_parser("bootstrap")
     p.add_argument("--arm", action="store_true")
+    p.set_defaults(func=cmd_bootstrap)
+
     p = sub.add_parser("build")
     p.add_argument("--arm", action="store_true")
+    p.set_defaults(func=cmd_build)
+
     p = sub.add_parser("test")
     p.add_argument("--graphics", action="store_true")
-    sub.add_parser("prepare-native")
+    p.set_defaults(func=cmd_test)
+
+    p = sub.add_parser("prepare-native")
+    p.set_defaults(func=cmd_prepare_native)
+
     p = sub.add_parser("package")
     p.add_argument("--arm", action="store_true")
+    p.set_defaults(func=cmd_package)
+
     p = sub.add_parser("headless-test")
     p.add_argument("archive", type=Path)
     p.add_argument("--host", required=True)
@@ -351,6 +590,8 @@ def main():
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--replay", type=Path)
     p.add_argument("--known-hosts", type=Path)
+    p.set_defaults(func=cmd_headless_test)
+
     for name in ("provision", "deploy", "rollback"):
         p = sub.add_parser(name)
         p.add_argument("--host", required=True)
@@ -360,6 +601,8 @@ def main():
             p.add_argument("--target", choices=["stock", "previous"], default="stock")
         if name == "deploy":
             p.add_argument("archive", type=Path)
+        p.set_defaults(func=remote)
+
     p = sub.add_parser("preview")
     p.add_argument("mode", nargs="?", default="starter")
     p.add_argument("--frames", type=int, default=0)
@@ -370,9 +613,13 @@ def main():
     p.add_argument("--audio-wav", type=Path)
     p.add_argument("--record", type=Path)
     p.add_argument("--record-limit", type=int, default=10000)
+    p.set_defaults(func=cmd_preview)
+
     p = sub.add_parser("new-mode")
     p.add_argument("name")
     p.add_argument("--pack", help="Pack repo to author in (default: the untracked modes/ assembly dir)")
+    p.set_defaults(func=cmd_new_mode)
+
     p = sub.add_parser("modes", help="Assemble or inspect the mode pack repos")
     p.add_argument("action", choices=["sync", "list"])
     p.add_argument(
@@ -381,223 +628,20 @@ def main():
         default=[],
         help="Pack root (repeatable); default: every sibling eyesy-modes-* repo",
     )
+    p.set_defaults(func=cmd_modes)
+
     for name in ("status", "logs"):
         p = sub.add_parser(name)
         p.add_argument("--host", required=True)
         p.add_argument("--known-hosts", type=Path)
-    args = parser.parse_args()
-    if args.command == "doctor":
-        doctor(args.host)
-    elif args.command == "bootstrap":
-        expected_arch = "armhf" if args.arm else "amd64"
-        sdk(args.arm)
-        run(
-            [
-                "podman",
-                "build",
-                "--arch",
-                "arm" if args.arm else "amd64",
-                "--build-arg",
-                f"EXPECTED_ARCH={expected_arch}",
-                "-t",
-                "localhost/eyesy-build:armhf" if args.arm else IMAGE,
-                "-f",
-                ROOT / "tools/Containerfile",
-                ROOT,
-            ]
-        )
-    elif args.command == "build":
-        sdk(args.arm)
-        if args.arm:
-            # Keep desktop and target output separate; OF uses platform-specific object dirs.
-            container(
-                [
-                    "make",
-                    "-C",
-                    "engine",
-                    "-j8",
-                    "JOBS=-j8",
-                    "Release",
-                    "PLATFORM_ARCH=armv6l",
-                    "CROSS_COMPILING=0",
-                    "USE_PI_LEGACY=0",
-                    "APPNAME=eyesy-armhf",
-                ],
-                arm=True,
-            )
-            runtime = ROOT / "local/runtime-arm"
-            runtime.mkdir(parents=True, exist_ok=True)
-            container(
-                [
-                    "cp",
-                    "-L",
-                    "/usr/lib/arm-linux-gnueabihf/libstdc++.so.6",
-                    "/usr/lib/arm-linux-gnueabihf/libgcc_s.so.1",
-                    "/workspace/local/runtime-arm/",
-                ],
-                arm=True,
-            )
-        else:
-            container(["make", "-C", "engine", "-j6", "Release"])
-        run(
-            [sys.executable, ROOT / "tools/build_provenance.py"] + (["--arm"] if args.arm else []),
-            stdout=subprocess.DEVNULL,
-        )
-    elif args.command == "test":
-        run(["cmake", "-S", ROOT, "-B", ROOT / "build/core", "-G", "Ninja"])
-        run(["cmake", "--build", ROOT / "build/core"])
-        run(["ctest", "--test-dir", ROOT / "build/core", "--output-on-failure"])
-        run([sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests"), "-p", "test_*.py"])
-        if args.graphics:
-            for script in (
-                "graphics_tests.py",
-                "creative_tests.py",
-                "input_workflow_tests.py",
-                "runtime_robustness_tests.py",
-                "render_target_tests.py",
-            ):
-                if (ROOT / "tests" / script).is_file():
-                    container(["python3", "/workspace/tests/" + script])
-    elif args.command == "prepare-native":
-        destination = ROOT / "local/runtime"
-        destination.mkdir(parents=True, exist_ok=True)
-        libraries = [
-            "libglfw.so.3",
-            "librtaudio.so.6",
-            "libGLEW.so.2.2",
-            "libfreeimage.so.3",
-            "liburiparser.so.1",
-            "libjxrglue.so.0",
-            "libjpeg.so.62",
-            "libraw.so.20",
-            "libOpenEXR-3_1.so.30",
-            "libIex-3_1.so.30",
-            "libImath-3_1.so.29",
-            "libjpegxr.so.0",
-            "libIlmThread-3_1.so.30",
-        ]
-        container(
-            ["cp", "-L"]
-            + ["/usr/lib/x86_64-linux-gnu/" + name for name in libraries]
-            + ["/workspace/local/runtime/"]
-        )
-        env = os.environ.copy()
-        env["LD_LIBRARY_PATH"] = f"{destination}:{ROOT}/engine/bin"
-        output = subprocess.check_output(["ldd", ROOT / "engine/bin/engine"], env=env, text=True)
-        if "not found" in output:
-            raise RuntimeError(output)
-        print("Native runtime ready. Run ./eyesyctl preview starter --native.")
-    elif args.command == "preview":
-        folder = mode_packs.find(args.mode)
-        if folder is None:
-            raise RuntimeError(
-                f"Unknown mode {args.mode!r}; run `./eyesyctl modes sync` to assemble the packs"
-            )
-        if folder.is_relative_to(ROOT / "modes"):
-            engine_mode = "/workspace/modes/" + args.mode
-            host_mode = str(ROOT / "modes" / args.mode)
-        else:
-            engine_mode = f"/packs/{folder.parent.name}/{args.mode}"
-            host_mode = str(folder)
-        command = [
-            "/workspace/engine/bin/engine",
-            "--mode",
-            engine_mode,
-            "--storage",
-            "/workspace/local/preview",
-            "--frames",
-            str(args.frames),
-            "--report",
-            f"/workspace/local/reports/{args.mode}.json",
-            "--switch-every",
-            str(args.switch_every),
-        ]
-        if args.replay:
-            replay = args.replay.resolve().relative_to(ROOT)
-            command += ["--replay", "/workspace/" + str(replay)]
-        if args.audio_wav:
-            wav = args.audio_wav.resolve().relative_to(ROOT)
-            command += ["--audio-wav", "/workspace/" + str(wav)]
-        if args.record:
-            record = args.record.resolve().relative_to(ROOT)
-            command += ["--record", "/workspace/" + str(record)]
-        if args.record_limit != 10000:
-            if args.record_limit < 1 or args.record_limit > 100000:
-                raise RuntimeError("--record-limit must be 1..100000")
-            command += ["--record-limit", str(args.record_limit)]
-        if args.headless:
-            command = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"] + command
-        if args.native:
-            if args.headless:
-                raise RuntimeError("Choose native or headless, not both")
-            command = [part.replace("/workspace", str(ROOT)) for part in command]
-            command = [host_mode if part == engine_mode else part for part in command]
-            env = os.environ.copy()
-            env["LD_LIBRARY_PATH"] = f"{ROOT}/local/runtime:{ROOT}/engine/bin"
-            run(command, env=env)
-        else:
-            container(command, graphical=not args.headless)
-    elif args.command == "new-mode":
-        if not args.name or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-_" for c in args.name):
-            raise RuntimeError("Use lowercase letters, digits, hyphens or underscores")
-        destination = Path(args.pack).expanduser().resolve() if args.pack else ROOT / "modes"
-        if not destination.is_dir():
-            raise RuntimeError(f"No such pack directory: {destination}")
-        target = destination / args.name
-        if target.exists():
-            raise RuntimeError(f"Already exists: {target}")
-        shutil.copytree(ROOT / "modes/starter", target)
-        print(target)
-        if not args.pack:
-            print(
-                "modes/ is untracked assembly; pass --pack to author in a pack repo, or move "
-                "this folder into one before it is lost to a later `./eyesyctl modes sync`",
-                file=sys.stderr,
-            )
-    elif args.command == "modes":
-        if args.action == "list":
-            roots = mode_packs.pack_roots(args.pack)
-            if not roots:
-                print("No mode packs found (expected sibling `eyesy-modes-*` repos)")
-            for root in roots:
-                found = mode_packs.discover(root)
-                print(f"{root}: {len(found)} modes")
-                for name in sorted(found):
-                    marker = "" if mode_packs.shippable(found[name]) else f"  [{mode_packs.NO_SHIP}]"
-                    print(f"  {name}{marker}")
-        else:
-            print(json.dumps(mode_packs.sync(args.pack), indent=2))
-    elif args.command == "package":
-        package(args.arm)
-    elif args.command == "headless-test":
-        if args.frames < 1 or args.frames > 3600:
-            raise RuntimeError("--frames must be 1..3600")
-        from tools.headless_test import execute
+        p.set_defaults(func=cmd_device_read)
 
-        print(
-            json.dumps(
-                execute(
-                    args.archive.resolve(),
-                    args.host,
-                    args.clone_id,
-                    args.mode,
-                    args.frames,
-                    args.output,
-                    ssh_options(args),
-                    replay=args.replay,
-                ),
-                indent=2,
-            )
-        )
-    elif args.command in ("provision", "deploy", "rollback"):
-        remote(args)
-    elif args.command in ("status", "logs"):
-        command = (
-            "cat /sdcard/eyesy-platform/status.json"
-            if args.command == "status"
-            else "journalctl -u eyesy-platform -n 100 --no-pager"
-        )
-        run(["ssh"] + ssh_options(args) + [f"music@{args.host}", command])
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":
