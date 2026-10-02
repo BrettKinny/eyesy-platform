@@ -27,8 +27,10 @@ pack's repository.
 
 - Python: [ruff](https://docs.astral.sh/ruff/), configured in `ruff.toml`. Run
   `uvx ruff format` and `uvx ruff check` before sending a change.
-- C++: `.clang-format` (LLVM base, 4-space indent, 100 columns) for new and
-  changed code.
+- C++: `.clang-format` (LLVM base, 4-space indent, 100 columns). CI checks every
+  tracked C++ file with clang-format 23.1.2; run
+  `git ls-files -z '*.cpp' '*.h' | xargs -0 uvx clang-format==23.1.2 -i` before
+  sending a change.
 
 Keep commits focused, and add or update tests for behaviour changes.
 

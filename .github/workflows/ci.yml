@@ -34,3 +34,6 @@ jobs:
 
       - name: Ruff format
         run: pipx run ruff==0.16.10 format --check
+
+      - name: clang-format
+        run: git ls-files -z '*.cpp' '*.h' | xargs -0 pipx run clang-format==23.1.2 --dry-run --Werror
