@@ -9,7 +9,9 @@ board identity, service commands, and time. They are intentionally offline.
 import hashlib
 import importlib.util
 import json
+import contextlib
 from contextlib import ExitStack
+import io
 from pathlib import Path
 import subprocess
 import tarfile
@@ -197,7 +199,9 @@ class ReleaseTransactionTests(unittest.TestCase):
                     *self.healthy_clock(base),
                 ]:
                     stack.enter_context(patch)
+                stdout = stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
                 result = release.activate(archive, "unit", base)
+            self.assertIn("Release candidate is already installed; re-selecting it", stdout.getvalue())
             self.assertEqual(result["release"], "candidate")
             self.assertEqual((base / "current").resolve(), installed.resolve())
             self.assertEqual((base / "active.env").read_text(), "EYESY_RELEASE=candidate\n")

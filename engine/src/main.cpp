@@ -8,6 +8,7 @@
 #include "runtime.h"
 #include <alsa/asoundlib.h>
 #include <arpa/inet.h>
+#include <cerrno>
 #include <csignal>
 #include <fcntl.h>
 #include <fstream>
@@ -596,6 +597,26 @@ class EngineApp : public ofBaseApp {
                 screenshot();
         }
     }
+    void openMidi() {
+        // Containers and desktops without the snd-seq module have no sequencer
+        // device; skip the open there rather than let alsa-lib print its own
+        // "open /dev/snd/seq failed" error. Any other failure (permissions, a
+        // broken ALSA config) still goes through snd_seq_open and is reported.
+        if (access("/dev/snd/seq", F_OK) != 0 && errno == ENOENT) {
+            ofLogNotice() << "MIDI: no ALSA sequencer (/dev/snd/seq), MIDI input disabled";
+            return;
+        }
+        int rc = snd_seq_open(&seq, "default", SND_SEQ_OPEN_INPUT, SND_SEQ_NONBLOCK);
+        if (rc < 0) {
+            seq = nullptr;
+            ofLogWarning() << "MIDI: cannot open ALSA sequencer: " << snd_strerror(rc);
+            return;
+        }
+        snd_seq_set_client_name(seq, "EYESY Platform");
+        seqPort = snd_seq_create_simple_port(seq, "input",
+                                             SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
+                                             SND_SEQ_PORT_TYPE_APPLICATION);
+    }
     void pollMidi() {
         if (!seq)
             return;
@@ -851,13 +872,7 @@ class EngineApp : public ofBaseApp {
                 throw std::runtime_error("WAV input unavailable: " + error);
         } else if (!audio.start(options.device))
             message = "Audio input unavailable";
-        if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_INPUT, SND_SEQ_NONBLOCK) >= 0) {
-            snd_seq_set_client_name(seq, "EYESY Platform");
-            seqPort = snd_seq_create_simple_port(
-                seq, "input", SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
-                SND_SEQ_PORT_TYPE_APPLICATION);
-        } else
-            seq = nullptr;
+        openMidi();
         for (auto &e : fs::directory_iterator(options.mode.parent_path()))
             if (e.is_directory() && fs::exists(e.path() / "main.lua"))
                 catalog.push_back(e.path());

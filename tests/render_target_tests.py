@@ -115,12 +115,11 @@ def main():
             (320, 540, (0, 255, 0)),
             (960, 540, (255, 255, 0)),
         ]
-        for im in images:
-            print("quadrants", [pixel(im, x, y) for x, y, _ in pts])
+        for mode, im in zip(modes, images):
             for x, y, want in pts:
                 got = pixel(im, x, y)
                 if max(abs(got[i] - want[i]) for i in range(3)) > 12:
-                    raise AssertionError((x, y, want, got))
+                    raise AssertionError((mode.name, x, y, want, got))
         for target_image in (images[1], images[3]):
             if pixel(target_image, 5, 5) != (255, 0, 255):
                 raise AssertionError("parent projection was not restored after target")

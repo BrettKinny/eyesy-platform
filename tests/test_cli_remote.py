@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
+import contextlib
 import importlib.util
+import io
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -51,7 +53,9 @@ class RemoteCliTests(unittest.TestCase):
     @mock.patch.object(eyesyctl, "run")
     @mock.patch.object(eyesyctl.subprocess, "check_output", return_value="/tmp/eyesy-platform.ABC123\n")
     def test_rollback_stages_guarded_release_and_selected_target(self, check_output, run):
-        eyesyctl.remote(self.args(target="stock"))
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            eyesyctl.remote(self.args(target="stock"))
+        self.assertIn("Remote staging retained for inspection: /tmp/eyesy-platform.ABC123", stdout.getvalue())
         calls = [c.args[0] for c in run.call_args_list]
         self.assertEqual(len(calls), 2)
         command = calls[1][-1]

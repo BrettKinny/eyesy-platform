@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
+import contextlib
 import importlib.util
+import io
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -91,8 +94,12 @@ class WatchdogSafetyTests(unittest.TestCase):
         def status_json(path):
             return {"frame": next(frames), "error": "", "renderer": "VC4"}
 
+        # main() prints its JSON report; capture it so the run stays quiet and
+        # the tests below can assert on what an operator would see.
+        self.stdout = io.StringIO()
         try:
             with (
+                contextlib.redirect_stdout(self.stdout),
                 mock.patch.object(Path, "is_relative_to", return_value=True),
                 mock.patch.object(watchdog.argparse, "ArgumentParser", return_value=parser),
                 mock.patch.object(watchdog, "check_clone"),
@@ -132,9 +139,15 @@ class WatchdogSafetyTests(unittest.TestCase):
 
     def test_success_requires_advancing_heartbeat(self):
         self.assertEqual(self.run_main(), 0)
+        report = json.loads(self.stdout.getvalue())
+        self.assertTrue(report["passed"])
+        self.assertNotIn("cleanup_error", report)
 
     def test_cleanup_failure_makes_result_nonzero(self):
         self.assertEqual(self.run_main(restart_error=RuntimeError("stop failed")), 1)
+        report = json.loads(self.stdout.getvalue())
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["cleanup_error"], "stop failed")
 
     def test_report_failure_without_primary_raises(self):
         with self.assertRaisesRegex(OSError, "report disk full"):

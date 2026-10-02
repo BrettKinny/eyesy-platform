@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
+import contextlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -87,9 +89,13 @@ class HeadlessWorkflowTests(unittest.TestCase):
                     side_effect=['{"clone_id":"clone"}', "Compute Module 3 Plus", "/tmp/eyesy-headless.ABC"],
                 ),
                 mock.patch.object(helper, "run", side_effect=command),
+                contextlib.redirect_stderr(io.StringIO()) as stderr,
             ):
                 with self.assertRaises(subprocess.CalledProcessError):
                     helper.execute(Path(temp) / "archive", "host", "clone", "starter", 10, Path(temp) / "out")
+            self.assertIn(
+                "Remote staging retained for inspection: /tmp/eyesy-headless.ABC", stderr.getvalue()
+            )
             self.assertEqual(calls[-1][0], "scp")
             self.assertIn("-r", calls[-1])
             self.assertTrue(all("StrictHostKeyChecking=yes" in c for c in calls))
