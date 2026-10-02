@@ -2,7 +2,8 @@
 
 **Scope:** how to play and render GIF (and by extension short animated) content on the
 `eyesy` platform — Raspberry Pi CM3+ `vc4-kms-v3d` V3D 2.1, direct-KMS GLES2 engine,
-Lua scene API. Evidence cited against the repo.
+Lua scene API. Evidence cited against the repo as of September 2026; file and line
+references are to the engine at that time.
 
 **Recommendation (TL;DR):** **Offline pre-processing is the primary path.** Decode the GIF to a
 flattened PNG-frame sequence **on the workstation at package/asset-build time**, ship it inside
@@ -25,8 +26,8 @@ Grounding (file → evidence):
 
 - **Renderer.** Direct-KMS/GBM window, EGL context `EGL_CONTEXT_CLIENT_VERSION 2`, an
   `ofGLProgrammableRenderer` initialized for GLSL ES 2 (`engine/src/kms_window.cpp:91-116`).
-  Hardware is the BCM2837 `VC4 V3D 2.1` (GL string reported via `main.cpp`; `ROADMAP.md` "27 modes
-  … direct KMS … `VC4 V3D 2.1` at ~60 fps").
+  Hardware is the BCM2837 `VC4 V3D 2.1` (GL string reported via `main.cpp`; `docs/STATUS.md`: direct KMS,
+  `VC4 V3D 2.1`, ~60 fps).
 - **Output.** 1280×720×60; KMS picks a `1280×720`/`55–65 Hz` mode and falls back to
   `connector->modes[0]` (`kms_window.cpp:253-264`). No Xorg in the display path.
 - **Lua graphics surface** (`docs/API.md`): `image(relative_path)→handle` and
@@ -45,8 +46,8 @@ Grounding (file → evidence):
 - **Deployment**: `eyesyctl package` deep-copies the whole `modes/` tree (minus symlinks) into
   an immutable, hash-pinned release that `eyesyctl deploy` stages and atomically activates on
   `/sdcard` (`eyesyctl` `package()`; `docs/DEPLOYMENT.md`). Device root `/` is **read-only**
-  (`provision_device.sh` remount dance); only `/tmp` (tmpfs) is a scratch area (`ROADMAP.md`
-  "device tools restage after every boot (`/tmp` is tmpfs)").
+  (`provision_device.sh` remount dance); only `/tmp` (tmpfs) is a scratch area, and it is
+  wiped at every boot.
 - **Codec availability on device**: provision installs GStreamer runtimes
   (`libgstreamer1.0-0`, `libgstreamer-plugins-base1.0-0`) and `libmpg123` as **unversioned
   runtime deps of the OF stack** (`tools/provision_device.sh` `apt-get` line), but there is
@@ -226,7 +227,7 @@ means.
   off-stage and replays it smoothly — the same spirit as §1.
 
 The audio echo is telling: the platform already prefers **pre-baking content** (`--audio-wav`,
-`local/overnight` fixtures, replay `.json` fixtures in `tests/`) over runtime codec work. GIF
+generated WAV fixtures, replay `.json` fixtures in `tests/`) over runtime codec work. GIF
 frames are the visual analogue: bake the sequence, replay it.
 
 ---
@@ -261,5 +262,5 @@ Repo-grounded (paths under the repo root):
 - `eyesyctl` (`package()`: modes deep-copied, symlinks rejected; `deploy()`: immutable release).
 - `tools/provision_device.sh` (read-only root remount dance; GStreamer/mpg123 as passive deps).
 - `docs/DEPLOYMENT.md`, `docs/SCENE-LIBRARY.md` (tier budget, composite design law),
-  `docs/CREATIVE.md`, `ROADMAP.md` (read-only `/tmp` tmpfs, VC4 V3D 2.1, 60 fps),
+  `docs/CREATIVE.md`, `docs/STATUS.md` (VC4 V3D 2.1, 60 fps),
   `docs/background/eyesy-of-engine.md` (old OF `VIDEO` precedent).
