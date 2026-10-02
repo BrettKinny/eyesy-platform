@@ -35,7 +35,7 @@ Checks (docs/SCENE-LIBRARY.md design-law signatures):
 - trigger response: same, asserted when the scene references ctx.trigger
 
 Usage:
-  scene_verify.py --mode flow-field-drift --output local/verify-001 --xvfb
+  scene_verify.py --mode starter --output local/verify-001 --xvfb
   scene_verify.py --output local/verify-all --xvfb              # whole catalog
 Exit 0 iff every selected scene passes. Evidence per scene: summary.json,
 contact-sheet.png and run-<name>/{replay.json,engine.log,report.json,grabs/}.

@@ -86,19 +86,37 @@ def main():
         on_grab = next((polarity / 'on-store' / 'grabs').glob('*.png'))
         off_grab = next((polarity / 'off-store' / 'grabs').glob('*.png'))
         assert on_grab.read_bytes() != off_grab.read_bytes(), 'persist changed nothing'
-        # The same polarity must hold for the shipped pilot modes.
-        for pilot in ('starter', 'stereo-mesh'):
+        # The same polarity must hold for the public starter and for a 3D mesh
+        # mode (depth off, rotated audio waveforms, decayed rather than cleared).
+        mesh = temp / 'modes/mesh'; mesh.mkdir(parents=True)
+        (mesh / 'main.lua').write_text('''local e = eyesy
+local mesh, points = nil, {}
+return {api_version=1,
+  setup=function(ctx) mesh = e.new_mesh() for i=1,256 do points[i]={0,0,0} end end,
+  draw=function(ctx)
+    if ctx.auto_clear then e.clear(0.02,0.02,0.04)
+    else e.color(0.02,0.02,0.04,0.08) e.rect(0,0,ctx.width,ctx.height) end
+    e.depth(false) e.push() e.translate(ctx.width/2, ctx.height/2, 0) e.rotate(20+ctx.time*40, 0, 1, 0)
+    for channel=1,2 do
+      local wave = channel==1 and ctx.audio.left or ctx.audio.right
+      for i=1,256 do local p=points[i]
+        p[1],p[2],p[3] = (i/256-0.5)*1080, wave[i*4]*150+(channel-1.5)*180, math.sin(i/25+ctx.time)*200 end
+      e.color(e.palette(0.3*channel)) e.update_mesh(mesh, points) e.draw_mesh(mesh)
+    end
+    e.pop()
+  end}''')
+        for pilot in (ROOT / 'modes/starter', mesh):
             pilot_hashes = []
             for name, events in (('on', []),
                                  ('off', [{'frame': 0, 'type': 'hardware_key', 'key': 3}])):
-                replay = temp / f'{pilot}-persist-{name}.json'
+                replay = temp / f'{pilot.name}-persist-{name}.json'
                 replay.write_text(json.dumps(events))
-                store = temp / f'{pilot}-persist-{name}'
-                result = run(ROOT / 'modes' / pilot, store, frames=90, replay=replay)
+                store = temp / f'{pilot.name}-persist-{name}'
+                result = run(pilot, store, frames=90, replay=replay)
                 assert not result['error'] and result['mode_errors'] == 0, result
                 pilot_hashes.append(hashlib.sha256(
                     next((store / 'grabs').glob('*.png')).read_bytes()).hexdigest())
-            assert pilot_hashes[0] != pilot_hashes[1], f'{pilot} ignored persist'
+            assert pilot_hashes[0] != pilot_hashes[1], f'{pilot.name} ignored persist'
         # Instrument HUD (Phase 4): the overlay draws on the composited window
         # and must never leak into the mode render, at a fixed draw-call cost.
         hud_dir = temp / 'hud'

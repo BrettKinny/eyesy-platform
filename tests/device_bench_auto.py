@@ -29,14 +29,6 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ENGINE_PORT = 4000
 STORE = "/sdcard/eyesy-platform"
 
-# Modes known broken in the *deployed* release. Each is already fixed in its
-# pack repo, so a redeploy clears it; a mode outside this set still fails the
-# run. kirlian-aura: dev-8fcb282d8437 ships main.lua without kirlian.frag
-# (modes/kirlian-aura/kirlian.frag exists in the pack as of 2026-09-18).
-KNOWN_BROKEN = {
-    "kirlian-aura": "deployed release is missing kirlian.frag (fixed in the pack; redeploy clears it)",
-}
-
 PRELUDE = '''
 import json, socket, struct, time
 
@@ -223,7 +215,12 @@ def main():
     parser.add_argument("--known-hosts", type=pathlib.Path,
                         default=ROOT / "local/eyesy_known_hosts")
     parser.add_argument("--skip-modes", action="store_true", help="skip the catalog render smoke")
+    parser.add_argument("--known-broken", action="append", default=[], metavar="MODE",
+                        help="mode already known to fail setup in the deployed release (fixed in "
+                             "its pack, cleared by a redeploy); repeatable. Any other failing "
+                             "mode still fails the run")
     args = parser.parse_args()
+    known_broken = set(args.known_broken)
     if args.output.exists():
         sys.exit("--output must not already exist")
     args.output.mkdir(parents=True)
@@ -252,7 +249,7 @@ print(json.dumps(wait_for(lambda s: s.get('mode') == 'starter' and s.get('menu_s
                           and s.get('sequencer') == 'stopped' and s.get('fps', 0) > 20,
                           'idle baseline', timeout=10)))
 ''')
-    assert baseline["mode_errors"] <= len(KNOWN_BROKEN), baseline
+    assert baseline["mode_errors"] <= len(known_broken), baseline
     record("00-baseline", {k: baseline.get(k) for k in
                            ("release", "mode", "fps", "renderer", "mode_count", "diagnostics")},
            capture.snapshot("00-baseline"))
@@ -359,7 +356,7 @@ print(json.dumps(wait_for(lambda s: s.get('mode') != {prev!r}, 'mode change', ti
             capture.snapshot(f"smoke-{index:02d}")
         final = device.status()
         assert len(set(seen)) >= count - 1, f"mode switching stalled: {len(set(seen))}/{count}"
-        unexpected = [m for m in errors if m not in KNOWN_BROKEN]
+        unexpected = [m for m in errors if m not in known_broken]
         assert not unexpected, f"modes reported a setup error: {unexpected}"
         assert final["mode_errors"] == errs, final
         blanks = [k for k, v in capture.frames.items()
@@ -384,7 +381,7 @@ time.sleep(.5)
 print(json.dumps(status()))
 ''', timeout=120)
     assert final["mode"] == "starter", final
-    assert final["mode_errors"] <= len(KNOWN_BROKEN), final
+    assert final["mode_errors"] <= len(known_broken), final
     record("07-final-idle", {k: final.get(k) for k in
                              ("mode", "mode_errors", "led", "menu_screen", "sequencer", "fps")},
            capture.snapshot("07-final-idle"))
