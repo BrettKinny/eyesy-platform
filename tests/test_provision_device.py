@@ -29,16 +29,14 @@ class ProvisionDeviceSafetyTests(unittest.TestCase):
         rm_rc=1,
         conf_exists=True,
     ):
-        start = self.source.index('task_mount_options=$(findmnt -n -o OPTIONS /)')
+        start = self.source.index("task_mount_options=$(findmnt -n -o OPTIONS /)")
         end = self.source.index('task_script_dir=$(cd -- "$(dirname -- "$0")" && pwd)', start)
         block = self.source[start:end]
         with tempfile.TemporaryDirectory() as task_tmp:
             task_legacy_conf = Path(task_tmp) / "10-eyesy-720p.conf"
             if conf_exists:
                 task_legacy_conf.write_text("stale\n")
-            block = block.replace(
-                '/etc/X11/xorg.conf.d/10-eyesy-720p.conf', str(task_legacy_conf)
-            )
+            block = block.replace("/etc/X11/xorg.conf.d/10-eyesy-720p.conf", str(task_legacy_conf))
 
             script = """set -euo pipefail
 findmnt() { printf \"%s\" \"OPTIONS\"; }
@@ -76,16 +74,12 @@ RM_RC=RM_RC_VALUE
             script = script.replace("RM_RC_VALUE", str(rm_rc))
             script = script.replace("CONF_PATH", str(task_legacy_conf))
 
-            result = subprocess.run(
-                ["bash", "-c", script], capture_output=True, text=True
-            )
+            result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
 
             return result, task_legacy_conf
 
     def test_shell_syntax(self):
-        result = subprocess.run(
-            ["bash", "-n", str(SCRIPT)], capture_output=True, text=True
-        )
+        result = subprocess.run(["bash", "-n", str(SCRIPT)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_identity_guards_are_not_asserts(self):
@@ -99,8 +93,10 @@ RM_RC=RM_RC_VALUE
         checks = self.source.index("systemctl is-active")
         checks = min(checks, self.source.index("systemctl is-enabled"))
         self.assertLess(checks, self.source.index("apt-get update"))
-        self.assertIn('for task_unit in eyesy-platform.service eyesy-platform-fallback.service',
-                      self.source[:checks + 1])
+        self.assertIn(
+            "for task_unit in eyesy-platform.service eyesy-platform-fallback.service",
+            self.source[: checks + 1],
+        )
 
     def test_backup_inventory_and_destinations_are_protected(self):
         inventory = self.source.index("for task_backup in packages.before")
@@ -109,7 +105,8 @@ RM_RC=RM_RC_VALUE
         )
         self.assertLess(inventory, first_inventory_write)
         for name in (
-            "packages.before", "packages.after",
+            "packages.before",
+            "packages.after",
             "eyesy-platform.service",
             "eyesy-platform-fallback.service",
         ):
@@ -131,17 +128,20 @@ RM_RC=RM_RC_VALUE
     def test_cleanup_exit_status_reflects_remount_failure(self):
         # Execute only the actual cleanup function, with inert mount/sync stubs.
         # Never source or execute the root provisioning workflow itself.
-        start = self.source.index('cleanup() {')
-        end = self.source.index('\ntrap cleanup EXIT', start)
+        start = self.source.index("cleanup() {")
+        end = self.source.index("\ntrap cleanup EXIT", start)
         cleanup = self.source[start:end]
         for original, remount, expected in ((0, 1, 1), (7, 1, 7), (0, 0, 0), (7, 0, 7)):
             with self.subTest(original=original, remount=remount):
-                script = ('set -euo pipefail\n' + f'mount() {{ return {remount}; }}\n'
-                          'sync() { :; }\ntask_restore_ro=true\n' + cleanup +
-                          f'\ntrap cleanup EXIT\nexit {original}\n')
-                result = subprocess.run(['bash', '-c', script], capture_output=True, text=True)
+                script = (
+                    "set -euo pipefail\n" + f"mount() {{ return {remount}; }}\n"
+                    "sync() { :; }\ntask_restore_ro=true\n"
+                    + cleanup
+                    + f"\ntrap cleanup EXIT\nexit {original}\n"
+                )
+                result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
                 self.assertEqual(result.returncode, expected, result.stderr)
-                self.assertEqual('failed to restore' in result.stderr, remount != 0)
+                self.assertEqual("failed to restore" in result.stderr, remount != 0)
 
     def test_legacy_xorg_conf_removed_and_verified(self):
         result, legacy_conf = self._run_mount_and_xorg_block()
@@ -154,16 +154,14 @@ RM_RC=RM_RC_VALUE
         self.assertFalse(legacy_conf.exists())
 
     def test_failed_read_write_remount_is_fatal(self):
-        result, _legacy_conf = self._run_mount_and_xorg_block(
-            mount_options='ro', remount_rw_rc=1
-        )
+        result, _legacy_conf = self._run_mount_and_xorg_block(mount_options="ro", remount_rw_rc=1)
         self.assertEqual(result.returncode, 1)
-        self.assertIn('failed to remount root filesystem read-write', result.stderr)
+        self.assertIn("failed to remount root filesystem read-write", result.stderr)
 
     def test_failed_legacy_xorg_conf_removal_is_fatal(self):
         result, _legacy_conf = self._run_mount_and_xorg_block(rm_fail=True, rm_rc=1)
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('failed to remove', result.stderr)
+        self.assertIn("failed to remove", result.stderr)
 
 
 if __name__ == "__main__":

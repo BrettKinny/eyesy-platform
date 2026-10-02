@@ -14,6 +14,7 @@ reported FAILED even though the platform was converging. `activating` now
 counts as success, while a genuinely parked platform plus a dead stock client
 still exits nonzero.
 """
+
 import os
 import pathlib
 import subprocess
@@ -60,8 +61,8 @@ def exec_start_command(text):
     join backslash continuations."""
     lines = text.splitlines()
     index = next(i for i, line in enumerate(lines) if line.startswith("ExecStart="))
-    parts = [lines[index][len("ExecStart="):].rstrip().rstrip("\\").rstrip()]
-    for line in lines[index + 1:]:
+    parts = [lines[index][len("ExecStart=") :].rstrip().rstrip("\\").rstrip()]
+    for line in lines[index + 1 :]:
         stripped = line.strip()
         if not stripped:
             break
@@ -80,8 +81,7 @@ class FallbackUnitTests(unittest.TestCase):
         ("platform inactive, stock takes over", ["inactive"], "1", 0),
         # The regression: platform mid-Restart= (activating) and the stock start
         # was canceled by Conflicts=; the display is converging on the platform.
-        ("platform activating, stock start canceled -> convergent success",
-         ["activating"], "0", 0),
+        ("platform activating, stock start canceled -> convergent success", ["activating"], "0", 0),
     ]
 
     def setUp(self):
@@ -99,8 +99,15 @@ class FallbackUnitTests(unittest.TestCase):
         env = dict(os.environ)
         env.update(MOCK_DIR=str(self.tmp), MOCK_STOCK_ON_START=stock_on_start)
         env["PATH"] = f"{self.tmp}:{env['PATH']}"
-        result = subprocess.run(self.command, shell=True, executable="/bin/sh",
-                                env=env, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            self.command,
+            shell=True,
+            executable="/bin/sh",
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         started = (self.tmp / "stock").exists()
         return result.returncode, started
 

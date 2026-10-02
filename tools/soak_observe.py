@@ -8,7 +8,14 @@ engine -- that is soak_guard.py's job, and ROADMAP item 4 forbids it here.
     sudo -n python3 soak_observe.py --duration 3600 --interval 5 \
         --output /sdcard/eyesy-platform/experiments/soak-<date> --mode-seconds 120
 """
-import argparse, json, os, socket, struct, sys, time
+
+import argparse
+import json
+import os
+import socket
+import struct
+import sys
+import time
 
 
 def osc_key(port, key, down):
@@ -32,8 +39,12 @@ def main():
     ap.add_argument("--osc-port", type=int, default=4000)
     ap.add_argument("--storage", default="/sdcard/eyesy-platform")
     ap.add_argument("--output", required=True)
-    ap.add_argument("--mode-seconds", type=float, default=120.0,
-                    help="seconds per mode before advancing (0 = no switching)")
+    ap.add_argument(
+        "--mode-seconds",
+        type=float,
+        default=120.0,
+        help="seconds per mode before advancing (0 = no switching)",
+    )
     args = ap.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
@@ -51,9 +62,7 @@ def main():
                     temp = int(f.read().strip()) / 1000.0
             except OSError:
                 temp = None
-            sample = {"t": round(now - started, 2),
-                      "temperature_c": temp,
-                      "status": status}
+            sample = {"t": round(now - started, 2), "temperature_c": temp, "status": status}
             out.write(json.dumps(sample) + "\n")
             n += 1
             if args.mode_seconds and now >= next_switch:
