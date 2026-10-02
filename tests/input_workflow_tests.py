@@ -354,6 +354,12 @@ def main():
                 except subprocess.TimeoutExpired:
                     p.kill(); p.wait(timeout=5)
             if output: (store / 'menu-engine.log').write_text(output)
+        # Closing the menu with the keyboard M toggle persists like Back does:
+        # M, Down to Audio & MIDI, Return, Right x2 (gain up), M.
+        m_keys=[ord('m'),0xe00F,13,0xe00E,0xe00E,ord('m')]
+        m_replay=root/'menu-m.json'; m_replay.write_text(json.dumps([{'frame':i+1,'type':'key','key':k} for i,k in enumerate(m_keys)]))
+        m_store=root/'menu-m-store'; run([str(ENGINE),'--mode',str(mode),'--storage',str(m_store),'--frames','12','--replay',str(m_replay)])
+        m_saved=json.loads((m_store/'config.json').read_text()); assert m_saved['audio_gain']>1, ('M close did not persist', m_saved)
         bad_audio=root/'bad-audio.json'; bad_audio.write_text('[{"frame":0,"type":"audio","gain":9}]')
         bad=root/'bad.json'; bad.write_text('[{"frame":0,"type":"not-an-event"}]')
         prefix=[] if OFFSCREEN else ['xvfb-run','-a','-s','-screen 0 1280x720x24']

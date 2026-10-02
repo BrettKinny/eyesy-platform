@@ -145,12 +145,15 @@ class EngineApp : public ofBaseApp {
         }
         menu.key(mapped, settings, palettes);
         audio.setGain(float(settings.gain));
-        if (!menu.active()) {
-            try {
-                persistSettings();
-            } catch (const std::exception &e) {
-                message = e.what();
-            }
+        if (!menu.active())
+            menuClosed();
+    }
+    // Every way out of the menu commits its edits.
+    void menuClosed() {
+        try {
+            persistSettings();
+        } catch (const std::exception &e) {
+            message = e.what();
         }
     }
     void refreshHud() {
@@ -1054,6 +1057,8 @@ class EngineApp : public ofBaseApp {
             menu.toggle();
             osd = true;
             message.clear();
+            if (!menu.active())
+                menuClosed();
             return;
         }
         if (menu.active()) {
