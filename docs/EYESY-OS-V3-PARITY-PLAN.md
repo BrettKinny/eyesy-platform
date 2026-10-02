@@ -1,5 +1,15 @@
 # EYESY OS v3 Parity: Gap Analysis & Porting Plan
 
+> **Status: done.** All five phases are implemented and verified, including on
+> hardware: the 13-step device suite (`tests/device_parity_tests.py`) passed on
+> the CM3+ on 2026-09-17 and again on 2026-09-18. What was delivered, the
+> corrections measurements forced on this plan, and the deliberate scope limits
+> are in [§7](#7-implementation-status-2026-09-17). Sections 1–6 are the
+> original gap analysis and plan, kept as written; where they say "missing" or
+> "ours does nothing", that described the engine before this work. Stock
+> features still not ported (Wi-Fi, MIDI program-change mapping, backups, logs,
+> USB modes, composite output) are tracked in the [roadmap](../ROADMAP.md).
+
 Documented: 2026-09-17  
 Baseline comparisons:
 - **Upstream specification**: [Official EYESY OS v3 User Manual](https://docs.critterandguitari.com/EYESY/ey_os_3/)
