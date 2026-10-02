@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build g++
+
+      - name: Build and run core tests
+        run: |
+          cmake -S . -B build/core -G Ninja
+          cmake --build build/core
+          ctest --test-dir build/core --output-on-failure
+
+      - name: Python unit tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Ruff lint
+        run: pipx run ruff==0.16.10 check
+
+      - name: Ruff format
+        run: pipx run ruff==0.16.10 format --check
