@@ -440,6 +440,14 @@ def cmd_prepare_native(args):
     print("Native runtime ready. Run ./eyesyctl preview starter --native.")
 
 
+def workspace_path(flag, path):
+    """Map a host path inside the repo to its path in the build container."""
+    path = path.resolve()
+    if not path.is_relative_to(ROOT):
+        raise RuntimeError(f"{flag} {path}: the file must be inside {ROOT} (for example under local/)")
+    return "/workspace/" + str(path.relative_to(ROOT))
+
+
 def cmd_preview(args):
     folder = mode_packs.find(args.mode)
     if folder is None:
@@ -463,15 +471,9 @@ def cmd_preview(args):
         "--switch-every",
         str(args.switch_every),
     ]
-    if args.replay:
-        replay = args.replay.resolve().relative_to(ROOT)
-        command += ["--replay", "/workspace/" + str(replay)]
-    if args.audio_wav:
-        wav = args.audio_wav.resolve().relative_to(ROOT)
-        command += ["--audio-wav", "/workspace/" + str(wav)]
-    if args.record:
-        record = args.record.resolve().relative_to(ROOT)
-        command += ["--record", "/workspace/" + str(record)]
+    for flag, path in (("--replay", args.replay), ("--audio-wav", args.audio_wav), ("--record", args.record)):
+        if path:
+            command += [flag, workspace_path(flag, path)]
     if args.record_limit != 10000:
         if args.record_limit < 1 or args.record_limit > 100000:
             raise RuntimeError("--record-limit must be 1..100000")
