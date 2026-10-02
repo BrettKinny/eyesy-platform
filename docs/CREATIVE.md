@@ -1,79 +1,75 @@
-# Creative runtime additions
+# Creative runtime: palettes, persist and reference modes
 
-This slice adds reusable palettes and three reference modes for the v1 Lua API.
+How colour and persistence work for a mode, and which modes to read as
+examples. The full call list is in the [mode API](API.md).
 
-## Palette API
+## Palettes
 
-`eyesy.palette(phase)` is unchanged: it returns three 0..1 channels from the
-existing cosine palette. `eyesy.palette(name, phase)` returns a named palette,
-with phase wrapped to `[0,1)` and linearly interpolated between its RGB stops.
-Built-in names are `sunset`, `ocean`, `ember`, and `mint`.
+A mode has three ways to pick colours. Each returns three channels in 0..1.
 
-Modes may register a palette during `setup` with
-`eyesy.define_palette(name, {{r,g,b}, {r,g,b}, ...})`. A palette has 2..16 RGB
-stops; channels are clamped to 0..1. Registration replaces an existing name,
-including a built-in. Unknown names and malformed stop tables are Lua errors.
-Palette stops are converted once during setup rather than rebuilt per draw.
+**A fixed cosine palette.** `eyesy.palette(phase)` returns
+`0.5 + 0.5*cos(2π(phase + i/3))` for the three channels: a full hue wheel, and
+the quickest way to get a hue sweep from a knob.
+
+**Named palettes with stops.** `eyesy.palette(name, phase)` samples a named
+palette, with `phase` wrapped to `[0,1)` and linearly interpolated between its
+RGB stops. The built-in names are `sunset`, `ocean`, `ember` and `mint`. A mode
+registers its own during `setup` with
+`eyesy.define_palette(name, {{r,g,b}, {r,g,b}, ...})`: 2..16 stops, channels
+clamped to 0..1. Registering an existing name replaces it, including a
+built-in. Unknown names and malformed stop tables are Lua errors. Stops are
+converted once at registration, not per draw. Custom palettes are recreated
+whenever the mode loads, and at most 32 names can exist, built-ins included;
+re-defining an existing name does not count against that limit.
+
+Stop spacing is cyclic, with i/n segments, so the last stop blends back into
+the first. When exact colours matter (an authored pair, an equal-luminance
+opposition), check the sampled values or hardcode the colours.
+
+**The instrument's palettes.** `ctx.palette_fg(phase)` and
+`ctx.palette_bg(phase)` sample the foreground and background palettes the
+player has selected, as on the stock EYESY: Shift + Mode cycles the foreground
+palette and Shift + Scene the background, the HUD shows both as swatches, and
+scenes and `config.json` save the selection. These are the 43 stock EYESY OS v3
+cosine palettes (`color = a + b*cos(2π(c*t + d))` per channel). A
+`System/palettes.json` in the platform's storage replaces the list: an array of
+objects with a `name` and three-element `a`, `b`, `c` and `d` arrays. A mode
+that colours itself from these follows the player's choice, the way stock modes
+do.
+
+## Persist
+
+The Persist button sets `ctx.auto_clear`. When it is `true` (the default) a
+mode clears each frame; when it is `false` the previous frame should stay and
+fade. The engine skips its own clear, but a mode that calls `clear()`
+unconditionally still wipes the frame, so a mode has to honour the setting
+itself. `starter` shows the idiom: clear when `ctx.auto_clear` is true, and
+otherwise draw a translucent full-screen rectangle to fade the previous frame.
+
+A mode that keeps a feedback target can treat Persist as its decay control
+instead. A pygame-style "draw over the last frame" port needs a persistence
+bridge (draw into a target, fade it, blit it), which costs three full-screen
+passes; render that pair at reduced resolution (see the
+[scene library](SCENE-LIBRARY.md) notes).
 
 ## Reference modes
 
-- `modes/aurora`: ES2 fragment shader ribbons with a custom aurora palette;
-  quality knob 3 uses a preallocated 640x360 target below 0.75 and direct
-  full-canvas rendering at 0.75 or above.
-- `modes/prism-mesh`: reusable 192-vertex audio mesh and 46-vertex faceted strip,
-  stereo color separation, depth animation, and named palette lookup.
-- `modes/echo-feedback`: alternating full-size targets and render-target feedback,
-  audio-reactive source orb, and an ember palette.
+| Mode | Where | What to read it for |
+| --- | --- | --- |
+| `starter` | `modes/starter/` in this repo | the smallest complete mode: two bound parameters, a palette lookup, audio-reactive size, and the persist idiom |
+| `milkdrop` | [eyesy-modes-milkdrop](https://github.com/BrettKinny/eyesy-modes-milkdrop) | a shader engine: warp and composite passes through ping-pong targets at content resolution, a preset catalog, custom per-point waves, and all eight targets in use |
+| `s-*` ports | [eyesy-modes-factory](https://github.com/BrettKinny/eyesy-modes-factory) | stock pygame modes mapped onto the immediate primitives and meshes, with stock knob behaviour, palette registration, and reduced-resolution persistence bridges |
 
-All three stay within the runtime limits (two targets maximum, one shader, and
-238 mesh vertices per mode) and avoid retaining frame snapshot tables. The mesh modes
-reuse their vertex table and mesh handle each frame.
-
-## Knob map
+Knob maps:
 
 | Mode | 1 | 2 | 3 | 4 | 5 |
 | --- | --- | --- | --- | --- | --- |
-| Starter | Size | — | — | Hue | — |
-| Stereo Mesh | Amplitude | Rotation | Depth | Hue | Speed |
-| Shader | Shape | — | — | — | — |
-| Feedback | Decay | Rotation | Zoom | Hue | Size |
-| Aurora | Flow | Glow | Quality | Palette phase | — |
-| Prism Mesh | Amplitude | Depth | Spin | Palette phase | Speed |
-| Echo Feedback | Decay | Orbit | Scale | Hue | Size |
-| Phosphor | Decay | Morph | Gain | Hue | Swirl |
-| Kali Bloom | Decay | Morph | Pulse | Hue | Zoom |
+| `starter` | Size | — | — | Hue | — |
+| `milkdrop` | Motion | Preset | Detail | Hue | Feedback |
 
-Bound parameters follow knob values, so a declared parameter default is not a
-substitute for setting the corresponding knob in a replay. Workstation knobs
-initially sit at 0.5. Aurora therefore uses its half-resolution path initially;
-knob 3 values of 0.75 and above select full resolution.
+Each factory port documents its own knob map in its header and its
+`docs/ports/<slug>.md` report.
 
-Three prototypes live under `local/experiments`, outside release packages:
-a curved 12-petal mesh sculpture, a shader tunnel, and reduced-resolution echo
-feedback. All passed 600-frame native VC4 checks and screenshot inspection,
-with no measured short-run median RSS growth. They are not included in the
-frozen seven-mode soak or release artifacts.
-
-The reduced-resolution echo uses two 640×360 targets instead of two 1280×720
-targets, reducing feedback pixel work at the cost of visibly coarser edges.
-Under concurrent stock video plus the soak, one preliminary comparison measured
-53.83 ms median frame time for full-size echo versus 44.82 ms for the reduced
-variant. This is a shared-load comparison, not an isolated speedup guarantee;
-the post-soak repeat below is the stronger comparison.
-
-Evidence: `local/overnight/prototypes-shared-round1/summary.json`.
-
-After the soak stopped, a counterbalanced full/half/half/full comparison ran
-900 frames per trial on the same packaged ARM engine, with stock video still
-active. Both variants completed cleanly with zero measured median RSS growth:
-
-| Variant | Median frame time, two trials | 900-frame wall time, two trials |
-| --- | --- | --- |
-| Full-size echo | 29.661 / 29.667 ms | 27.904 / 27.907 s |
-| Half-size echo | 21.606 / 21.606 ms | 20.613 / 20.615 s |
-
-This supports roughly 27% lower median frame cost for the reduced-resolution
-variant in this offscreen setup, not a universal speedup or HDMI frame-rate claim.
-Its coarser edges remain visible, so it stays an explicit experiment rather than
-silently replacing the shipping mode. Evidence:
-`local/overnight/echo-abba-round1/summary.json`.
+Bound parameters follow the knob values, so a declared parameter default is not
+a substitute for setting the corresponding knob in a replay. Knobs start at 0.5
+on the workstation and on a fresh start of the device.
