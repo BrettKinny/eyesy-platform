@@ -642,7 +642,10 @@ class EngineApp : public ofBaseApp {
                 m.type = 0xfc;
                 break;
             default:
-                break;
+                // Sysex, pitch bend, port announcements...: not part of the
+                // mode API. Left as {0, 0} they read as channel-1 events.
+                snd_seq_free_event(e);
+                continue;
             }
             m.timestamp = ofGetElapsedTimef();
             if (m.type >= 0xf0 || m.channel == settings.midiChannel - 1) {
