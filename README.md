@@ -47,7 +47,7 @@ testing. This makes reaction–diffusion, fractal zooms and MilkDrop-style
 feedback practical on a Compute Module 3+. Shipped modes are benchmarked on the
 device itself, because desktop timings don't predict VC4 performance. Simple
 modes run at 60 fps, and heavy shader scenes run at about 25 to 50 fps. See [the
-tier table](docs/SCENE-LIBRARY.md).
+performance tiers](docs/SCENE-LIBRARY.md#performance-tiers).
 
 ### Detailed stereo audio
 
@@ -295,7 +295,8 @@ Read [deployment](docs/DEPLOYMENT.md) in full before you start. In outline:
 5. Choose which software the instrument starts at boot; see [boot
    selection](docs/DEPLOYMENT.md#boot-selection).
 6. Check the device with `./eyesyctl status` and `./eyesyctl logs`, and go back
-   with `./eyesyctl rollback --target previous` or `--target stock`.
+   with `./eyesyctl rollback --target previous` or `--target stock`, which
+   take the same `--host` and `--clone-id`.
 
 You don't need a screen to test a package on the device first; see
 [headless development](docs/HEADLESS-DEVELOPMENT.md).
@@ -328,12 +329,13 @@ cause, down to the register bit.
 
 - [Mode API](docs/API.md): the Lua interface modes are written against
 - [Scene library conventions](docs/SCENE-LIBRARY.md): the knob contract, performance tiers and optimization notes
-- [Creative runtime](docs/CREATIVE.md): palettes and the reference modes
+- [Creative runtime](docs/CREATIVE.md): palettes, Persist and the reference modes
 - [Input workflow](docs/INPUT-WORKFLOW.md): WAV input and event record/replay
+- [Display backends](docs/DISPLAY-BACKENDS.md): the direct KMS and offscreen windows, and the GPU probe
 - [Headless development](docs/HEADLESS-DEVELOPMENT.md): testing on the device's GPU without a screen
 - [Deployment](docs/DEPLOYMENT.md): preparing a card, provisioning, deploying and rolling back
 - [EYESY OS v3 parity](docs/EYESY-OS-V3-PARITY-PLAN.md): how the stock instrument layer was ported and verified
-- [Implementation status](docs/STATUS.md) and [roadmap](ROADMAP.md): what is done, what is open, and the dated history
+- [Implementation status](docs/STATUS.md) and [roadmap](ROADMAP.md): what is done and what is open
 - [Bench checklist](docs/BENCH-CHECKLIST.md): the remaining hardware acceptance checks
 - Background research, written before the engine existed:
   - [the stock OS architecture](docs/background/stock-os-architecture.md)
