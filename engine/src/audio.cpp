@@ -85,6 +85,10 @@ void AudioInput::work() {
         if (synthesizing.load()) {
             // Stock OS v3 fills the input buffer with an undulating sine while the
             // trigger is held so audio-reactive modes run without an external source.
+            // A live device never paces `deadline`, so on entry it is stale by the
+            // whole time since start; without the clamp the first hold
+            // synthesizes (and FFTs) all of that in a busy loop.
+            deadline = std::max(deadline, std::chrono::steady_clock::now());
             undulatePhase += 0.005;
             double undulate = ((std::sin(undulatePhase * 2 * PI) + 1.0) * 2.0) + 0.5;
             for (int i = 0; i < 256; ++i) {
