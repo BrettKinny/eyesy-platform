@@ -135,6 +135,9 @@ def package(arm=False):
         for mode in shipped:
             shutil.copytree(mode, stage / "modes" / mode.name)
         shutil.copy2(ROOT / "dependencies.lock.json", stage)
+        # The licence and third-party notices travel with every binary release.
+        for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+            shutil.copy2(ROOT / name, stage)
         provenance = ROOT / 'build' / f'provenance-{architecture}.json'
         if arm and not provenance.is_file():
             raise RuntimeError('ARM packaging requires build provenance; run eyesyctl build --arm again')
@@ -154,8 +157,6 @@ def package(arm=False):
                     if digest(ROOT / 'local/runtime-arm' / name) != libraries[name]:
                         raise RuntimeError('Private ARM runtime changed since build; rebuild before packaging')
             shutil.copy2(provenance, stage / 'build-provenance.json')
-        if not arm and (ROOT / 'engine/bin/libfmod.so').exists():
-            shutil.copy2(ROOT / 'engine/bin/libfmod.so', stage)
         if arm:
             runtime = ROOT / 'local/runtime-arm'
             (stage / 'libs').mkdir()

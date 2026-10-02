@@ -22,6 +22,8 @@ class PackageTests(unittest.TestCase):
         (root / 'modes/starter').mkdir(parents=True)
         (root / 'modes/starter/main.lua').write_text('return {}')
         (root / 'dependencies.lock.json').write_text('{}')
+        (root / 'LICENSE').write_text('licence')
+        (root / 'THIRD_PARTY_NOTICES.md').write_text('notices')
 
     def package(self, root):
         with patch.object(ctl, 'ROOT', root), patch.object(ctl.subprocess, 'check_output', return_value='ELF 64-bit x86-64'), contextlib.redirect_stdout(io.StringIO()):
@@ -37,6 +39,20 @@ class PackageTests(unittest.TestCase):
             os.utime(root / 'modes/starter/main.lua', (100, 100))
             self.package(root)
             self.assertEqual(before, artifact.read_bytes())
+
+    def test_release_carries_licence_and_notices_but_not_fmod(self):
+        import tarfile
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            (root / 'engine/bin/libfmod.so').write_bytes(b'proprietary')
+            self.package(root)
+            with tarfile.open(next((root / 'dist').glob('*.gz'))) as tar:
+                names = {name.split('/', 1)[1] for name in tar.getnames() if '/' in name}
+                manifest = json.load(tar.extractfile(next(n for n in tar.getnames() if n.endswith('/manifest.json'))))
+            self.assertLessEqual({'LICENSE', 'THIRD_PARTY_NOTICES.md'}, names)
+            self.assertLessEqual({'LICENSE', 'THIRD_PARTY_NOTICES.md'}, set(manifest['files']))
+            self.assertNotIn('libfmod.so', names)
 
     def test_dependency_metadata_changes_release_identity(self):
         with tempfile.TemporaryDirectory() as temp:
