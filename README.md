@@ -6,6 +6,11 @@ with OpenGL ES 2 at up to 60 fps, with full stereo audio analysis, shaders and
 video feedback. The knobs, buttons, scenes, knob sequencer and on-screen display
 work the same way they do on the stock OS.
 
+![The kaleido-fold preset from the MilkDrop pack, its feedback mirror blooming on each trigger](docs/images/milkdrop-kaleido-fold.gif)
+<sub>The `kaleido-fold` preset from the [MilkDrop pack](#mode-packs), driven by a
+scripted audio input. This and the stills below are desktop renders from the
+same engine; the HUD shot further down is captured from the instrument's HDMI.</sub>
+
 > [!NOTE]
 > **This is an unofficial project.** It is not affiliated with or endorsed by
 > Critter & Guitari. It installs alongside the stock EYESY OS, and one command
@@ -182,9 +187,12 @@ cd eyesy-platform
 ./eyesyctl preview starter --native                # a window on your GPU
 ```
 
-Headless reports, screenshots and saved scenes go under `local/`. Headless
-previews use software rendering, so they check correctness but don't measure
-performance.
+The first `bootstrap` downloads about 340 MB of SDK, and the first build takes
+a minute or two. Headless reports and saved scenes go under `local/`, and each
+headless run saves its last frame to `local/preview/grabs/`. Headless previews
+use software rendering, so they check correctness but don't measure
+performance. `--native` always opens a window. Files passed to `--audio-wav`,
+`--replay` or `--record` must be inside the repo, for example under `local/`.
 
 In the desktop preview, these keys stand in for the hardware controls:
 
@@ -218,6 +226,13 @@ directory that sits next to this repo.
 | --- | --- |
 | [`eyesy-modes-factory`](https://github.com/BrettKinny/eyesy-modes-factory) | Lua ports of the stock Critter & Guitari OS v3 library (87 of 108 so far) |
 | [`eyesy-modes-milkdrop`](https://github.com/BrettKinny/eyesy-modes-milkdrop) | A MilkDrop-style preset engine: one mode that plays a catalog of Lua-defined presets through warp and composite shader passes |
+
+| | | |
+| --- | --- | --- |
+| ![Arcway](docs/images/factory-arcway.png) | ![Amp Color 5-gon Filled](docs/images/factory-amp-color-5gon-filled.png) | ![Grid Triangles Unfilled Column Color](docs/images/factory-grid-triangles-unfilled-column-color.png) |
+| Factory: `s-arcway` | Factory: `s-amp-color-5gon-filled` | Factory: `s-grid-triangles-unfilled-column-color` |
+| ![MilkDrop kaleido-fold](docs/images/milkdrop-kaleido-fold-violet.png) | ![MilkDrop spirolateral](docs/images/milkdrop-spirolateral.png) | |
+| MilkDrop: `kaleido-fold` | MilkDrop: `spirolateral` | |
 
 The author's collection of original scenes is kept private. Some docs in this
 repo mention it (as `eyesy-modes-bespoke`) when they describe scene conventions
