@@ -245,7 +245,7 @@ def main():
         p.add_argument('--clone-id', required=True); p.add_argument('--known-hosts', type=Path)
         if name == 'rollback': p.add_argument('--target', choices=['stock', 'previous'], default='stock')
         if name == 'deploy': p.add_argument('archive', type=Path)
-    p = sub.add_parser("preview"); p.add_argument("mode", nargs="?", default="starter"); p.add_argument("--frames", type=int, default=0); p.add_argument("--headless", action="store_true"); p.add_argument("--native", action="store_true"); p.add_argument("--probe", action="store_true"); p.add_argument("--switch-every", type=int, default=0); p.add_argument("--replay", type=Path); p.add_argument("--audio-wav", type=Path); p.add_argument("--record", type=Path); p.add_argument("--record-limit", type=int, default=10000)
+    p = sub.add_parser("preview"); p.add_argument("mode", nargs="?", default="starter"); p.add_argument("--frames", type=int, default=0); p.add_argument("--headless", action="store_true"); p.add_argument("--native", action="store_true"); p.add_argument("--switch-every", type=int, default=0); p.add_argument("--replay", type=Path); p.add_argument("--audio-wav", type=Path); p.add_argument("--record", type=Path); p.add_argument("--record-limit", type=int, default=10000)
     p = sub.add_parser("new-mode"); p.add_argument("name"); p.add_argument("--pack", help="Pack repo to author in (default: the untracked modes/ assembly dir)")
     p = sub.add_parser("modes", help="Assemble or inspect the mode pack repos")
     p.add_argument("action", choices=["sync", "list"])
@@ -298,7 +298,6 @@ def main():
             engine_mode = f"/packs/{folder.parent.name}/{args.mode}"
             host_mode = str(folder)
         command = ["/workspace/engine/bin/engine", "--mode", engine_mode, "--storage", "/workspace/local/preview", "--frames", str(args.frames), "--report", f"/workspace/local/reports/{args.mode}.json", "--switch-every", str(args.switch_every)]
-        if args.probe: command += ["--probe"]
         if args.replay:
             replay = args.replay.resolve().relative_to(ROOT)
             command += ["--replay", "/workspace/" + str(replay)]

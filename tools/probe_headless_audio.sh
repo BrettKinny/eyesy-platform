@@ -15,6 +15,9 @@ assert not output.exists() and not output.is_symlink()
 PY
 task_engine=$(realpath -- "$2")
 [[ -x $task_engine ]]
+# The engine needs a mode; use the release's own starter beside the binary.
+task_mode=$(dirname -- "$task_engine")/modes/starter
+[[ -f $task_mode/main.lua ]] || { echo "No starter mode at $task_mode" >&2; exit 1; }
 ldd "$task_engine"
 if ldd "$task_engine" | grep -q 'not found'; then exit 1; fi
 systemctl is-active --quiet eyesypy.service
@@ -25,7 +28,7 @@ trap 'exit 143' TERM
 trap 'exit 130' INT
 systemctl stop eyesypy.service
 timeout --signal=TERM --kill-after=5s 60s runuser -u music -- \
-    "$task_engine" --offscreen --probe --audio-device auto --osc-port 4000 \
+    "$task_engine" --offscreen --mode "$task_mode" --audio-device auto --osc-port 4000 \
     --frames 1200 --storage "$3" --report "$3/report.json"
 python3 - "$3/report.json" <<'PY'
 import json, sys

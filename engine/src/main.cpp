@@ -27,7 +27,7 @@ struct Options {
     fs::path mode, storage = "local", report, replay, audioWav, record;
     std::string videoMode;
     int frames = 0, device = -1, port = 0, ledPort = 4001, switchEvery = 0;
-    bool fullscreen = false, probe = false, offscreen = false, kms = false;
+    bool fullscreen = false, offscreen = false, kms = false;
     size_t recordLimit = 10000;
 };
 // Status LED colors the eyesyhw daemon understands on OSC /led.
@@ -840,17 +840,14 @@ class EngineApp : public ofBaseApp {
                 SND_SEQ_PORT_TYPE_APPLICATION);
         } else
             seq = nullptr;
-        if (!options.probe) {
-            auto root = options.mode.parent_path();
-            for (auto &e : fs::directory_iterator(root))
-                if (e.is_directory() && fs::exists(e.path() / "main.lua"))
-                    catalog.push_back(e.path());
-            std::sort(catalog.begin(), catalog.end());
-            auto it = std::find(catalog.begin(), catalog.end(), options.mode);
-            loadMode(it == catalog.end() ? 0 : it - catalog.begin());
-            refreshScenes();
-            sceneStamp = scenesStamp();
-        }
+        for (auto &e : fs::directory_iterator(options.mode.parent_path()))
+            if (e.is_directory() && fs::exists(e.path() / "main.lua"))
+                catalog.push_back(e.path());
+        std::sort(catalog.begin(), catalog.end());
+        auto it = std::find(catalog.begin(), catalog.end(), options.mode);
+        loadMode(it == catalog.end() ? 0 : it - catalog.begin());
+        refreshScenes();
+        sceneStamp = scenesStamp();
         for (int k = 0; k < 5; ++k)
             recordEvent({0, "knob", k + 1, 0, 0, 0, 0, 0, knobs[k]});
         notify("READY=1");
@@ -959,15 +956,13 @@ class EngineApp : public ofBaseApp {
             triggerCount = a.triggerCount;
         }
         lastAnalysis = a;
-        if (!options.probe) {
-            knobs = knobSeq.run(knobs);
-            syncLed();
-            refreshHud();
-            menu.observe(telemetry);
-            runtime.snapshot(now, dt, knobs, a, midi, trigger, autoClear, midiEvents);
-            runtime.call("update", dt);
-        }
-        if (wall - lastWatch > .3 && !options.probe) {
+        knobs = knobSeq.run(knobs);
+        syncLed();
+        refreshHud();
+        menu.observe(telemetry);
+        runtime.snapshot(now, dt, knobs, a, midi, trigger, autoClear, midiEvents);
+        runtime.call("update", dt);
+        if (wall - lastWatch > .3) {
             lastWatch = wall;
             bool changed = false, onlyShaders = true;
             for (auto &p : watched)
@@ -984,7 +979,7 @@ class EngineApp : public ofBaseApp {
                     loadMode(selected);
             }
         }
-        if (wall - lastSceneScan > 1.0 && !options.probe) {
+        if (wall - lastSceneScan > 1.0) {
             lastSceneScan = wall;
             auto stamp = scenesStamp();
             if (stamp != sceneStamp) {
@@ -1004,12 +999,7 @@ class EngineApp : public ofBaseApp {
         canvas.begin();
         if (autoClear)
             ofClear(0, 0, 0, 255);
-        if (options.probe) {
-            ofSetColor(40, 160, 255);
-            ofDrawCircle(640 + std::sin(ofGetElapsedTimef()) * 300, 360, 100);
-            ofSetColor(255);
-            ofDrawBitmapString("EYESY GPU / AUDIO PROBE\n" + renderer, 20, 30);
-        } else if (runtime.error.empty()) {
+        if (runtime.error.empty()) {
             if (!runtime.call("draw"))
                 ++modeErrors;
         } else {
@@ -1173,7 +1163,7 @@ int main(int argc, char **argv) {
             else
                 throw std::runtime_error("unknown argument: " + arg);
         }
-        if (!o.probe && !fs::exists(o.mode / "main.lua"))
+        if (!fs::exists(o.mode / "main.lua"))
             throw std::runtime_error("--mode must name a folder containing main.lua");
         if (!o.recordLimit || o.recordLimit > 100000)
             throw std::runtime_error("--record-limit must be 1..100000");
