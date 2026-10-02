@@ -509,7 +509,7 @@ int ModeRuntime::invoke(lua_State *l, int op) {
             ofDisableDepthTest();
         break;
     case PARAM: {
-        std::string name = string(1, "palette name");
+        std::string name = string(1, "parameter name");
         double def = n(2), minimum = n(3), maximum = n(4, 1);
         int knob = id(5) - 1;
         if (name.empty() || minimum >= maximum || knob < -1 || knob > 4)
@@ -635,7 +635,7 @@ int ModeRuntime::invoke(lua_State *l, int op) {
         break;
     }
     case IMAGE_NEW: {
-        auto file = asset(string(1, "shader path"));
+        auto file = asset(string(1, "image path"));
         auto image = std::make_shared<ofImage>();
         if (images.size() >= 32 || !image->load(file.string()))
             throw std::runtime_error("image load failed or budget exceeded");
@@ -650,7 +650,7 @@ int ModeRuntime::invoke(lua_State *l, int op) {
         images.at(id(1))->draw(n(2), n(3), n(4), n(5));
         break;
     case SHADER_NEW: {
-        auto file = asset(string(1, "image path"));
+        auto file = asset(string(1, "shader path"));
         if (shaders.size() >= 16)
             throw std::runtime_error("shader budget exceeded");
         auto shader = compileShader(file);

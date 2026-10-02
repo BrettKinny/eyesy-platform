@@ -45,11 +45,11 @@ static void atomicJson(const fs::path &path, const ofJson &data) {
     }
     int fd = open(tmp.c_str(), O_RDONLY);
     if (fd < 0)
-        throw std::runtime_error("cannot open scene for sync");
+        throw std::runtime_error("cannot open " + tmp.string() + " for sync");
     int result = fsync(fd);
     close(fd);
     if (result)
-        throw std::runtime_error("scene fsync failed");
+        throw std::runtime_error("fsync failed: " + tmp.string());
     fs::rename(tmp, path);
     fd = open(path.parent_path().c_str(), O_RDONLY | O_DIRECTORY);
     if (fd >= 0) {
