@@ -442,7 +442,7 @@ receipt, and cleaned up the scene directory.
 
 One bench-unit hazard the run must tolerate: the CM3+ spare's button matrix
 emits spurious key events in bursts, and a spurious save-bit pair writes a
-scene. See `docs/BENCH-CHECKLIST.md` §3.
+scene. See `docs/BENCH-CHECKLIST.md` §1.
 
 ### New files
 
