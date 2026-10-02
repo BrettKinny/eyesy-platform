@@ -55,8 +55,8 @@ be shown offscreen; the deployed service itself runs `starter` at about 60 fps
 on the KMS path.
 
 **Absolute numbers from different sessions are not comparable.** The floor has
-moved by 12 ms between sessions on the same device and release, and by 13 ms
-between two back-to-back runs. So:
+moved by 12 ms between sessions on the same device, and by 13 ms between two
+back-to-back runs. So:
 
 - Start from a known condition: the live service on a light scene at about
   60 fps (`./eyesyctl status`). A heavy scene left running, or the settings menu
