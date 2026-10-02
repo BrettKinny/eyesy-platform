@@ -15,6 +15,25 @@ from its container; package creation requires their build-provenance hashes.
 SDK patches, source hashes, package inventory, and container identity are also
 recorded. GPU/audio libraries still come from the device's provisioned OS.
 
+## Outline
+
+1. [Prepare a spare card](#prepare-the-spare-card) from a verified copy of your
+   original, and record the clone ID that `tools/prepare_clone.py` writes.
+2. [Build and stage](#build-and-stage) an ARM release on the workstation.
+3. Provision the spare once with `./eyesyctl provision`.
+4. Optionally [check the package on the device](#check-the-package-on-the-device)
+   with `./eyesyctl headless-test`.
+5. [Activate](#activate) it with `./eyesyctl deploy`, and check it with
+   `./eyesyctl status` and `./eyesyctl logs`.
+6. [Select what starts at boot](#boot-selection). Deploying does not change
+   this: a provisioned card still boots into stock until you switch it.
+
+`provision`, `deploy`, `rollback` and `headless-test` all require
+`--host DEVICE_IP` and `--clone-id UUID_FROM_RECEIPT`, and refuse to act on a
+card whose clone ID does not match. `status` and `logs` need only `--host`.
+All of them verify the device's SSH host key; pass `--known-hosts PATH` to use
+a specific known-hosts file.
+
 ## Prepare the spare card
 
 Keep the original card intact. The selected recovery strategy is a verified clone
@@ -63,12 +82,11 @@ platform's systemd units, disabled. It records the package inventory before and
 after, and backs up anything it replaces. It then attempts to restore the prior
 root mount mode. It does not stop stock video.
 
-The provisioner also still installs the Xorg packages, and writes an
-`Xwrapper.config`, from the platform's earlier X-based display path. The current
-service never starts X. It draws with direct KMS, because on this board any Xorg
-session leaves HDMI blanked until the next power cycle; see
-[HDMI display issue](HDMI-DISPLAY-ISSUE.md). The provisioner also removes the
-legacy `/etc/X11/xorg.conf.d/10-eyesy-720p.conf` if an earlier run left it.
+The platform does not use X. It draws with direct KMS, because on this board
+any Xorg session leaves HDMI blanked until the next power cycle; see
+[HDMI display issue](HDMI-DISPLAY-ISSUE.md). The provisioner installs no Xorg
+packages, and removes the legacy `/etc/X11/xorg.conf.d/10-eyesy-720p.conf` if
+an earlier version of the platform left it.
 
 On the first spare-card provision, the read-only remount failed immediately after
 apt, and a controlled reboot restored `ro,noatime`. Treat this cleanup limitation
@@ -96,9 +114,6 @@ This renders offscreen on the real VC4 GPU with synthetic audio while stock keep
 running. It then retrieves the report, the log and screenshots. Confirm that the
 renderer is `VC4 V3D 2.1` (never `llvmpipe`), and that the run has no mode
 errors. See [headless development](HEADLESS-DEVELOPMENT.md).
-
-Do not use `tools/probe_device.sh`. It is the older first-hardware probe, and it
-starts Xorg, which triggers the HDMI blanking described above.
 
 ## Activate
 
@@ -141,9 +156,10 @@ recover and otherwise starts stock.
 ## Boot selection
 
 Deployment and rollback switch the running service; they do not change what
-starts at boot. A freshly provisioned card still boots into stock. To make the
-platform start at boot, run these commands on the device. The root filesystem is
-read-only, so remount it read-write first, then restore it:
+starts at boot. A freshly provisioned card still boots into stock, and keeps
+doing so after a deploy until you make this switch. To make the platform start at boot, run these commands on the
+device. The root filesystem is read-only, so remount it read-write first, then
+restore it:
 
 ```sh
 sudo mount -o remount,rw /
