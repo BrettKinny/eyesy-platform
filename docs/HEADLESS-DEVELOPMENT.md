@@ -10,12 +10,15 @@ physical-control, and visual acceptance checks.
 ```sh
 ./eyesyctl build
 ./eyesyctl test --graphics
-./eyesyctl preview aurora --headless --frames 600
-./eyesyctl preview aurora --native
+./eyesyctl preview starter --headless --frames 600
+./eyesyctl preview starter --native
+./eyesyctl preview milkdrop --headless --frames 600
 ```
 
-`--headless` uses desktop software rendering: useful for correctness, not CM3+
-performance. Native desktop preview uses the workstation GPU after
+`preview` finds modes in the mode-pack repos checked out beside this one (here
+`milkdrop` from `eyesy-modes-milkdrop`), so it does not need a `modes sync`
+first. `--headless` uses desktop software rendering: useful for correctness,
+not CM3+ performance. Native desktop preview uses the workstation GPU after
 `./eyesyctl prepare-native`. The [input workflow](INPUT-WORKFLOW.md) supports
 repeatable WAV analysis and recorded control-event replay.
 
@@ -27,10 +30,11 @@ card whose UUID and SSH host key have been verified.
 
 ```sh
 ./eyesyctl build --arm
+./eyesyctl modes sync
 ./eyesyctl package --arm
 ./eyesyctl headless-test dist/RELEASE-armhf.tar.gz \
   --host DEVICE_IP --clone-id UUID_FROM_RECEIPT \
-  --mode aurora --frames 600 --output local/device-test-001
+  --mode milkdrop --frames 600 --output local/device-test-001
 ```
 
 Replace the archive, IP, and UUID with the actual values. The command verifies the
@@ -47,25 +51,25 @@ the normal SSH known-hosts file; `--known-hosts PATH` is explicit. It will not
 silently trust a new or changed host key. Frames are limited to 1–3600 and the
 engine experiment is capped at 120 seconds. Reports explicitly leave full
 hardware acceptance false. Other GPU workloads, including stock video, remain
-running, so timings are shared-load offscreen measurements.
+running, so timings are shared-load offscreen measurements; see
+[measuring on the device](SCENE-LIBRARY.md#measuring-on-the-device) before
+comparing numbers. `--replay PATH` passes a replay file through to the engine,
+for example to select one preset inside a mode.
 
-The complete CLI-to-device workflow passed a 180-frame starter test on the spare
-CM3+ during the overnight run, including verified upload, real VC4 rendering,
-and local diagnostic retrieval. Evidence is under
-`local/overnight/headless-cli-round1/`. This was a short workflow check alongside
-the longer soak, not an isolated performance measurement or full deployment test.
-The failure path also passed: a separate intentionally broken draw callback
-returned engine exit 2 and CLI exit 1 while still retrieving the screenshot, log,
-and reports. Evidence is in `local/overnight/headless-negative-round1/`.
-The clearly named negative-test archives under `local/overnight/` must never be
-used for deployment; normal release artifacts remain under `dist/`.
+Both paths of the workflow have been exercised on a CM3+: a passing run
+(verified upload, real VC4 rendering, local retrieval of the results) and a
+deliberately broken draw callback, which returned engine exit 2 and CLI exit 1
+while still retrieving the screenshot, log and reports. The backend behind
+this command is described in [display backends](DISPLAY-BACKENDS.md).
 
 ## What still needs the bench
 
 Display-service activation, rollback to the previous release or stock, and
-unattended recovery have since been exercised on hardware through the direct-KMS
-service; see [implementation status](STATUS.md). What still needs a person:
+unattended recovery have been exercised on hardware through the direct-KMS
+service; see [implementation status](STATUS.md). What still needs a person is
+in the [bench checklist](BENCH-CHECKLIST.md):
 
-- Visible physical controls and HDMI display latency on a real display.
+- Knob and button feel, and settings changes, on the physical controls.
 - Known stereo input signals for channel separation, response, and signal quality.
-- Knob and button feel.
+- HDMI display latency on a real display.
+- Cold-boot recovery after a no-display failure.
