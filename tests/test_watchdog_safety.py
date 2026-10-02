@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 import importlib.util
 from pathlib import Path
 import subprocess

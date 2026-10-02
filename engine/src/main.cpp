@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 #include "audio.h"
 #include "kms_window.h"
 #include "knob_sequencer.h"

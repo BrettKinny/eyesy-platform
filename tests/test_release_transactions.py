@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Mocked transaction tests for release activation and rollback.
 
 These exercise the real filesystem/link transaction while replacing only root,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 """Static safety checks for the root-only provisioning script.
 
 The script intentionally is not executed by the test suite: it changes package

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Bounded spare-card watchdog experiment; never changes production units/boot."""
 
 import argparse

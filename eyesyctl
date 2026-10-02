@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Build, test, preview, package and deploy the EYESY Platform engine and its modes."""
 
 import argparse

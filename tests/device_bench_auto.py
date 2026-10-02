@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Automated bench acceptance against a live EYESY platform unit.
 
 Covers what can be driven without hands:

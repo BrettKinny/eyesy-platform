@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Bounded renderer experiments. Run under a real display or xvfb-run explicitly.
 
 Renderer identity is recorded; software-rendered measurements are never labelled

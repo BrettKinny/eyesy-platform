@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Black-box runtime API robustness checks against the desktop engine."""
 
 import json

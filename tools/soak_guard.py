@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Guard one identified experiment PID when the device lacks memory cgroups."""
 
 import argparse

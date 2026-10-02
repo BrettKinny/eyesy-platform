@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Observe-only soak driver for the eyesy platform.
 
 Samples status.json + thermal at a fixed interval and cycles modes via OSC

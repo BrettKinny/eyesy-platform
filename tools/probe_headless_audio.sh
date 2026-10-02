@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Run inside a transient systemd unit with RuntimeMaxSec and stock ExecStopPost.
 # Only a fresh, explicitly identified spare is allowed. No boot selection changes.
 set -euo pipefail

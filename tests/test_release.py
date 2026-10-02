@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 import hashlib
 import importlib.util
 import io

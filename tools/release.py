@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Verify a release without executing it. Hardware activation is separately gated."""
 
 import argparse

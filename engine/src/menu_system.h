@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Portions ported from Critter & Guitari EYESY_OS; see THIRD_PARTY_NOTICES.md.
 #pragma once
 #include "ofMain.h"
 #include "palette_manager.h"

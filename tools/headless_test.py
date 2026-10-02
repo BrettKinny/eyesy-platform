@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Run one verified ARM release mode on a prepared clone, offscreen only."""
 
 import json

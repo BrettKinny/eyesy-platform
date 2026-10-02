@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 #include "runtime.h"
 #include "ofGLProgrammableRenderer.h"
 #include <climits>

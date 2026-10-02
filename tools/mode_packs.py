@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 """Mode packs: scene collections that live in their own repositories.
 
 The engine repo owns exactly one mode, ``starter`` -- the contract baseline the

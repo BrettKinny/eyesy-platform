@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """End-to-end parity checks against a live EYESY platform unit.
 
 Drives the *deployed* engine over OSC from the device itself, reads its

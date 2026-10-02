@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Pixel-level reduced render-target regression (desktop build container)."""
 
 import subprocess

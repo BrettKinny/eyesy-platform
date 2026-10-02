@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Unit test for the stock-recovery fallback unit's exit contract.
 
 Runs the real `ExecStart` shell script from `deploy/eyesy-platform-fallback.service`

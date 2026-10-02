@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Install prerequisites ONLY on the identified development clone. Run via sudo.
 set -euo pipefail
 if [[ $EUID != 0 || $# != 1 ]]; then

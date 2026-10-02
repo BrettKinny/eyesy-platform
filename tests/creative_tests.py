@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Renderer integration checks for palette registration and creative modes."""
 
 import json

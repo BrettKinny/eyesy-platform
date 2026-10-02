@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 #include "input_workflow.h"
 #include <algorithm>
 #include <cmath>

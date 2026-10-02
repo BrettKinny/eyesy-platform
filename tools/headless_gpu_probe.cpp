@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 // Standalone surfaceless EGL/GLES2 probe.  This tests an offscreen driver only;
 // it does not test HDMI scanout, Xorg, audio, or engine performance.
 #include <EGL/egl.h>

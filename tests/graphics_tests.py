@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Integration checks against the compiled renderer; run inside the build container."""
 
 import hashlib

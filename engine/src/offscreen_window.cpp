@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 #include "offscreen_window.h"
 #include "ofAppRunner.h"
 #include "ofEvents.h"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Scene contract verifier: deterministic A/B runs with pixel assertions.
 
 The engine in --replay mode is bit-deterministic (fixed 60 fps clock,

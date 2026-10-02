@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 #include "kms_window.h"
 #include "ofAppRunner.h"
 #include "ofEvents.h"

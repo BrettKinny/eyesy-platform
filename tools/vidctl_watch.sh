@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Logs the vc4 HDMI_VID_CTL register ~10 Hz with timestamps, to a local file.
 # The latch oracle for HDMI display work: 0xc0080000 = healthy scanout,
 # 0xc2000000 (bit 25) = sync-with-blanked-pixels, persists until power cycle.
