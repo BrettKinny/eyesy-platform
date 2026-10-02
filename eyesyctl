@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local development and read-only device inventory for EYESY Platform."""
+"""Build, test, preview, package and deploy the EYESY Platform engine and its modes."""
 import argparse
 import gzip
 import hashlib
@@ -222,13 +222,13 @@ def remote(args):
         run([sys.executable, ROOT / 'tools/release.py', archive, '--architecture', 'armhf'])
         run(scp + [str(archive), f'music@{args.host}:{staging}/release.tar.gz'])
         run(scp + [str(ROOT / 'tools/release.py'), f'music@{args.host}:{staging}/release.py'])
-        run(ssh + [shlex.join(['sudo', 'python3', staging+'/release.py', staging+'/release.tar.gz', '--activate-clone', args.clone_id])])
+        run(ssh + [shlex.join(['sudo', '-n', 'python3', staging+'/release.py', staging+'/release.tar.gz', '--activate-clone', args.clone_id])])
     else:
         run(ssh + [shlex.join(['mkdir', staging+'/tools', staging+'/deploy'])])
         run(scp + [str(ROOT / 'tools/provision_device.sh'), f'music@{args.host}:{staging}/tools/'])
         for name in ('eyesy-platform.service', 'eyesy-platform-fallback.service'):
             run(scp + [str(ROOT / 'deploy' / name), f'music@{args.host}:{staging}/deploy/'])
-        run(ssh + [shlex.join(['sudo', 'bash', staging+'/tools/provision_device.sh', args.clone_id])])
+        run(ssh + [shlex.join(['sudo', '-n', 'bash', staging+'/tools/provision_device.sh', args.clone_id])])
     print(f'Remote staging retained for inspection: {staging}')
 
 def main():
@@ -287,7 +287,7 @@ def main():
         env = os.environ.copy(); env['LD_LIBRARY_PATH'] = f'{destination}:{ROOT}/engine/bin'
         output = subprocess.check_output(['ldd', ROOT / 'engine/bin/engine'], env=env, text=True)
         if 'not found' in output: raise RuntimeError(output)
-        print('Native runtime ready. Run eyesyctl preview shader --native.')
+        print('Native runtime ready. Run ./eyesyctl preview starter --native.')
     elif args.command == "preview":
         folder = mode_packs.find(args.mode)
         if folder is None:
