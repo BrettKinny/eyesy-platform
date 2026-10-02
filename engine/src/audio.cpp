@@ -94,8 +94,8 @@ void AudioInput::work() {
             undulatePhase += 0.005;
             double undulate = ((std::sin(undulatePhase * 2 * PI) + 1.0) * 2.0) + 0.5;
             for (int i = 0; i < 256; ++i) {
-                float value = float(std::sin((i / 100.0) * 2 * PI * undulate) *
-                                    (25000.0 / 32768.0));
+                float value =
+                    float(std::sin((i / 100.0) * 2 * PI * undulate) * (25000.0 / 32768.0));
                 ring.push({value, value});
             }
             deadline += std::chrono::microseconds(5333);

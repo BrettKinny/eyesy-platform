@@ -16,9 +16,9 @@
 #include "ofGLProgrammableRenderer.h"
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <cerrno>
 #include <fcntl.h>
 #include <gbm.h>
-#include <cerrno>
 #include <poll.h>
 #include <unistd.h>
 #include <xf86drm.h>
@@ -60,9 +60,8 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         if (drmFd < 0)
             throw std::runtime_error("KMS: cannot open /dev/dri/card0");
         if (drmSetMaster(drmFd) != 0)
-            throw std::runtime_error(
-                "KMS: cannot acquire DRM master (another display client, e.g. "
-                "stock eyesypy or Xorg, holds the card; stop it first)");
+            throw std::runtime_error("KMS: cannot acquire DRM master (another display client, e.g. "
+                                     "stock eyesypy or Xorg, holds the card; stop it first)");
 
         gbm = gbm_create_device(drmFd);
         if (!gbm)
@@ -100,8 +99,8 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         EGLint count = 0;
         if (!eglChooseConfig(display, configAttrs, &config, 1, &count) || count != 1)
             throw std::runtime_error("KMS: no EGL GLES2 window config");
-        surface = eglCreateWindowSurface(display, config,
-                                         reinterpret_cast<EGLNativeWindowType>(gbmSurface), nullptr);
+        surface = eglCreateWindowSurface(
+            display, config, reinterpret_cast<EGLNativeWindowType>(gbmSurface), nullptr);
         const EGLint contextAttrs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
         context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttrs);
         if (surface == EGL_NO_SURFACE || context == EGL_NO_CONTEXT ||
@@ -239,7 +238,8 @@ class KmsWindow final : public ofAppBaseGLESWindow {
             if (candidate->connection != DRM_MODE_CONNECTED)
                 continue;
             // HDMI first: composite is always "connected" and never wanted.
-            int score = strstr(drmModeGetConnectorTypeName(candidate->connector_type), "HDMI") ? 2 : 1;
+            int score =
+                strstr(drmModeGetConnectorTypeName(candidate->connector_type), "HDMI") ? 2 : 1;
             if (score > bestScore) {
                 bestScore = score;
                 connector = candidate;
@@ -279,8 +279,8 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         if (!chosen)
             for (int i = 0; i < connector->count_modes; ++i) {
                 auto &m = connector->modes[i];
-                if (m.hdisplay == 1280 && m.vdisplay == 720 &&
-                    m.vrefresh >= 55 && m.vrefresh <= 65) {
+                if (m.hdisplay == 1280 && m.vdisplay == 720 && m.vrefresh >= 55 &&
+                    m.vrefresh <= 65) {
                     chosen = &m;
                     break;
                 }
@@ -299,11 +299,9 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         connectorId = connector->connector_id;
         width = mode.hdisplay;
         height = mode.vdisplay;
-        fprintf(stderr,
-                "KMS: connector %s mode \"%s\" %ux%u@%u clock %u flags 0x%x type 0x%x\n",
-                drmModeGetConnectorTypeName(connector->connector_type), mode.name,
-                mode.hdisplay, mode.vdisplay, mode.vrefresh,
-                mode.clock, mode.flags, mode.type);
+        fprintf(stderr, "KMS: connector %s mode \"%s\" %ux%u@%u clock %u flags 0x%x type 0x%x\n",
+                drmModeGetConnectorTypeName(connector->connector_type), mode.name, mode.hdisplay,
+                mode.vdisplay, mode.vrefresh, mode.clock, mode.flags, mode.type);
         if (!mode.name[0] || mode.flags == 0)
             fprintf(stderr, "KMS: WARNING degenerate kernel mode blob\n");
 
@@ -347,8 +345,8 @@ class KmsWindow final : public ofAppBaseGLESWindow {
         uint32_t stride = gbm_bo_get_stride(bo);
         uint32_t offset = 0;
         uint32_t fb = 0;
-        if (drmModeAddFB2(drmFd, width, height, GBM_FORMAT_XRGB8888, &handle, &stride,
-                          &offset, &fb, 0) != 0)
+        if (drmModeAddFB2(drmFd, width, height, GBM_FORMAT_XRGB8888, &handle, &stride, &offset, &fb,
+                          0) != 0)
             throw std::runtime_error("KMS: drmModeAddFB2 failed");
         framebuffers.emplace(bo, fb);
         return fb;

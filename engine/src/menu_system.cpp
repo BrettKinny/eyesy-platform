@@ -13,15 +13,14 @@ const ofColor LGRAY(200, 200, 200);
 const ofColor GREEN(0, 255, 0);
 const ofColor RED(255, 0, 0);
 const ofColor YELLOW(255, 255, 0);
-const char *const screenNames[] = {"Main Menu", "Video Settings", "Audio & MIDI",
-                                   "Palettes", "Hardware Test"};
-const char *const triggerSources[] = {"audio", "MIDI note", "audio + note", "MIDI quarter"};
-const char *const homeEntries[] = {"Video Settings", "Audio & MIDI", "Palettes",
+const char *const screenNames[] = {"Main Menu", "Video Settings", "Audio & MIDI", "Palettes",
                                    "Hardware Test"};
+const char *const triggerSources[] = {"audio", "MIDI note", "audio + note", "MIDI quarter"};
+const char *const homeEntries[] = {"Video Settings", "Audio & MIDI", "Palettes", "Hardware Test"};
 
 const std::vector<std::string> &videoModes() {
-    static const std::vector<std::string> modes{"", "1280x720@60", "1920x1080@60",
-                                                "1360x768@60", "1280x1024@60"};
+    static const std::vector<std::string> modes{"", "1280x720@60", "1920x1080@60", "1360x768@60",
+                                                "1280x1024@60"};
     return modes;
 }
 
@@ -93,8 +92,7 @@ void MenuSystem::observe(const MenuTelemetry &telemetry) {
 }
 
 std::array<bool, 4> MenuSystem::diagnostics() const {
-    return {std::count(potSeen.begin(), potSeen.end(), true) >= 2,
-            presses >= pressBaseline + 3,
+    return {std::count(potSeen.begin(), potSeen.end(), true) >= 2, presses >= pressBaseline + 3,
             noteSeen[0] && noteSeen[1] && noteSeen[2], peakSeen > .5f};
 }
 
@@ -241,11 +239,10 @@ void MenuSystem::draw(const MenuSettings &settings, const MenuTelemetry &telemet
         live << "knobs  ";
         for (double knob : telemetry.knobs)
             live << std::fixed << std::setprecision(2) << knob << "  ";
-        live << "  peak " << std::setprecision(2) << peakSeen
-             << "  presses " << (presses - pressBaseline);
+        live << "  peak " << std::setprecision(2) << peakSeen << "  presses "
+             << (presses - pressBaseline);
         ofDrawBitmapString(live.str(), 40, 330);
-        ofDrawBitmapString("notes 60/62/64: " +
-                               std::string(noteSeen[0] ? "60 " : "-- ") +
+        ofDrawBitmapString("notes 60/62/64: " + std::string(noteSeen[0] ? "60 " : "-- ") +
                                (noteSeen[1] ? "62 " : "-- ") + (noteSeen[2] ? "64" : "--"),
                            40, 360);
         ofSetColor(telemetry.trigger ? YELLOW : LGRAY);

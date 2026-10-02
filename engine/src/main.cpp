@@ -23,7 +23,9 @@ namespace fs = std::filesystem;
 // with a flag and exit cleanly from the next frame; a nonzero exit here comes
 // from a teardown throw (main's catch block), not the handler.
 static volatile std::sig_atomic_t terminateRequested = 0;
-static void requestTermination(int) { terminateRequested = 1; }
+static void requestTermination(int) {
+    terminateRequested = 1;
+}
 struct Options {
     fs::path mode, storage = "local", report, replay, audioWav, record;
     std::string videoMode;
@@ -164,9 +166,8 @@ class EngineApp : public ofBaseApp {
         hudState.sceneLoaded = sceneIndex >= 0 && sceneIndex < int(scenes.size());
         // Our scenes are single timestamped files, so the HUD shows the stem
         // clipped to the space the stock folder name occupies.
-        hudState.scene = hudState.sceneLoaded
-                             ? scenes[sceneIndex].stem().string().substr(0, 22)
-                             : std::string();
+        hudState.scene =
+            hudState.sceneLoaded ? scenes[sceneIndex].stem().string().substr(0, 22) : std::string();
         hudState.sceneIndex = sceneIndex;
         hudState.sceneCount = int(scenes.size());
         hudState.width = ofGetWidth();
@@ -245,8 +246,8 @@ class EngineApp : public ofBaseApp {
                       palettes.entries()[key <= 5 ? palettes.fg() : palettes.bg()].name;
     }
     void syncLed() {
-        sendLed(knobSeq.playing()          ? LED_GREEN
-                : knobSeq.recording()      ? LED_RED
+        sendLed(knobSeq.playing()                                         ? LED_GREEN
+                : knobSeq.recording()                                     ? LED_RED
                 : knobSeq.state() == eyesy::KnobSequencer::State::Enabled ? LED_MAGENTA
                                                                           : LED_WHITE);
     }
@@ -422,8 +423,8 @@ class EngineApp : public ofBaseApp {
     // until a Scene-key step. Re-scan on an external change; keep the loaded
     // scene by path when it survives, else clamp the index without reloading.
     void reconcileScenes() {
-        auto loaded = (sceneIndex >= 0 && sceneIndex < int(scenes.size()))
-                          ? scenes[sceneIndex] : fs::path{};
+        auto loaded =
+            (sceneIndex >= 0 && sceneIndex < int(scenes.size())) ? scenes[sceneIndex] : fs::path{};
         refreshScenes();
         if (scenes.empty()) {
             sceneIndex = -1;
@@ -665,7 +666,8 @@ class EngineApp : public ofBaseApp {
                 midi.apply(m);
                 midiEvents.push_back(m);
                 recordEvent({frame, "midi", 0, 0, m.type, m.channel, m.a, m.b, 0});
-                if (m.type == 0x90 && m.b && (settings.triggerSource == 1 || settings.triggerSource == 2))
+                if (m.type == 0x90 && m.b &&
+                    (settings.triggerSource == 1 || settings.triggerSource == 2))
                     trigger = true;
                 if (m.type == 0xf8 && settings.triggerSource == 3 && midi.clocks % 24 == 0)
                     trigger = true;
@@ -707,8 +709,8 @@ class EngineApp : public ofBaseApp {
         report["recording_truncated"] = recorder.truncated();
         report["audio_synthesizing"] = audio.isSynthesizing();
         report["led"] = ledState;
-        report["sequencer"] = knobSeq.playing()          ? "playing"
-                              : knobSeq.recording()      ? "recording"
+        report["sequencer"] = knobSeq.playing()     ? "playing"
+                              : knobSeq.recording() ? "recording"
                               : knobSeq.state() == eyesy::KnobSequencer::State::Enabled ? "enabled"
                                                                                         : "stopped";
         report["sequencer_frames"] = knobSeq.size();
@@ -909,7 +911,8 @@ class EngineApp : public ofBaseApp {
                 if (m.type >= 0xf0 || m.channel == settings.midiChannel - 1) {
                     midi.apply(m);
                     midiEvents.push_back(m);
-                    if (m.type == 0x90 && m.b && (settings.triggerSource == 1 || settings.triggerSource == 2))
+                    if (m.type == 0x90 && m.b &&
+                        (settings.triggerSource == 1 || settings.triggerSource == 2))
                         trigger = true;
                     if (m.type == 0xf8 && settings.triggerSource == 3 && midi.clocks % 24 == 0)
                         trigger = true;
@@ -967,8 +970,8 @@ class EngineApp : public ofBaseApp {
             a.timestamp = now;
         }
         if (a.triggerCount != triggerCount) {
-            trigger = trigger ||
-                      ((settings.triggerSource == 0 || settings.triggerSource == 2) && a.triggerCount > triggerCount);
+            trigger = trigger || ((settings.triggerSource == 0 || settings.triggerSource == 2) &&
+                                  a.triggerCount > triggerCount);
             triggerCount = a.triggerCount;
         }
         lastAnalysis = a;
@@ -1200,9 +1203,9 @@ int main(int argc, char **argv) {
 #endif
         windowSettings.setSize(1280, 720);
         windowSettings.windowMode = o.fullscreen ? OF_FULLSCREEN : OF_WINDOW;
-        auto window = o.kms ? createKmsWindow(o.videoMode)
-                            : o.offscreen ? createOffscreenWindow(1280, 720)
-                                          : ofCreateWindow(windowSettings);
+        auto window = o.kms         ? createKmsWindow(o.videoMode)
+                      : o.offscreen ? createOffscreenWindow(1280, 720)
+                                    : ofCreateWindow(windowSettings);
         // ofInit (called by every window factory) installs OF's handler, which
         // surfaces SIGTERM as a nonzero exit; replace it for the loop below.
         std::signal(SIGTERM, requestTermination);

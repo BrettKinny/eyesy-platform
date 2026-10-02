@@ -10,7 +10,9 @@ constexpr double twoPi = 6.283185307179586;
 
 // Stock EYESY OS v3 defaults, copied verbatim from
 // engines/python/stuff/color_palettes.py::abcd_palettes. System/palettes.json
-// replaces this table when present.
+// replaces this table when present. One palette per line: name, then the a, b, c, d
+// cosine coefficients (r, g, b), kept as written so rows diff against the source.
+// clang-format off
 const CosinePalette stockPalettes[] = {
     {"Original", {0.500000f, 0.500000f, 0.500000f}, {0.500000f, 0.500000f, 0.500000f}, {0.500000f, 0.500000f, 0.500000f}, {0.500000f, 0.500000f, 0.500000f}},
     {"Greyscale", {0.500000f, 0.500000f, 0.500000f}, {0.500000f, 0.500000f, 0.500000f}, {0.500000f, 0.500000f, 0.500000f}, {0.500000f, 0.500000f, 0.500000f}},
@@ -54,15 +56,17 @@ const CosinePalette stockPalettes[] = {
     {"Almost Rainbow", {1.400000f, 0.590000f, 0.770000f}, {-1.392000f, 0.640000f, 0.720000f}, {-1.220000f, 1.070000f, 0.127000f}, {0.088000f, -0.362000f, 2.617000f}},
     {"KRYCB", {-0.212000f, -0.470000f, -0.682000f}, {3.138000f, 3.138000f, 3.138000f}, {-0.790000f, 0.718000f, 0.428000f}, {-0.672000f, -0.422000f, 4.557000f}},
     {"Discrete Variety!", {0.000000f, 0.000000f, 0.000000f}, {1.000000f, 1.000000f, 1.000000f}, {250.000000f, 251.000000f, 252.000000f}, {0.000000f, 0.683000f, 0.000000f}},
-    {"Palette 1", {0.332000f, 0.347000f, 0.404000f}, {0.944000f, 0.346000f, 0.315000f}, {0.368000f, 0.980000f, 1.422000f}, {4.571000f, 2.412000f, 4.308000f}},};
+    {"Palette 1", {0.332000f, 0.347000f, 0.404000f}, {0.944000f, 0.346000f, 0.315000f}, {0.368000f, 0.980000f, 1.422000f}, {4.571000f, 2.412000f, 4.308000f}},
+};
+// clang-format on
 
 std::array<float, 3> evaluate(const CosinePalette &palette, double phase) {
     std::array<float, 3> color{};
     for (size_t channel = 0; channel < color.size(); ++channel) {
-        double value = double(palette.a[channel]) +
-                       double(palette.b[channel]) *
-                           std::cos(twoPi * (double(palette.c[channel]) * phase +
-                                             double(palette.d[channel])));
+        double value =
+            double(palette.a[channel]) +
+            double(palette.b[channel]) *
+                std::cos(twoPi * (double(palette.c[channel]) * phase + double(palette.d[channel])));
         color[channel] = float(std::clamp(value, 0.0, 1.0));
     }
     return color;
@@ -95,8 +99,8 @@ std::array<std::array<float, 3>, PaletteManager::previewStops>
 PaletteManager::preview(bool foreground) const {
     std::array<std::array<float, 3>, previewStops> stops{};
     for (size_t i = 0; i < stops.size(); ++i)
-        stops[i] = foreground ? sampleFg(double(i) / stops.size())
-                              : sampleBg(double(i) / stops.size());
+        stops[i] =
+            foreground ? sampleFg(double(i) / stops.size()) : sampleBg(double(i) / stops.size());
     return stops;
 }
 bool PaletteManager::replace(std::vector<CosinePalette> palettes) {

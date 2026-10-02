@@ -20,7 +20,8 @@ static void appendChunk(const std::string &path, const std::vector<unsigned char
     std::ifstream in(path, std::ios::binary);
     std::vector<unsigned char> d((std::istreambuf_iterator<char>(in)), {});
     uint32_t size = uint32_t(d.size() - 8 + chunk.size());
-    for (int i = 0; i < 4; ++i) d[4 + i] = uint8_t(size >> (8 * i));
+    for (int i = 0; i < 4; ++i)
+        d[4 + i] = uint8_t(size >> (8 * i));
     d.insert(d.end(), chunk.begin(), chunk.end());
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     out.write(reinterpret_cast<const char *>(d.data()), d.size());
@@ -114,8 +115,14 @@ int main() {
     }
     unlink(fp.c_str());
     auto nan = writeWav(32, true, false, false);
-    { int fd = open(nan.c_str(), O_RDWR); unsigned char q[4] = {0, 0, 192, 127}; pwrite(fd, q, 4, 44); close(fd); }
-    if (!eyesy::loadWav(nan, w, e) || w.frames[0].left != 0) return 14;
+    {
+        int fd = open(nan.c_str(), O_RDWR);
+        unsigned char q[4] = {0, 0, 192, 127};
+        pwrite(fd, q, 4, 44);
+        close(fd);
+    }
+    if (!eyesy::loadWav(nan, w, e) || w.frames[0].left != 0)
+        return 14;
     unlink(nan.c_str());
     auto op = writeWav(16, false, false, true);
     if (!good(op, 16, false, false, true))
@@ -191,13 +198,17 @@ int main() {
         return 11;
     unlink(hugeName);
     auto dupData = writeWav(16, false, false, false);
-    appendChunk(dupData, {'d','a','t','a',0,0,0,0});
-    if (eyesy::loadWav(dupData, w, e) || e.find("duplicate") == std::string::npos) return 12;
+    appendChunk(dupData, {'d', 'a', 't', 'a', 0, 0, 0, 0});
+    if (eyesy::loadWav(dupData, w, e) || e.find("duplicate") == std::string::npos)
+        return 12;
     unlink(dupData.c_str());
     auto dupFmt = writeWav(16, false, false, false);
+    // clang-format off
     std::vector<unsigned char> extra = {'f','m','t',' ',16,0,0,0,1,0,2,0,0x80,0xbb,0,0,0,0xEE,2,0,16,0,0,0,0,0};
+    // clang-format on
     appendChunk(dupFmt, extra);
-    if (eyesy::loadWav(dupFmt, w, e) || e.find("duplicate") == std::string::npos) return 13;
+    if (eyesy::loadWav(dupFmt, w, e) || e.find("duplicate") == std::string::npos)
+        return 13;
     unlink(dupFmt.c_str());
     eyesy::InputRecorder r(2);
     if (!r.record({0, "hardware_key", 0, 2}) || !r.record({1, "hardware_release", 0, 2}) ||

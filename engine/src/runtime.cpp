@@ -253,8 +253,8 @@ bool ModeRuntime::load(const std::filesystem::path &folder, int w, int h) {
     lua_newtable(lua);
     number(lua, "width", w);
     number(lua, "height", h);
-    for (auto entry : {std::make_pair("palette_fg", PALETTE_FG),
-                       std::make_pair("palette_bg", PALETTE_BG)}) {
+    for (auto entry :
+         {std::make_pair("palette_fg", PALETTE_FG), std::make_pair("palette_bg", PALETTE_BG)}) {
         lua_pushlightuserdata(lua, this);
         lua_pushinteger(lua, entry.second);
         lua_pushcclosure(lua, dispatch, 2);
@@ -713,8 +713,10 @@ int ModeRuntime::invoke(lua_State *l, int op) {
             }
         }
         double time = n(2), energy = n(3), control = n(4, .5);
-        const int renderWidth = targetStack.empty() ? width : int(fbos.at(targetStack.back())->getWidth());
-        const int renderHeight = targetStack.empty() ? height : int(fbos.at(targetStack.back())->getHeight());
+        const int renderWidth =
+            targetStack.empty() ? width : int(fbos.at(targetStack.back())->getWidth());
+        const int renderHeight =
+            targetStack.empty() ? height : int(fbos.at(targetStack.back())->getHeight());
         auto &s = *it->second;
         s.begin();
         s.setUniform2f("u_resolution", renderWidth, renderHeight);

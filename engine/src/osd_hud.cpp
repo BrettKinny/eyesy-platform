@@ -71,8 +71,7 @@ void OsdHud::draw(const HudState &state) {
 
     // BG then FG palette preview swatches (draw_color_palette).
     for (int row = 0; row < 130; ++row)
-        addQuad(fills, 450, 10 + row, 170, 1,
-                stopColor(state.bgPreview, float(row) / 130.f));
+        addQuad(fills, 450, 10 + row, 170, 1, stopColor(state.bgPreview, float(row) / 130.f));
     for (int row = 0; row < 85; ++row)
         addQuad(fills, 475, 35 + row, 125, 1, stopColor(state.fgPreview, float(row) / 85.f));
 
