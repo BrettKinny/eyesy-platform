@@ -37,6 +37,20 @@ def main():
         (broken / 'main.lua').write_text('return {api_version=1,draw=function() eyesy.pop() end}')
         result = run(broken, temp / 'underflow', expected=2)
         assert 'underflow' in result['error']
+        # Non-string error values (error({})) must surface as a message, not a crash,
+        # whether raised while loading or from a scene restore.
+        (broken / 'main.lua').write_text('error({})')
+        result = run(broken, temp / 'table-error', expected=2)
+        assert 'table value' in result['error'], result
+        (broken / 'main.lua').write_text(
+            'return {api_version=1,draw=function() end,restore=function() error({}) end}')
+        (temp / 'restore/scenes').mkdir(parents=True)
+        (temp / 'restore/scenes/scene-0.json').write_text(json.dumps(
+            {'schema_version': 1, 'mode': 'broken', 'parameters': {}, 'state': {}}))
+        replay = temp / 'restore-replay.json'
+        replay.write_text(json.dumps([{'frame': 1, 'type': 'hardware_key', 'key': 7}]))
+        result = run(broken, temp / 'restore', replay=replay, expected=2)
+        assert 'table value' in result['error'], result
         hashes = []
         for iteration in range(2):
             storage = temp / f'replay-{iteration}'

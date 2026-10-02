@@ -80,6 +80,12 @@ void pushJson(lua_State *l, const ofJson &j, int depth = 0) {
             }
     }
 }
+// error({}) and friends raise non-string values; lua_tostring returns NULL
+// for those, which must never reach a std::string.
+std::string luaError(lua_State *l) {
+    const char *message = lua_tostring(l, -1);
+    return message ? message : std::string("Lua error (") + luaL_typename(l, -1) + " value)";
+}
 ofJson readJson(lua_State *l, int index, int depth = 0) {
     if (depth > 16)
         throw std::runtime_error("scene state cyclic or deeper than 16");
@@ -255,7 +261,7 @@ bool ModeRuntime::load(const std::filesystem::path &folder, int w, int h) {
     }
     contextRef = luaL_ref(lua, LUA_REGISTRYINDEX);
     if (luaL_loadfile(lua, (directory / "main.lua").c_str()) || lua_pcall(lua, 0, 1, 0)) {
-        error = lua_tostring(lua, -1);
+        error = luaError(lua);
         lua_pop(lua, 1);
         return false;
     }
@@ -297,8 +303,7 @@ bool ModeRuntime::call(const char *method, double dt) {
     ofPopMatrix();
     ofPopStyle();
     if (status) {
-        const char *message = lua_tostring(lua, -1);
-        error = std::string(method) + ": " + (message ? message : "Lua error");
+        error = std::string(method) + ": " + luaError(lua);
         ofLogError("mode") << error;
     }
     lua_settop(lua, top);
@@ -387,7 +392,7 @@ ofJson ModeRuntime::save() {
         return ofJson::object();
     }
     if (lua_pcall(lua, 0, 1, 0)) {
-        std::string e = lua_tostring(lua, -1);
+        std::string e = luaError(lua);
         lua_settop(lua, top);
         throw std::runtime_error(e);
     }
@@ -413,7 +418,7 @@ bool ModeRuntime::restore(const ofJson &state) {
     pushJson(lua, state);
     int status = lua_pcall(lua, 1, 0, 0);
     if (status)
-        error = lua_tostring(lua, -1);
+        error = luaError(lua);
     lua_settop(lua, top);
     return !status;
 }
