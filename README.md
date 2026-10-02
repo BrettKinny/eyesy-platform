@@ -9,7 +9,7 @@ work the same way they do on the stock OS.
 > [!NOTE]
 > **This is an unofficial project.** It is not affiliated with or endorsed by
 > Critter & Guitari. It installs alongside the stock EYESY OS, and one command
-> switches the instrument back to stock. Read [Status](#status) before you
+> hands the running instrument back to stock. Read [Status](#status) before you
 > install it on your instrument.
 
 ## Why a new engine?
@@ -34,7 +34,7 @@ This platform keeps the instrument and replaces the engine underneath it.
 | MIDI given to modes | Note states | Last note and velocity | **Notes, all 128 CCs, clock, transport and timestamped events** |
 | Mode isolation | Every mode loads into one Python process at boot, and module state survives mode switches | Not documented | **A fresh Lua state for every load and reload** |
 | Runs on the current EYESY image | Yes | Needs the legacy GL stack | **Yes, alongside stock** |
-| Instrument controls | The reference | Basic: modes, OSD and trigger | **Stock-compatible: shift shortcuts, knob sequencer, HUD, 43 palettes, config menu, LED and trigger tone** |
+| Instrument controls | The reference | Basic: modes, scenes, OSD, screenshots and trigger | **Stock-compatible: shift shortcuts, knob sequencer, HUD, 43 palettes, config menu, LED and trigger tone** |
 
 ## What you get
 
@@ -44,7 +44,7 @@ Every mode renders on the GPU. The engine draws finished frames straight to HDMI
 through KMS, with no X server. Modes can use fragment shaders, ping-pong render
 targets for feedback, meshes, images, and a perspective camera with depth
 testing. This makes reaction–diffusion, fractal zooms and MilkDrop-style
-feedback practical on a Compute Module 3+. Each mode is benchmarked on the
+feedback practical on a Compute Module 3+. Shipped modes are benchmarked on the
 device itself, because desktop timings don't predict VC4 performance. Simple
 modes run at 60 fps, and heavy shader scenes run at about 25 to 50 fps. See [the
 tier table](docs/SCENE-LIBRARY.md).
@@ -55,8 +55,8 @@ Stock OS v3 gives each mode 100 averaged samples per channel. Here, every frame
 gets 1,024 samples per channel, a 513-bin FFT per channel, low/mid/high bands,
 RMS and peak. The waveform is also a GPU texture that any shader can sample.
 Audio capture runs on its own thread and writes to a non-blocking ring buffer,
-so a slow frame never blocks audio. A 3-million-frame stress test passes under
-ThreadSanitizer.
+so a slow frame never blocks audio. A 3-million-frame stress test of that ring
+buffer passes under ThreadSanitizer.
 
 ### It still works like an EYESY
 
@@ -100,7 +100,8 @@ The same engine runs on a Linux desktop:
 
 ### Safe to install and remove
 
-Builds run in pinned containers against checksummed SDKs. Release archives are
+Builds run in containers on a digest-pinned Debian base, against checksummed
+SDKs, and record the exact package list they used. Release archives are
 byte-reproducible and record their provenance. Deployment works like this:
 
 1. Check the target card's identity and the archive's contents.
@@ -117,22 +118,28 @@ stays installed, and only one of the two runs at a time.
 The claims above come from recorded runs on real hardware:
 
 - 60-minute soaks across 30 modes, with no crashes and a flat temperature
-- A 216,000-frame run with 1,800 mode reloads, which grew memory by 80 KiB
-- Sanitizer runs
+- A 216,000-frame run with 1,800 mode reloads across the first seven modes,
+  which grew memory by 80 KiB. A later soak over the larger catalog measured
+  about 73 KB of growth per reload, and that is still being tracked down.
 - Rollback and recovery bench reports
+
+ASan, UBSan and ThreadSanitizer runs cover the engine core on the workstation.
+The run reports themselves are kept privately, because they are full of device
+logs; the [status](docs/STATUS.md) page summarises them.
 
 ## Status
 
 This is a working development platform. It boots and runs on a CM3+ EYESY with
 OS v3.0. Release manifests keep `hardware_validated: false` until the remaining
 manual checks are done. Those checks cover knob and button feel, a known stereo
-signal on the line input, and HDMI display latency. See the [implementation
+signal on the line input, HDMI display latency, and recovery after a cold
+boot. See the [implementation
 status](docs/STATUS.md) and the [roadmap](ROADMAP.md).
 
 Current limitations:
 
 - **Hardware.** It has been tested only on a CM3+ EYESY running OS v3.0. CM4
-  units are untested.
+  units are untested, and the deploy tool refuses them.
 - **Output.** It renders at 1280×720 over HDMI. Composite video and native 1080p
   rendering are not supported.
 - **Stock modes.** Python modes from the stock OS don't run as they are. They
@@ -153,8 +160,10 @@ Current limitations:
 ### Requirements
 
 - An x86-64 Linux workstation with:
-  - Python 3
+  - Python 3.9 or newer
   - Rootless Podman
+  - curl, patch and file, for fetching and patching the SDK
+  - An OpenSSH client, for installing on the instrument
   - CMake, Ninja and g++, for the native tests
   - Podman's ARM emulation (qemu-user-static), for ARM builds
 - To install on the instrument: a CM3+ EYESY on OS v3.0, and a spare microSD
@@ -194,8 +203,9 @@ In the desktop preview, these keys stand in for the hardware controls:
 | G | Save a screenshot |
 | M | Open settings |
 
-In settings, Up/Down selects a row, Left/Right changes its value, and Enter
-saves.
+In settings, Up/Down selects a row and Left/Right changes its value. Enter
+opens a screen, and Backspace or Esc goes back. Settings are saved when you
+leave the menu.
 
 ### Mode packs
 
@@ -222,8 +232,9 @@ cd eyesy-platform
 ./eyesyctl preview milkdrop --native
 ```
 
-`preview` and `test` find modes in the packs directly. Before you run
-`package`, run `./eyesyctl modes sync` to copy the packs into `modes/`.
+`preview` finds modes in the packs directly. Before you run `package` or
+`tools/scene_verify.py`, run `./eyesyctl modes sync` to copy the packs into
+`modes/`.
 
 ### Write a mode
 
@@ -279,8 +290,11 @@ Read [deployment](docs/DEPLOYMENT.md) in full before you start. In outline:
    `modes sync`, and `package --arm`. Don't run a desktop build at the same
    time, because both builds share the source tree.
 4. Prepare the device with `./eyesyctl provision`, then install the release with
-   `./eyesyctl deploy`.
-5. Check the device with `./eyesyctl status` and `./eyesyctl logs`, and go back
+   `./eyesyctl deploy`. Both take the device's `--host` and the `--clone-id`
+   you gave the card.
+5. Choose which software the instrument starts at boot; see [boot
+   selection](docs/DEPLOYMENT.md#boot-selection).
+6. Check the device with `./eyesyctl status` and `./eyesyctl logs`, and go back
    with `./eyesyctl rollback --target previous` or `--target stock`.
 
 You don't need a screen to test a package on the device first; see
@@ -288,7 +302,7 @@ You don't need a screen to test a package on the device first; see
 
 ## How it works
 
-The engine is a C++17 openFrameworks 0.12.1 application that embeds LuaJIT
+The engine is a C++ openFrameworks 0.12.1 application that embeds LuaJIT
 directly, with its own small binding layer instead of raw openFrameworks
 bindings. On the EYESY, it takes over the display from KMS, and picks an HDMI
 mode from the display's EDID. It gets the knobs and buttons from the stock
@@ -332,6 +346,12 @@ cause, down to the register bit.
 - [critterandguitari/EYESY_Modes_OSv3](https://github.com/critterandguitari/EYESY_Modes_OSv3): the stock mode library
 - [critterandguitari/EYESY_OF](https://github.com/critterandguitari/EYESY_OF): the earlier openFrameworks + Lua engine
 - [critterandguitari/EYESY_oFLua_Examples](https://github.com/critterandguitari/EYESY_oFLua_Examples): example modes for EYESY_OF
+
+## AI assistance
+
+Much of the code and documentation here was written with AI coding assistants
+(mainly Claude), working under the author's direction. The hardware claims in
+this README come from runs on a real EYESY, not from the assistants.
 
 ## License
 
