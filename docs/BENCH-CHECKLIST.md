@@ -1,129 +1,102 @@
-# Next bench-session acceptance checklist
+# Bench checklist
 
-This is a test plan, not an acceptance claim. Existing headless evidence includes
-the CLI workflow, offscreen GPU path, capture plumbing, and replay tests; it does not
-qualify HDMI scanout, physical controls/MIDI, audio wiring, or full deployment.
+The manual checks that remain before a release can carry
+`hardware_validated: true`. They need a person at the instrument, a known
+audio source, or a real display.
 
-## 1. Stock baseline
-
-- Keep the original card untouched as recovery media. Boot stock on the prepared
-  spare and confirm stock video, editor access, audio capture,
-  physical knobs/buttons, and MIDI behavior.
-- Record card identity, boot selection, display orientation, and any existing
-  service status before touching the prepared development card.
-- Stop immediately and restore stock operation if baseline controls, video, or
-  audio are not healthy.
-
-## 2. HDMI, GPU, audio, and recovery probe
-
-Stage a verified ARM package on the prepared card. The platform display path is
-now direct KMS (engine flag `--kms`): no Xorg runs, the engine takes DRM master
-and selects a kernel-EDID mode itself. A live activation health check must show
-advancing frames plus a hardware renderer (`VC4 V3D 2.1`, never llvmpipe).
-
-Before any headless benchmark or tier gate, confirm the live service is on a
-tier-A scene at ~60 fps (`./eyesyctl status`): a heavy GPU neighbour inflates
-every offscreen p50 by 5-7 ms (measured 2026-09-17). Note the engine routes OSC
-`/key` events to the settings menu while it is open — key 1 exits — so a stuck
-menu silently blocks mode switching and neighbour control.
-
-The HDMI→USB capture dongle is a qualified A/B observer when its UVC pipeline
-streams continuously (its HPD line follows its streaming state; without a
-client it asserts no HPD and the device sees no display — the engine fails
-its probe and the fallback restores stock, which is correct behavior). Keep
-exactly one streamer on the dongle (two UVC clients collide fatally) and use
-`tools/vidctl_watch.sh` as the latch oracle: `HDMI_VID_CTL 0xc0080000` or
-`0xc0000000` is healthy; `0xc2000000` (bit 25) means Xorg-class damage — with
-the Xorg path removed this must never appear. Treat a uniform-gray capture
-(7,7,7) as "sync present, pixels blanked" and uniform black (0,0,0) as no
-TMDS. See [HDMI display issue](HDMI-DISPLAY-ISSUE.md).
-
-Capture the probe output, renderer identity, measured display mode, codec capture,
-clean exit, and return to stock. Verify HDMI image, orientation, frame pacing,
-left/right audio levels, and that a failed or interrupted probe does not leave
-stock video stopped. Stop and roll back to stock on a missing display, wrong
-renderer, audio-open failure, or failure to recover the stock service.
-
-## 3. Physical input and settings
-
-- Confirm the button matrix is quiet before trusting any control test: with the
-  engine idle and nothing pressed, watch `scenes/` for a few minutes. A spurious
-  matrix transition on the save bit arrives as a `/key` 8 press/release pair
-  (the daemon maps matrix bit 3 to key 8 in `keysInput()`), and each pair writes
-  a scene; a *held* one deletes the loaded scene. Measured on the CM3+ spare
-  2026-09-17: bursts of 2-9 spurious saves inside 20 s windows (17 scenes in
-  `scenes/`, several identical), plus a self-toggling OSD. `eyesyhw` restart,
-  temperature, or a marginal ribbon contact are candidates; treat a nonzero
-  spurious rate as a fail for the save/delete gates and for any test that
-  asserts exact scene counts.
-- Clearing glitch residue needs the engine's cooperation: `refreshScenes()` runs
-  only from `saveScene()` and `recallScene()` (`engine/src/main.cpp`), so
-  `status.json` keeps reporting the old `scene_count` after files are removed
-  until a Scene key (6/7) steps once or the engine restarts. Measured
-  2026-09-18 on the CM3+ spare: 47 glitch files removed, `scene_count` stayed at
-  50 until one step press brought it to 3 with a baseline scene loaded; a 120 s
-  watch after that recorded zero new files and zero OSD events — a quiet window,
-  not a fix.
-- With the platform preview/test path running, exercise all five knobs, trigger,
-  scene save/recall, mode navigation, OSD, and settings changes.
-- Verify soft takeover after scene recall and confirm the selected trigger source
-  (audio, MIDI note, combined, or quarter-note MIDI clock) behaves as configured.
-- Exercise physical MIDI note, CC 20–24, clock start/continue/stop, and cable
-  disconnect/reconnect. Capture a short video or written result plus any
-  `status.json`/`engine.log` evidence available.
-- Treat any stuck control, wrong knob mapping, unsafe scene recall, or service
-  conflict as a fail; return to stock before further activation work.
-
-## 4. Known stereo signal
-
-- Feed a controlled left-only signal, then right-only signal, then matched stereo
-  signal through the known audio path.
-- Use the existing headless/WAV workflow where useful, but confirm the physical
-  codec path: capture `audio_available`, `audio_source`, sample rate, left/right
-  RMS, sequence, and dropped-frame fields from `status.json`.
-- Confirm stereo-mesh/reference modes respond to the intended channel and that
-  silence/stale input becomes silence. Record signal setup and screenshots.
-
-## 5. Production activation and rollback
-
-Only after the preceding gates pass, use the existing CLI workflow:
+Already covered on hardware, and not repeated here (see
+[implementation status](STATUS.md)): HDMI scanout through direct KMS, deploy
+and rollback in all four paths, recovery to stock with no display attached,
+60-minute soaks, the 13-step OS v3 parity suite, and the automated half of
+this checklist. That automated half is `tests/device_bench_auto.py`: the HDMI
+latch oracle, MIDI CC 20–24 to knobs, notes, clock and transport,
+disconnect/reconnect, and a render smoke over the mode catalog. Re-run it after
+any engine change:
 
 ```sh
-./eyesyctl package --arm
-python3 tools/release.py dist/dev-<payload-id>-armhf.tar.gz --architecture armhf
-./eyesyctl deploy dist/dev-<payload-id>-armhf.tar.gz --host DEVICE_IP --clone-id UUID_FROM_RECEIPT
-./eyesyctl status --host DEVICE_IP
-./eyesyctl logs --host DEVICE_IP
-```
-Capture archive/clone identity, deploy output, status heartbeat, renderer, mode,
-and service logs. Confirm candidate `active.env`, advancing frames, GPU renderer,
-and the expected boot selection (stock during gating; platform after the V2
-platform-owned boot has passed).
-
-Previous-release recovery requires two distinct, healthy releases to have been
-activated in sequence. First activation alone has no previous platform release;
-that missing-history error is expected and must not be bypassed. Then exercise
-both recovery cases on the prepared card:
-
-```sh
-./eyesyctl rollback --host DEVICE_IP --clone-id UUID_FROM_RECEIPT --target previous
-./eyesyctl rollback --host DEVICE_IP --clone-id UUID_FROM_RECEIPT --target stock
+python3 tests/device_bench_auto.py --host DEVICE_IP --output local/bench-auto-NNN
 ```
 
-For each, capture command output, selected symlink/environment state, journal,
-and proof that the expected service is running. A retained platform `status.json`
-can be stale after stock recovery; require `eyesypy.service` active and visible
-stock output rather than using that file as proof. Stop and
-restore stock if activation health fails, a renderer is software, a heartbeat
-does not advance, or either rollback cannot recover deterministically.
+Keep headless, emulated and physical results separate. Never set the
+hardware-validated flag from headless, software-rendered or short workflow
+checks alone.
 
-## 6. Latency and soak distinctions
+## 1. Before you start
 
-- Measure HDMI-visible latency, physical control feel, and display orientation;
-  these are not covered by desktop or offscreen evidence.
-- Run the planned 60-minute reference-mode soak and 500-switch memory-growth
-  measurement, recording frame timing, RSS, errors, shader warnings, dropped
-  audio frames, and temperature when available.
-- Keep headless results, emulated/desktop results, and physical acceptance
-  results separate. Do not set a hardware-validated release flag from headless,
-  software-rendered, or short workflow checks alone.
+- Keep the original card untouched as recovery media and work on the prepared
+  spare. Boot stock first and confirm stock video, audio capture, knobs,
+  buttons and MIDI are healthy; stop if they are not.
+- Record the card's clone ID, the deployed release, and the boot selection.
+- Connect the display before the platform starts and keep it connected. The
+  engine picks its mode from the display's EDID at start.
+- If you observe through an HDMI→USB capture dongle, keep exactly one streamer
+  running on it for the whole session: the dongle asserts hot-plug only while
+  it streams, and two capture clients collide. A uniform (0,0,0) capture means
+  no TMDS signal; a uniform (7,7,7) capture means sync with blanked pixels.
+  `tools/vidctl_watch.sh` logs `HDMI_VID_CTL` on the device: `0xc0000000` or
+  `0xc0080000` is healthy, and bit 25 (`0xc2000000`) must never appear. See
+  [HDMI display issue](HDMI-DISPLAY-ISSUE.md).
+- Before timing anything, put the live service on a light scene at about
+  60 fps (`./eyesyctl status --host DEVICE_IP`). The engine routes OSC `/key`
+  events to the settings menu while it is open (key 1 exits), so a menu left
+  open blocks mode switching.
+- **Check the button matrix is quiet.** With the engine idle and nothing
+  pressed, watch `scenes/` for a few minutes. A spurious matrix transition on
+  the save bit arrives as a key 8 press/release pair and writes a scene; a
+  held one deletes the loaded scene. The CM3+ bench spare has produced bursts
+  of 2–9 spurious saves within 20 s. Any nonzero rate fails the save/delete
+  checks and any check that counts scenes. Candidates are an `eyesyhw` restart,
+  temperature, or a marginal ribbon contact. Removing stray scene files is
+  safe: the engine re-scans `scenes/` within a second.
+
+## 2. Physical controls and settings
+
+- Turn all five knobs through their range and confirm the HUD sliders and the
+  mode respond on the right knob.
+- Press every button: mode and scene navigation, save, screenshot, trigger, OSD
+  and Persist. Check the shift functions (palette cycling, in-place scene
+  update, hold Save to delete, sequencer record and play, Shift + Knob 1 gain).
+- Recall a scene and confirm soft takeover: a knob does nothing until it
+  crosses its saved value.
+- In the menu, change the trigger source (audio, MIDI note, combined,
+  quarter-note MIDI clock) and confirm each behaves as configured. Exit and
+  confirm the setting persists across an engine restart.
+- With physical MIDI equipment, repeat notes, CC 20–24, clock
+  start/continue/stop, and a cable disconnect/reconnect.
+- Treat a stuck control, a wrong knob mapping, an unsafe scene recall, or a
+  service conflict as a fail, and return to stock before further work. Record
+  a short video or written result plus `status.json` and `engine.log`.
+
+## 3. Known stereo signal
+
+- Feed a left-only signal, then right-only, then matched stereo, through the
+  line input.
+- Capture `audio_available`, `audio_source`, the sample rate, left/right RMS,
+  the sequence counter and the dropped-frame count from `status.json`.
+- Confirm a stereo-reactive mode responds to the intended channel, and that
+  silence or stale input reads as silence. Record the signal setup and
+  screenshots.
+
+## 4. Real display
+
+- On a real HDMI display (not only the capture dongle), confirm image,
+  orientation and frame pacing.
+- Measure HDMI-visible latency from a physical control or a trigger to the
+  change on screen.
+
+## 5. Cold-boot recovery
+
+The recovery path is proven while the device stays powered: with no display,
+the engine fails its start check, systemd's start limit trips, and
+`OnFailure` starts stock. What remains is the cold-boot half:
+
+1. With the platform owning boot, disconnect the display and restart the
+   platform service. Confirm the fallback leaves stock running.
+2. Reconnect the display and power-cycle the instrument by hand.
+3. Confirm it boots into the platform with live output, a healthy
+   `HDMI_VID_CTL`, and a hardware renderer in `./eyesyctl status`.
+
+For every check, capture command output, the selected release and service
+state, and the journal. A retained platform `status.json` can be stale after a
+fallback to stock; prove stock with `eyesypy.service` active and visible stock
+output instead.
