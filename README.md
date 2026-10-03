@@ -241,10 +241,6 @@ directory that sits next to this repo.
 its trigger test tone. The factory stills are desktop renders from the same
 engine.</sub>
 
-The author's collection of original scenes is kept private. Some docs in this
-repo mention it (as `eyesy-modes-bespoke`) when they describe scene conventions
-and performance.
-
 ```sh
 cd ..
 git clone https://github.com/BrettKinny/eyesy-modes-factory.git

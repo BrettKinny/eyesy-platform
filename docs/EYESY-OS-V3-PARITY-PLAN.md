@@ -148,7 +148,7 @@ Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode 
 - **Scene-library pacing**: scene code fixes and rewrites ride the scene-library
   batches; they are not done as an ad-hoc sweep. Land the engine-side persist
   enabler (`ctx.auto_clear` + OSD indicator) and a 1–2 mode pilot
-  (`starter` / `stereo-mesh`) first, then migrate the rest of the fleet in the
+  (`starter` and one shader mode) first, then migrate the rest of the fleet in the
   next scene-library pass after physical bench acceptance (ROADMAP items 1–3).
 - **Rule for porting**: Do **not** execute a sweeping 37-mode draw-idiom rewrite
   in one pass — restructure the canvas modes per batch with per-scene tier
@@ -173,7 +173,7 @@ Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode 
 │ Phase 2: Persist Enabler & Minimal Pilot                        │
 │   2.1 Expose ctx.auto_clear (bool) in ModeRuntime::snapshot     │
 │   2.2 OSD displays "persist: on" / "persist: off"               │
-│   2.3 Pilot veil idiom in starter and stereo-mesh               │
+│   2.3 Pilot veil idiom in two modes                             │
 │   2.4 Regression tests for polarity and visible trail diff      │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
@@ -287,7 +287,7 @@ Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode 
   - In `main.cpp`: update OSD line to display `(autoClear ? " | persist off" : " | persist on")`.
 
 #### 2.2 Minimal Pilot Fleet
-- **Files**: `modes/starter/main.lua`, `modes/stereo-mesh/main.lua`
+- **Files**: `modes/starter/main.lua` and one shader pilot mode
 - **Design**:
   ```lua
   if ctx.auto_clear then
@@ -297,7 +297,7 @@ Stock provides 9 graphical screens navigated with Scene buttons (up/down), Mode 
     e.rect(0, 0, ctx.width, ctx.height)
   end
   ```
-- **Deferred Modes**: Remaining direct-canvas modes (`prism-mesh`, `facet-terrain`) migrate in the next scene-library pass.
+- **Deferred Modes**: Remaining direct-canvas modes migrate in the next scene-library pass.
 
 ---
 
@@ -388,7 +388,7 @@ container renderer checks) plus hardware receipts from the CM3+ at
 | Phase | Delivered | Evidence |
 |---|---|---|
 | **1** | Trigger sine synthesis in `AudioInput::work()` (replaces the input while held, floors `peak*` at 25000/32768); Shift + Knob 1 gain takeover with stock pickup; Shift + Save in-place update; hold Save deletes; key repeater; OSC `/led` | `input_workflow_tests.py` asserts the tone in `status.json` (RMS 0.54), the LED order 7→6→1→3, save/update/delete on disk, and the repeater; on-device `led_codes_on_daemon_port_4001 = [6,1,3,7]` |
-| **2** | `ctx.auto_clear` in the mode snapshot; persist indicator; veil idiom in the two pilots | `graphics_tests.py` asserts mode-side polarity, differing grabs for a fixture **and** for `starter` and `stereo-mesh` |
+| **2** | `ctx.auto_clear` in the mode snapshot; persist indicator; veil idiom in the two pilots | `graphics_tests.py` asserts mode-side polarity, differing grabs for a fixture **and** for `starter` |
 | **3** | `KnobSequencer` (5×1000 frames, STOPPED/ENABLED/RECORDING/PLAYING), scene persistence, auto-play on recall | `core_tests` FSM/limit/JSON-free round-trip; `input_workflow_tests.py` records 4 frames, saves, recalls, asserts the sequence resumes and is dropped by an update while stopped; on device 91 frames recorded |
 | **4** | Stock-layout vector HUD (`osd_hud`), batched into 2 mesh draws + 7 text draws | `graphics_tests.py` pins `hud_draw_calls` (9 with the OSD, 0 without) and that the overlay never contaminates the mode render; on-device frames show sliders/VU/MIDI grid/trigger/gain/palette swatches |
 | **5** | `PaletteManager` (43 stock cosine palettes + `System/palettes.json` override), `ctx.palette_fg/bg`, shift palette cycling, fullscreen menu (home + Video / Audio & MIDI / Palettes / Hardware test), `--video-mode` KMS preference | `core_tests` palette math/cycling; `input_workflow_tests.py` navigates the menu, asserts config persistence and live diagnostics; on-device frames show the palette and hardware-test screens |
@@ -426,7 +426,7 @@ plan constants were wrong and the implementation follows the instrument:
   (WiFi, PC mapping, backups, logs) are not ported; the platform already owns
   those through `eyesyctl` and the editor.
 - **Persist pilot only**: only the two pilot modes carry the veil idiom
-  (`modes/starter`, and `eyesy-modes-bespoke/stereo-mesh`); the fleet rewrite
+  (`modes/starter` and one shader mode); the fleet rewrite
   rides the next scene-library pass.
 
 ### Verification tooling
