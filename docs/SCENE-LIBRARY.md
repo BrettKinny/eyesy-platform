@@ -73,7 +73,7 @@ back-to-back runs. So:
 
 | Mode | Measured | Notes |
 | --- | --- | --- |
-| `milkdrop` presets (first twelve slots) | 27.3–31.8 ms | tier C; built-in-wave presets about 7 ms cheaper than custom-wave ones. Per-preset table in the pack's README |
+| `milkdrop` presets (live slots 1–12) | 27.3–31.8 ms | tier C; built-in-wave presets 0.5–4.5 ms cheaper than custom-wave ones. Per-preset numbers in the pack's [docs/PERFORMANCE.md](https://github.com/BrettKinny/eyesy-modes-milkdrop/blob/main/docs/PERFORMANCE.md) |
 | `eyesy-modes-factory` ports | mostly within 2 ms of the same-session floor | the pack's cost is dominated by the engine's own per-frame work, not draw-call count |
 | `s-folia-angles` / `s-folia-curves` (factory) | 45.2 ms at full resolution, 32.96 ms at 320x180 | a persistence bridge costs three full-screen passes; shipped at quarter resolution |
 
