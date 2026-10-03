@@ -7,6 +7,7 @@ video feedback. The knobs, buttons, scenes, knob sequencer and on-screen display
 work the same way they do on the stock OS.
 
 ![The spirolateral preset from the MilkDrop pack, two spiral arms turning through a feedback trail](docs/images/hw-milkdrop-spirolateral.gif)
+
 <sub>The `spirolateral` preset from the [MilkDrop pack](#mode-packs), captured from
 the EYESY's HDMI output, where it runs at 29 fps.</sub>
 
@@ -80,6 +81,7 @@ A 13-step automated suite drives these controls on the device over OSC. It
 checks the result at every step and captures the HDMI output.
 
 ![The stock-layout HUD over the starter mode, captured from the EYESY's HDMI output](docs/images/hud-starter.png)
+
 <sub>The stock-layout HUD on the instrument, captured from its HDMI output: knob sliders, the MIDI note grid, VU meters and palette swatches, at 60 fps.</sub>
 
 ### A mode error won't stop the show
