@@ -155,7 +155,29 @@ def sdk(arm=False):
         (target / ".eyesy-kms-link-patched").write_text(digest(ROOT / "tools/of-kms-link.patch") + "\n")
 
 
-def package(arm=False):
+VERSION_RE = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?")
+
+
+def release_sources(modes_root):
+    """The platform and pack commits a package was assembled from."""
+    catalog = mode_packs.read_catalog(modes_root)
+    return {"platform": mode_packs.git_revision(ROOT), "packs": catalog.get("packs", {})}
+
+
+def require_clean_sources(sources, modes_root):
+    # A version names a fixed set of commits, so every input must be one.
+    revisions = {"eyesy-platform": sources["platform"], **sources["packs"]}
+    unclean = sorted(name for name, revision in revisions.items() if not revision or revision["dirty"])
+    if unclean:
+        raise RuntimeError("A versioned release needs clean, committed sources: " + ", ".join(unclean))
+    for name, entry in mode_packs.read_catalog(modes_root).get("synced", {}).items():
+        if mode_packs.tree_digest(modes_root / name) != entry["sha256"]:
+            raise RuntimeError(f"modes/{name} changed since `modes sync`; sync again")
+
+
+def package(arm=False, version=None):
+    if version is not None and not VERSION_RE.fullmatch(version):
+        raise RuntimeError("--version must look like v1.2.3 or v1.2.3-rc.1")
     binary = ROOT / ("engine/bin/eyesy-armhf" if arm else "engine/bin/engine")
     if not binary.is_file():
         raise RuntimeError("Build the engine first")
@@ -175,6 +197,9 @@ def package(arm=False):
     excluded = [p.name for p in catalog if not mode_packs.shippable(p)]
     if not shipped:
         raise RuntimeError("No modes assembled; run `./eyesyctl modes sync` first")
+    sources = release_sources(modes_root)
+    if version is not None:
+        require_clean_sources(sources, modes_root)
     output = ROOT / "dist"
     output.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="eyesy-package-") as temp:
@@ -224,13 +249,16 @@ def package(arm=False):
                 files[str(path.relative_to(stage))] = digest(path)
         # All payloads, including dependency metadata and bundled libraries,
         # participate in release identity. File timestamps do not.
-        release = "dev-" + hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:12]
+        release = version or (
+            "dev-" + hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:12]
+        )
         manifest = {
             "schema_version": 1,
             "release": release,
             "architecture": architecture,
             "hardware_validated": False,
             "files": files,
+            "sources": sources,
         }
         (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         target = output / f"{release}-{architecture}.tar.gz"
@@ -527,7 +555,7 @@ def cmd_modes(args):
 
 
 def cmd_package(args):
-    package(args.arm)
+    package(args.arm, args.version)
 
 
 def cmd_headless_test(args):
@@ -582,6 +610,7 @@ def build_parser():
 
     p = sub.add_parser("package")
     p.add_argument("--arm", action="store_true")
+    p.add_argument("--version", help="name the release (v1.2.3); needs clean, committed sources")
     p.set_defaults(func=cmd_package)
 
     p = sub.add_parser("headless-test")

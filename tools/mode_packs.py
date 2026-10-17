@@ -22,6 +22,7 @@ import os
 import re
 from pathlib import Path
 import shutil
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 MODES_ROOT = ROOT / "modes"
@@ -63,6 +64,27 @@ def discover(root):
 def shippable(mode_dir):
     """False for authored-but-unshippable modes (scratch probes, WIP gates)."""
     return not (Path(mode_dir) / NO_SHIP).exists()
+
+
+def git_revision(path):
+    """The commit checked out at `path` and whether its tree has changes.
+
+    None when `path` is not the top of a git work tree, so a pack copied in
+    without its history is reported as unknown rather than guessed at.
+    """
+    path = Path(path).resolve()
+
+    def git(*args):
+        result = subprocess.run(["git", "-C", str(path), *args], capture_output=True, text=True, check=False)
+        return result.stdout.strip() if result.returncode == 0 else None
+
+    if git("rev-parse", "--show-toplevel") != str(path):
+        return None
+    commit = git("rev-parse", "HEAD")
+    status = git("status", "--porcelain")
+    if commit is None or status is None:
+        return None
+    return {"commit": commit, "dirty": bool(status)}
 
 
 def tree_digest(path):
@@ -127,13 +149,17 @@ def sync(roots=(), modes_root=None):
         name: {"pack": pack.name, "sha256": tree_digest(modes_root / name)}
         for name, (source, pack) in sorted(located.items())
     }
-    (modes_root / CATALOG).write_text(json.dumps({"synced": catalog}, indent=2, sort_keys=True) + "\n")
+    packs = {pack.name: git_revision(pack) for _, pack in located.values()}
+    (modes_root / CATALOG).write_text(
+        json.dumps({"synced": catalog, "packs": packs}, indent=2, sort_keys=True) + "\n"
+    )
     return {
         "roots": [str(r) for r in pack_roots(roots)],
         "added": added,
         "updated": updated,
         "removed": removed,
         "catalog": catalog,
+        "packs": packs,
     }
 
 

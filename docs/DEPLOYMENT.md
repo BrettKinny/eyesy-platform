@@ -67,6 +67,14 @@ then verify the SSH host fingerprint before accepting it on the workstation.
 python3 tools/release.py dist/dev-<payload-id>-armhf.tar.gz --architecture armhf  # actual name printed by `package`
 ```
 
+`package` names the release `dev-<payload-id>` after its contents. For a
+published release, pass `--version v1.2.3` instead: the archive becomes
+`v1.2.3-armhf.tar.gz`, and packaging refuses unless the platform and every
+synced pack are clean git checkouts and `modes/` still matches the last
+`modes sync`. Either way the manifest's `sources` records the platform commit
+and the commit of each pack at sync time (`null` when a tree is not a git
+checkout).
+
 The ARM SDK has a small checked-in patch to select GLES2 explicitly and avoid the
 legacy Broadcom header. The stock kernel/overlays stay intact. The build runs under
 ARM emulation in a Bookworm container; no compiler is installed on the instrument.

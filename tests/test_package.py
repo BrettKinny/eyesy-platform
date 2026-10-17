@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -28,13 +29,91 @@ class PackageTests(unittest.TestCase):
         (root / "LICENSE").write_text("licence")
         (root / "THIRD_PARTY_NOTICES.md").write_text("notices")
 
-    def package(self, root):
+    def package(self, root, version=None):
         with (
             patch.object(ctl, "ROOT", root),
             patch.object(ctl.subprocess, "check_output", return_value="ELF 64-bit x86-64"),
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            ctl.package()
+            ctl.package(version=version)
+
+    def commit_all(self, root):
+        (root / ".gitignore").write_text("dist/\n")
+        git = [
+            "git",
+            "-C",
+            str(root),
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "commit.gpgsign=false",
+        ]
+        for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "fixture"]):
+            subprocess.run(git + args, check=True)
+        return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
+
+    def manifest(self, archive):
+        import tarfile
+
+        with tarfile.open(archive) as tar:
+            return json.load(tar.extractfile(next(n for n in tar.getnames() if n.endswith("/manifest.json"))))
+
+    def test_version_names_release_and_records_platform_commit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            commit = self.commit_all(root)
+            self.package(root, version="v0.1.0")
+            manifest = self.manifest(root / "dist/v0.1.0-amd64.tar.gz")
+            self.assertEqual(manifest["release"], "v0.1.0")
+            self.assertEqual(manifest["sources"]["platform"], {"commit": commit, "dirty": False})
+
+    def test_dev_package_records_unknown_platform_outside_git(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            self.package(root)
+            manifest = self.manifest(next((root / "dist").glob("dev-*.gz")))
+            self.assertEqual(manifest["sources"], {"platform": None, "packs": {}})
+
+    def test_version_rejects_malformed_name(self):
+        for version in ("0.1.0", "v0.1", "v0.1.0/../x", "latest"):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                self.fixture(root)
+                with self.assertRaisesRegex(RuntimeError, "--version"):
+                    self.package(root, version=version)
+
+    def test_version_rejects_unclean_sources(self):
+        for change in ("no-git", "dirty-platform", "dirty-pack", "unknown-pack", "edited-mode"):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                self.fixture(root)
+                (root / "modes/.gitignore").write_text("*\n!.gitignore\n!starter/\n!starter/**\n")
+                if change != "no-git":
+                    self.commit_all(root)
+                (root / "modes/wave").mkdir()
+                (root / "modes/wave/main.lua").write_text("return {}")
+                pack = {"commit": "abc", "dirty": change == "dirty-pack"}
+                catalog = {
+                    "synced": {
+                        "wave": {
+                            "pack": "eyesy-modes-x",
+                            "sha256": ctl.mode_packs.tree_digest(root / "modes/wave"),
+                        }
+                    },
+                    "packs": {"eyesy-modes-x": None if change == "unknown-pack" else pack},
+                }
+                (root / "modes/.catalog.json").write_text(json.dumps(catalog))
+                if change == "dirty-platform":
+                    (root / "LICENSE").write_text("edited")
+                elif change == "edited-mode":
+                    (root / "modes/wave/main.lua").write_text("return { edited = true }")
+                expected = "changed since" if change == "edited-mode" else "clean, committed"
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    self.package(root, version="v0.1.0")
 
     def test_byte_reproducible_despite_source_timestamps(self):
         with tempfile.TemporaryDirectory() as temp:
