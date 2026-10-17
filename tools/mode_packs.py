@@ -66,11 +66,13 @@ def shippable(mode_dir):
     return not (Path(mode_dir) / NO_SHIP).exists()
 
 
-def git_revision(path):
+def git_revision(path, shipped=()):
     """The commit checked out at `path` and whether its tree has changes.
 
-    None when `path` is not the top of a git work tree, so a pack copied in
-    without its history is reported as unknown rather than guessed at.
+    With `shipped` (folders under `path`), ignored files inside them count as
+    changes too, because sync copies them into the package. None when `path`
+    is not the top of a git work tree, so a pack copied in without its
+    history is reported as unknown rather than guessed at.
     """
     path = Path(path).resolve()
 
@@ -82,6 +84,9 @@ def git_revision(path):
         return None
     commit = git("rev-parse", "HEAD")
     status = git("status", "--porcelain")
+    if shipped and status is not None:
+        ignored = git("status", "--porcelain", "--ignored", "--", *(str(p) for p in shipped))
+        status = None if ignored is None else status + ignored
     if commit is None or status is None:
         return None
     return {"commit": commit, "dirty": bool(status)}
@@ -149,7 +154,10 @@ def sync(roots=(), modes_root=None):
         name: {"pack": pack.name, "sha256": tree_digest(modes_root / name)}
         for name, (source, pack) in sorted(located.items())
     }
-    packs = {pack.name: git_revision(pack) for _, pack in located.values()}
+    shipped = {}
+    for source, pack in located.values():
+        shipped.setdefault(pack, []).append(source)
+    packs = {pack.name: git_revision(pack, folders) for pack, folders in shipped.items()}
     (modes_root / CATALOG).write_text(
         json.dumps({"synced": catalog, "packs": packs}, indent=2, sort_keys=True) + "\n"
     )

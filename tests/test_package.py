@@ -86,6 +86,38 @@ class PackageTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "--version"):
                     self.package(root, version=version)
 
+    def test_pack_revision_counts_ignored_files_that_would_ship(self):
+        with tempfile.TemporaryDirectory() as temp:
+            pack = Path(temp)
+            (pack / "wave").mkdir()
+            (pack / "wave/main.lua").write_text("return {}")
+            self.commit_all(pack)
+            (pack / ".gitignore").write_text("dist/\n.eyesy-no-ship\n__pycache__/\n")
+            subprocess.run(["git", "-C", str(pack), "add", ".gitignore"], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(pack),
+                    "-c",
+                    "user.name=t",
+                    "-c",
+                    "user.email=t@t",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-q",
+                    "-m",
+                    "ignore",
+                ],
+                check=True,
+            )
+            (pack / "__pycache__").mkdir()
+            self.assertFalse(ctl.mode_packs.git_revision(pack, [pack / "wave"])["dirty"])
+            (pack / "wave/.eyesy-no-ship").write_text("")
+            self.assertFalse(ctl.mode_packs.git_revision(pack)["dirty"])
+            self.assertTrue(ctl.mode_packs.git_revision(pack, [pack / "wave"])["dirty"])
+
     def test_version_rejects_unclean_sources(self):
         for change in ("no-git", "dirty-platform", "dirty-pack", "unknown-pack", "edited-mode"):
             with self.subTest(change=change), tempfile.TemporaryDirectory() as temp:
