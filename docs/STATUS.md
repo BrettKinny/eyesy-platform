@@ -67,9 +67,13 @@ MIDI, Palettes and Hardware test screens. See the
 
 ## Release and deployment
 
-- Archives are byte-reproducible, with payload-derived release IDs and recorded
-  source, SDK, container and package provenance. Builds use a digest-pinned
-  Debian base image.
+- Archives are byte-reproducible, with recorded source, SDK, container and
+  package provenance. Builds use a digest-pinned Debian base image.
+- Development builds are named after their payload (`dev-<hash>`).
+  `package --version` names a release instead, and refuses unless the platform
+  and every synced pack are clean git checkouts. Every manifest records the
+  platform commit and each pack's commit. Releases are published as GitHub
+  pre-releases with the archive and its SHA-256.
 - Activation checks the clone ID, board, archive structure, checksums and ELF
   architecture before switching, installs releases immutably, switches with an
   atomic symlink, and keeps a release only once frames advance on the GPU.
@@ -108,7 +112,7 @@ untouched.
 | Recovery | With no display attached, the engine fails its start check, systemd's start limit trips, and `OnFailure` starts stock in about 9 s. Recovery with the display present is clean. |
 | Long runs | A 78.6-minute offscreen run of the first seven modes: 216,000 frames, 1,800 reloads, no errors or audio-ring drops, median RSS up 80 KiB. Two 60-minute observe-only soaks of the deployed service across 28 and 30 modes: no crashes, flat temperature. |
 | OS v3 parity | All 13 steps of `tests/device_parity_tests.py`, with HDMI captures at each step. |
-| Bench automation | All gates of `tests/device_bench_auto.py`: HDMI latch oracle, MIDI CC 20–24 to knobs, notes, transport, disconnect/reconnect, and a 41-mode render smoke. |
+| Bench automation | All gates of `tests/device_bench_auto.py` on v0.1.2: HDMI latch oracle, MIDI CC 20–24 to knobs, notes, transport, disconnect/reconnect, and a render smoke over all 89 modes with a distinct frame for each. The run leaves the scene list unchanged. |
 | Audio capture | A bounded capture run on the codec at 48 kHz with no ring drops. No known signal was supplied, so channel separation and response are untested. |
 
 These do not cover physical controls, a known stereo signal, display latency or
@@ -126,6 +130,9 @@ cold-boot recovery; those are the remaining manual checks.
   RSS, temperature and duration limits by PID instead.
 - **Provisioning.** Restoring the read-only root immediately after apt has not
   been qualified live, and apt repositories are not pinned.
-- **Bench unit button matrix.** The CM3+ spare emits bursts of spurious key
-  events; a spurious save press writes a scene. See the
-  [bench checklist](BENCH-CHECKLIST.md).
+- **Bench unit button matrix.** The CM3+ spare has emitted bursts of spurious
+  key events; a spurious save press writes a scene. See the
+  [bench checklist](BENCH-CHECKLIST.md). The stray scenes the bench automation
+  left before v0.1.2 were not this: they came from menu Enter also acting as
+  Save, now fixed. A 90-second idle capture on 2026-10-21 saw no spurious
+  keys.

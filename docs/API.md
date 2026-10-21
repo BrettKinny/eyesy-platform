@@ -31,7 +31,9 @@ not normalized percentages. No beat-tempo estimation is promised.
 MIDI clock pulses and `playing` tracks transport. Live input listens to the
 configured source channel (default channel 1). `ctx.midi.events` holds per-frame
 events with `status`, 1-based `channel`, `a`, `b`, and monotonic `time` in seconds.
-Live CC 20..24 controls the five knob values. The settings menu selects audio,
+Live CC 20..24 controls the five knob values. A CC value holds until that
+physical knob moves; the hardware's periodic knob reports do not override it.
+The settings menu selects audio,
 MIDI-note, combined, or quarter-note MIDI-clock triggers.
 
 ## Parameters and utility functions

@@ -47,7 +47,9 @@ checks alone.
   of 2–9 spurious saves within 20 s. Any nonzero rate fails the save/delete
   checks and any check that counts scenes. Candidates are an `eyesyhw` restart,
   temperature, or a marginal ribbon contact. Removing stray scene files is
-  safe: the engine re-scans `scenes/` within a second.
+  safe: the engine re-scans `scenes/` within a second. Before v0.1.2, Enter in
+  the settings menu also saved a scene, so a stray scene after a menu visit on
+  an older release is not matrix noise.
 
 ## 2. Physical controls and settings
 

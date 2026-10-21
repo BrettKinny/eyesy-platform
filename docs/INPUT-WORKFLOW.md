@@ -13,7 +13,8 @@ unsupported files are rejected before playback. Supported sample rates are
 `--record PATH` records live key, OSC knob, and MIDI input as the existing
 frame-indexed replay JSON. Desktop key releases use `key_release`; hardware
 button releases use `hardware_release`, preserving shift and held-key state.
-The initial five knob values are recorded at frame 0. This is input-event
+The initial five knob values are recorded at frame 0; after that, a knob is
+recorded only when its physical pot moves. This is input-event
 recording, not a full audiovisual capture: mode/settings/audio configuration is
 not included. `--record-limit N` bounds memory and output (default
 10,000, maximum 100,000); events beyond the limit are dropped and status

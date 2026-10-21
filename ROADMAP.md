@@ -17,7 +17,8 @@ What the platform does today, and what is still open. For the detail behind the
   stock-layout HUD, the 43 stock cosine palettes and a fullscreen settings menu
   ([parity plan](docs/EYESY-OS-V3-PARITY-PLAN.md)).
 - **Release tooling.** Byte-reproducible packages with build provenance,
-  transactional deploy, rollback to the previous release or to stock, and an
+  versioned releases that record their platform and pack commits (published
+  as GitHub pre-releases from v0.1.0), transactional deploy, rollback to the previous release or to stock, and an
   `OnFailure` fallback that hands the instrument back to stock.
 - **Hardware qualification so far.** Deploy and rollback in all four paths;
   unattended recovery to stock when the engine fails with no display attached;
