@@ -79,8 +79,8 @@ since 2022. This platform keeps the instrument and replaces the engine.
   a time.
 - **Backed by recorded runs.** 60-minute soaks across 30 modes ran with no
   crashes and a flat temperature. A 216,000-frame run with 1,800 mode reloads
-  grew memory by 80 KiB; a later soak over the larger catalog measured about
-  73 KB per reload, which is still being tracked down. ASan, UBSan and
+  grew memory by 80 KiB. On v0.1.3, 1,188 back-to-back reloads of a Lua mode
+  and of the MilkDrop shader engine left memory flat after warm-up. ASan, UBSan and
   ThreadSanitizer cover the engine core on the workstation. The run reports are
   kept privately because they are full of device logs, and the
   [status](docs/STATUS.md) page summarises them.

@@ -112,7 +112,7 @@ untouched.
 | HDMI scanout | Direct KMS live at about 60 fps on `VC4 V3D 2.1`, through a same-boot stock → platform → stock handoff and a platform-owned cold boot. The `HDMI_VID_CTL` latch never set. |
 | Deployment and rollback | All four paths: an incompatible previous release is rejected and restored automatically; `--target stock`; `--target previous` in both directions between two healthy KMS releases. |
 | Recovery | With no display attached, the engine fails its start check, systemd's start limit trips, and `OnFailure` starts stock in about 9 s. Recovery with the display present is clean. |
-| Long runs | A 78.6-minute offscreen run of the first seven modes: 216,000 frames, 1,800 reloads, no errors or audio-ring drops, median RSS up 80 KiB. Two 60-minute observe-only soaks of the deployed service across 28 and 30 modes: no crashes, flat temperature. |
+| Long runs | A 78.6-minute offscreen run of the first seven modes: 216,000 frames, 1,800 reloads, no errors or audio-ring drops, median RSS up 80 KiB. Two 60-minute observe-only soaks of the deployed service across 28 and 30 modes: no crashes, flat temperature. Two 20-minute reload runs on v0.1.3, 1,188 reloads in all, including the MilkDrop shader engine: RSS flat after warm-up, no mode errors. |
 | OS v3 parity | All 13 steps of `tests/device_parity_tests.py`, with HDMI captures at each step. |
 | Bench automation | All gates of `tests/device_bench_auto.py` on v0.1.2: HDMI latch oracle, MIDI CC 20–24 to knobs, notes, transport, disconnect/reconnect, and a render smoke over all 89 modes with a distinct frame for each. The run leaves the scene list unchanged. |
 | Audio capture | A bounded capture run on the codec at 48 kHz with no ring drops. No known signal was supplied, so channel separation and response are untested. |
@@ -122,9 +122,13 @@ cold-boot recovery; those are the remaining manual checks.
 
 ## Known limitations
 
-- **Memory growth.** One soak measured same-mode RSS growth of about 73 KB per
-  reload (about 2.2 MB/h at its switching rate); a later soak saw flat per-mode
-  RSS. Not yet attributed.
+- **Memory growth, not reproduced.** One earlier soak measured same-mode RSS
+  growth of about 73 KB per reload. On v0.1.3 (2026-10-21) it did not
+  reproduce: 594 reloads of `starter` ↔ `t-ball-of-mirrors` moved RSS by
+  60 KB in total, and 594 reloads of `milkdrop` ↔ `s-0-arrival-scope` rose
+  0.5 MB over the first ~60 reloads (render targets and shader cache) and then
+  stayed flat (about 21 B per reload, within noise). A full-catalog soak over
+  several hours would close it.
 - **Memory limits.** The device kernel has the memory cgroup controller
   disabled, so systemd `MemoryMax` has no effect. `tools/soak_guard.py` enforces
   RSS, temperature and duration limits by PID instead.
