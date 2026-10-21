@@ -96,6 +96,23 @@ void Parameter::restore(double v, double physicalKnob) {
     pickup = true;
     previousKnob = std::clamp(physicalKnob, 0.0, 1.0);
 }
+std::array<bool, 5> PhysicalKnobs::apply(const std::array<double, 5> &reading,
+                                         std::array<double, 5> &knobs, bool parkFirst) {
+    std::array<bool, 5> moved{};
+    for (int k = 0; k < 5; ++k) {
+        double n = std::clamp(reading[k], 0.0, 1.0);
+        // Compare against the last value taken, not the last report, so a slow
+        // turn still accumulates past the deadband.
+        if (seen && std::abs(n - last[k]) < deadband)
+            continue;
+        last[k] = n;
+        moved[k] = true;
+        if (!(parkFirst && k == 0))
+            knobs[k] = n;
+    }
+    seen = true;
+    return moved;
+}
 void Parameter::applyKnob(double n) {
     if (!std::isfinite(n))
         return;

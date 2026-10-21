@@ -84,6 +84,7 @@ class EngineApp : public ofBaseApp {
     AudioInput audio;
     eyesy::MidiState midi;
     std::array<double, 5> knobs{{.5, .5, .5, .5, .5}};
+    eyesy::PhysicalKnobs physicalKnobs;
     std::vector<fs::path> catalog, scenes;
     std::vector<double> frameTimes;
     std::map<fs::path, fs::file_time_type> watched;
@@ -572,8 +573,8 @@ class EngineApp : public ofBaseApp {
                 for (int k = 0; k < 5; ++k)
                     next[k] = std::clamp(e.integers[k] / 1023.0, 0.0, 1.0);
                 if (shift) {
-                    // Shift + Knob 1 takes over live audio input gain; the mode
-                    // parameter stays parked until shift is released.
+                    // Shift + Knob 1 takes over live audio input gain; knob 1
+                    // stays parked until the pot moves after shift is released.
                     if (std::abs(gainKnobCapture - next[0]) > .05)
                         gainKnobUnlocked = true;
                     double requested =
@@ -583,11 +584,11 @@ class EngineApp : public ofBaseApp {
                         audio.setGain(float(settings.gain));
                         message = "Audio gain " + ofToString(settings.gain, 2) + "x";
                     }
-                    next[0] = knobs[0];
                 }
-                knobs = next;
+                auto moved = physicalKnobs.apply(next, knobs, shift);
                 for (int k = 0; k < 5; ++k)
-                    recordEvent({frame, "knob", k + 1, 0, 0, 0, 0, 0, knobs[k]});
+                    if (moved[k])
+                        recordEvent({frame, "knob", k + 1, 0, 0, 0, 0, 0, knobs[k]});
             }
             if (e.address == "/key" && e.integers.size() == 2)
                 hardwareKey(e.integers[0], e.integers[1] > 0);

@@ -70,6 +70,18 @@ struct Parameter {
     void restore(double v, double physicalKnob);
     void applyKnob(double normalized);
 };
+// The pots as eyesyhw reports them: a full /knobs message about twice a second
+// whether or not anything moved. Only a pot that moved past the deadband takes
+// over its knob, so a MIDI CC value holds until someone turns that pot.
+struct PhysicalKnobs {
+    std::array<double, 5> last{};
+    bool seen = false;
+    double deadband = 4 / 1023.0;
+    // Writes moved pots into `knobs` and returns which moved. A parked first
+    // pot (Shift + Knob 1 sets gain) is tracked but leaves knob 1 alone.
+    std::array<bool, 5> apply(const std::array<double, 5> &reading, std::array<double, 5> &knobs,
+                              bool parkFirst = false);
+};
 struct OscEvent {
     std::string address;
     std::vector<int32_t> integers;

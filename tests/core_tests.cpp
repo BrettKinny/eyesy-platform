@@ -55,6 +55,20 @@ int main() {
     CHECK(!p.pickup && p.value == .8);
     p.applyKnob(std::numeric_limits<double>::quiet_NaN());
     CHECK(p.value == .8);
+    PhysicalKnobs pots;
+    std::array<double, 5> knobs{.5, .5, .5, .5, .5};
+    auto moved = pots.apply({.1, .2, .3, .4, .5}, knobs);
+    CHECK(knobs[0] == .1 && knobs[4] == .5 && moved[0] && moved[4]);
+    knobs[1] = 1; // a MIDI CC
+    moved = pots.apply({.1, .2 + 2 / 1023.0, .3, .4, .5}, knobs);
+    CHECK(knobs[1] == 1 && !moved[0] && !moved[1]);
+    moved = pots.apply({.1, .2 + 5 / 1023.0, .3, .4, .5}, knobs);
+    CHECK(moved[1] && std::abs(knobs[1] - (.2 + 5 / 1023.0)) < 1e-9);
+    knobs[0] = .9;
+    moved = pots.apply({.6, .2 + 5 / 1023.0, .3, .4, .5}, knobs, true);
+    CHECK(moved[0] && knobs[0] == .9);
+    moved = pots.apply({.6, .2 + 5 / 1023.0, .3, .4, .5}, knobs);
+    CHECK(!moved[0] && knobs[0] == .9);
     const uint8_t osc[] = {'/', 'k', 'e', 'y', 0, 0,  0, 0, ',', 'i',
                            'i', 0,   0,   0,   0, 10, 0, 0, 0,   1};
     OscEvent event;
