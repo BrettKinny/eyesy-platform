@@ -334,7 +334,9 @@ class EngineApp : public ofBaseApp {
             audio.setSynthesizing(down);
         if (key == 8) {
             if (down) {
-                if (!shift) {
+                // In the menu Save is Enter, so it must not also save on
+                // release or delete the current scene when held.
+                if (!shift && !menu.active()) {
                     savePressTime = ofGetElapsedTimef();
                     saveHeld = true;
                 }

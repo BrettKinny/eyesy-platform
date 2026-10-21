@@ -451,6 +451,32 @@ def main():
             updated = json.loads(scenes[0].read_text())
             assert abs(updated["parameters"]["tone"] - 0.2) < 0.02, updated["parameters"]
             assert "knob_sequence" not in updated, "stopped sequence kept on update"
+            key(2)
+            time.sleep(0.1)
+            key(1)
+            time.sleep(0.1)
+            key(1, 0)
+            time.sleep(0.1)
+            key(2, 0)  # Shift + OSD opens the menu
+            wait_for(lambda s: s.get("menu_screen", -1) >= 0, "menu open")
+            # Enter in the menu must neither save a scene nor, held, delete the
+            # current one. Check each separately: a stray save followed by a
+            # stray delete of that new scene leaves the list unchanged.
+            for hold, label in ((0.15, "saved"), (1.4, "deleted")):
+                key(8)
+                time.sleep(hold)
+                key(8, 0)
+                time.sleep(0.5)
+                in_menu = sorted((store / "scenes").glob("*.json"))
+                assert in_menu == scenes, (f"menu Enter {label} a scene", in_menu)
+            for _ in range(4):
+                if status().get("menu_screen", -1) == -1:
+                    break
+                key(1)
+                key(1, 0)
+                time.sleep(0.4)
+            wait_for(lambda s: s.get("menu_screen") == -1, "menu closed")
+            assert sorted((store / "scenes").glob("*.json")) == scenes
             key(8)  # hold past the delete window
             time.sleep(1.4)
             key(8, 0)
