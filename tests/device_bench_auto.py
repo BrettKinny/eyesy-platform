@@ -215,8 +215,17 @@ class Capture:
             raise AssertionError("capture stream looks blank; is the streamer up?")
         return True
 
-    def snapshot(self, label):
+    def snapshot(self, label, settle=0.75, timeout=5.0):
+        # The streamer rewrites the file at ~2 fps, so the frame on disk when a
+        # step finishes can predate it. Wait for one written `settle` seconds
+        # after the request, so mode switches and knob moves are on screen.
         self.alive()
+        fresh_after = time.time() + settle
+        deadline = fresh_after + timeout
+        while self.path.stat().st_mtime < fresh_after:
+            if time.time() > deadline:
+                raise AssertionError(f"{label}: no fresh capture frame; has the streamer stalled?")
+            time.sleep(0.1)
         for _ in range(20):
             data = self.path.read_bytes()
             if data.startswith(b"\x89PNG\r\n\x1a\n") and data.endswith(b"IEND\xaeB`\x82"):
