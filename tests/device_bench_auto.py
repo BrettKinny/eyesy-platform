@@ -403,14 +403,18 @@ print(json.dumps({"menu_screen": status().get('menu_screen')}))
     assert transport["mode_errors"] == 0 and transport["mode"] == "starter", transport
     record("04-midi-transport", {"mode": transport["mode"], "mode_errors": transport["mode_errors"]})
 
-    # 5. Disconnect / reconnect: dropping the source must not disturb the engine.
-    device.run(
-        f"aconnect -x 2>/dev/null || true; sleep .4; aconnect 'ttymidi:0' '{port}' 2>/dev/null || true"
-    )
-    time.sleep(0.6)
+    # 5. Disconnect / reconnect: dropping every connection must not disturb the
+    # engine, and its next source scan (every 2 s) must restore them unaided.
+    device.run("aconnect -x 2>/dev/null || true")
+    time.sleep(5)
     reconnect = device.status()
     assert reconnect["mode_errors"] == 0, reconnect
-    record("05-midi-reconnect", {"mode_errors": reconnect["mode_errors"], "led": reconnect["led"]})
+    sources = device.run("aconnect -l | grep -A3 \"'EYESY Platform'\" | grep 'Connected From' || true")
+    assert "128:0" in sources, f"engine did not reconnect ttymidi: {sources!r}"
+    record(
+        "05-midi-reconnect",
+        {"mode_errors": reconnect["mode_errors"], "led": reconnect["led"], "sources": sources.strip()},
+    )
 
     # 6. Catalog render smoke: every mode loads, renders non-blank, and differs.
     if not args.skip_modes:

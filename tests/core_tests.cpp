@@ -55,6 +55,18 @@ int main() {
     CHECK(!p.pickup && p.value == .8);
     p.applyKnob(std::numeric_limits<double>::quiet_NaN());
     CHECK(p.value == .8);
+    using Port = std::pair<int, int>;
+    // A source whose connection was removed outside the engine is reconnected.
+    auto plan = planMidiSources({{14, 0}, {128, 0}}, {{128, 0}}, {{14, 0}, {128, 0}});
+    CHECK((plan.connect == std::vector<Port>{{14, 0}}) && !plan.sourcesLost);
+    // A device that came back under a reused ID has no connection yet.
+    plan = planMidiSources({{20, 0}}, {}, {{20, 0}});
+    CHECK((plan.connect == std::vector<Port>{{20, 0}}) && !plan.sourcesLost);
+    // A new source is connected without clearing held notes; a lost one clears.
+    plan = planMidiSources({{14, 0}, {130, 0}}, {{14, 0}}, {{14, 0}});
+    CHECK((plan.connect == std::vector<Port>{{130, 0}}) && !plan.sourcesLost);
+    plan = planMidiSources({{14, 0}}, {{14, 0}}, {{14, 0}, {130, 0}});
+    CHECK(plan.connect.empty() && plan.sourcesLost);
     PhysicalKnobs pots;
     std::array<double, 5> knobs{.5, .5, .5, .5, .5};
     auto moved = pots.apply({.1, .2, .3, .4, .5}, knobs);

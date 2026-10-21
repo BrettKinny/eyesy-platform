@@ -5,6 +5,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -82,6 +83,18 @@ struct PhysicalKnobs {
     std::array<bool, 5> apply(const std::array<double, 5> &reading, std::array<double, 5> &knobs,
                               bool parkFirst = false);
 };
+// One pass of MIDI source upkeep. `readable` is every port the engine could
+// listen to, `connected` the ports ALSA reports as connected to it now, and
+// `previous` the readable set from the last pass. Working from ALSA's live
+// state rather than a remembered list recovers connections removed from
+// outside and devices that return under a reused client ID.
+struct MidiSourcePlan {
+    std::vector<std::pair<int, int>> connect;
+    bool sourcesLost = false;
+};
+MidiSourcePlan planMidiSources(const std::set<std::pair<int, int>> &readable,
+                               const std::set<std::pair<int, int>> &connected,
+                               const std::set<std::pair<int, int>> &previous);
 struct OscEvent {
     std::string address;
     std::vector<int32_t> integers;

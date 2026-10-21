@@ -96,6 +96,18 @@ void Parameter::restore(double v, double physicalKnob) {
     pickup = true;
     previousKnob = std::clamp(physicalKnob, 0.0, 1.0);
 }
+MidiSourcePlan planMidiSources(const std::set<std::pair<int, int>> &readable,
+                               const std::set<std::pair<int, int>> &connected,
+                               const std::set<std::pair<int, int>> &previous) {
+    MidiSourcePlan plan;
+    for (const auto &port : readable)
+        if (!connected.count(port))
+            plan.connect.push_back(port);
+    for (const auto &port : previous)
+        if (!readable.count(port))
+            plan.sourcesLost = true;
+    return plan;
+}
 std::array<bool, 5> PhysicalKnobs::apply(const std::array<double, 5> &reading,
                                          std::array<double, 5> &knobs, bool parkFirst) {
     std::array<bool, 5> moved{};

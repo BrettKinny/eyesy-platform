@@ -101,7 +101,7 @@ class EngineApp : public ofBaseApp {
     snd_seq_t *seq = nullptr;
     int seqPort = -1;
     double lastMidiScan = -10;
-    std::set<std::pair<int, int>> subscriptions;
+    std::set<std::pair<int, int>> midiSources;
     ofJson replayEvents = ofJson::array();
     size_t replayIndex = 0;
     bool deterministic = false;
@@ -625,7 +625,7 @@ class EngineApp : public ofBaseApp {
             return;
         if (ofGetElapsedTimef() - lastMidiScan > 2) {
             lastMidiScan = ofGetElapsedTimef();
-            std::set<std::pair<int, int>> seen;
+            std::set<std::pair<int, int>> readable, connected;
             snd_seq_client_info_t *client;
             snd_seq_client_info_alloca(&client);
             snd_seq_client_info_set_client(client, -1);
@@ -639,19 +639,31 @@ class EngineApp : public ofBaseApp {
                 snd_seq_port_info_set_port(port, -1);
                 while (snd_seq_query_next_port(seq, port) >= 0) {
                     auto cap = snd_seq_port_info_get_capability(port);
-                    int p = snd_seq_port_info_get_port(port);
                     if ((cap & (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ)) ==
-                        (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ)) {
-                        auto pair = std::make_pair(c, p);
-                        seen.insert(pair);
-                        if (!subscriptions.count(pair))
-                            snd_seq_connect_from(seq, seqPort, c, p);
-                    }
+                        (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ))
+                        readable.insert({c, snd_seq_port_info_get_port(port)});
                 }
             }
-            if (seen != subscriptions)
+            // Who ALSA says is writing to our input port right now.
+            snd_seq_query_subscribe_t *subs;
+            snd_seq_query_subscribe_alloca(&subs);
+            snd_seq_addr_t root{static_cast<unsigned char>(snd_seq_client_id(seq)),
+                                static_cast<unsigned char>(seqPort)};
+            snd_seq_query_subscribe_set_root(subs, &root);
+            snd_seq_query_subscribe_set_type(subs, SND_SEQ_QUERY_SUBS_WRITE);
+            snd_seq_query_subscribe_set_index(subs, 0);
+            while (snd_seq_query_port_subscribers(seq, subs) >= 0) {
+                auto addr = snd_seq_query_subscribe_get_addr(subs);
+                connected.insert({addr->client, addr->port});
+                snd_seq_query_subscribe_set_index(subs, snd_seq_query_subscribe_get_index(subs) + 1);
+            }
+            auto plan = eyesy::planMidiSources(readable, connected, midiSources);
+            for (const auto &[c, p] : plan.connect)
+                snd_seq_connect_from(seq, seqPort, c, p);
+            // Note-offs from a source that went away will never arrive.
+            if (plan.sourcesLost)
                 midi.notes.fill(0);
-            subscriptions = std::move(seen);
+            midiSources = std::move(readable);
         }
         snd_seq_event_t *e = nullptr;
         for (int i = 0; i < 128 && snd_seq_event_input(seq, &e) >= 0; ++i) {
