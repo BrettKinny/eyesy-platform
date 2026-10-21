@@ -249,7 +249,8 @@ Read [deployment](docs/DEPLOYMENT.md) in full before you start. In outline:
 1. Clone your original SD card to a spare card, and verify the copy.
 2. Run `tools/prepare_clone.py` on the spare card to install your SSH key and
    enable SSH.
-3. Build a release with `./eyesyctl bootstrap --arm`, `build --arm`,
+3. Download the archive from [Releases](https://github.com/BrettKinny/eyesy-platform/releases),
+   or build your own with `./eyesyctl bootstrap --arm`, `build --arm`,
    `modes sync` and `package --arm`. Don't run a desktop build at the same
    time, because both builds share the source tree.
 4. Prepare the device with `./eyesyctl provision`, then install the release with
