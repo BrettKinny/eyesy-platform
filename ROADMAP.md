@@ -66,11 +66,6 @@ pass ([bench checklist](docs/BENCH-CHECKLIST.md)):
 
 ### Engine
 
-- **MIDI after client churn.** MIDI input was seen to stop being applied after
-  a long session with many transient ALSA clients; restarting the engine
-  restores it. The suspected cause is `pollMidi()` clearing every held note
-  whenever the set of ALSA clients changes. It should clear only the notes of
-  clients that went away.
 - **Memory growth attribution.** One 60-minute soak measured same-mode RSS
   growth of about 2.2 MB/h, correlated with mode reloads. A later soak saw
   flat per-mode RSS. A run with mode switching disabled, against one with it

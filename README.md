@@ -114,8 +114,6 @@ Current limitations:
   modes from a USB drive isn't ported.
 - **Persist.** The Persist button affects only modes that read
   `ctx.auto_clear`. Most modes still clear the screen every frame.
-- **Known issue.** After many MIDI device connects and disconnects in one
-  session, MIDI input can stop responding until the engine restarts.
 
 ## Getting started
 

@@ -23,7 +23,9 @@ samples) are kept privately; this page summarises them.
   and screenshots.
 - Stereo waveform, FFT and band analysis on a nonblocking audio ring; MIDI
   notes, CC, clock and transport over ALSA sequencer ports; OSC from the stock
-  `eyesyhw` daemon.
+  `eyesyhw` daemon. Every 2 s the engine asks ALSA which sources are connected
+  to it and reconnects any that are missing, so MIDI recovers from dropped
+  connections and replugged devices without a restart (fixed in v0.1.3).
 - Lua, shader, input and resource errors are reported without stopping the
   render loop. Changed `.frag` files recompile as a transaction and keep the
   previous program on failure.
@@ -123,8 +125,6 @@ cold-boot recovery; those are the remaining manual checks.
 - **Memory growth.** One soak measured same-mode RSS growth of about 73 KB per
   reload (about 2.2 MB/h at its switching rate); a later soak saw flat per-mode
   RSS. Not yet attributed.
-- **MIDI after client churn.** MIDI input was seen to stop being applied after
-  a long session with many transient ALSA clients, until the engine restarted.
 - **Memory limits.** The device kernel has the memory cgroup controller
   disabled, so systemd `MemoryMax` has no effect. `tools/soak_guard.py` enforces
   RSS, temperature and duration limits by PID instead.
