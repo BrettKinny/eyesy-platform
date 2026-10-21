@@ -34,6 +34,9 @@ Checks (docs/SCENE-LIBRARY.md design-law signatures):
 - audio reactivity: any audio variant differs beyond --min-fraction, asserted
   when the scene Lua references ctx.audio
 - trigger response: same, asserted when the scene references ctx.trigger
+- persist: the Persist key (hardware key 3) at frame 1 must change the final
+  frame when the scene references ctx.auto_clear; otherwise a no-effect result
+  is reported as a warning, since some scenes ignore Persist by design
 
 Usage:
   scene_verify.py --mode starter --output local/verify-001 --xvfb
@@ -106,6 +109,7 @@ def build_runs(frames, assigned):
             "trigger",
             [{"frame": frames - 30, "type": "midi", "status": NOTE_ON, "channel": 0, "a": 60, "b": 100}],
         ),
+        variant("persist", [{"frame": 1, "type": "hardware_key", "key": 3}]),
     ]
     return runs
 
@@ -235,6 +239,7 @@ def verify_mode(engine, mode, out_dir, args):
     refs = {
         "audio": bool(re.search(r"ctx\s*\.\s*audio", main_lua)),
         "trigger": bool(re.search(r"ctx\s*\.\s*trigger", main_lua)),
+        "auto_clear": bool(re.search(r"ctx\s*\.\s*auto_clear", main_lua)),
     }
 
     grabs, results = {}, {}
@@ -389,8 +394,23 @@ def verify_mode(engine, mode, out_dir, args):
     else:
         summary["trigger"] = {"pass": None, "note": "trigger grab missing"}
 
+    warnings = []
+    if "base" in grabs and "persist" in grabs:
+        d = pair_metrics(grabs["base"], grabs["persist"])
+        changed = d["frac"] > args.min_fraction
+        summary["persist"] = {"diff": d, "threshold": args.min_fraction, "pass": changed}
+        if not changed:
+            if refs["auto_clear"]:
+                failures.append(f"persist: changed fraction {d['frac']} <= {args.min_fraction}")
+            else:
+                summary["persist"]["note"] = "scene does not reference ctx.auto_clear"
+                warnings.append("persist has no effect (scene ignores ctx.auto_clear)")
+    else:
+        summary["persist"] = {"pass": None, "note": "persist grab missing"}
+
     summary["verdict"] = "pass" if not failures else "fail"
     summary["failures"] = failures
+    summary["warnings"] = warnings
     return summary, [grabs[name] for name in sorted(grabs)]
 
 
@@ -452,7 +472,12 @@ def main():
             summary["contact_sheet_error"] = str(error)
         print(
             json.dumps(
-                {"mode": mode.name, "verdict": summary["verdict"], "failures": summary.get("failures", [])}
+                {
+                    "mode": mode.name,
+                    "verdict": summary["verdict"],
+                    "failures": summary.get("failures", []),
+                    "warnings": summary.get("warnings", []),
+                }
             ),
             flush=True,
         )
