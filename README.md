@@ -67,8 +67,10 @@ since 2022. This platform keeps the instrument and replaces the engine.
   controls. You can feed in a WAV file instead of live audio, record and replay
   control input, and render headless for automated checks. You can also run a
   package on the EYESY's GPU with no display attached and pull back screenshots
-  and timings. `tools/scene_verify.py` sweeps every knob and audio condition and
-  flags any control that doesn't change the picture.
+  and timings. `tools/scene_verify.py` sweeps every knob, audio condition and
+  the Persist button and flags anything that doesn't change the picture;
+  `tools/device_verify.py` runs a whole release on the EYESY's GPU and flags
+  shaders the device can't compile, black frames and frame-time overruns.
 - **Safe to install and remove.** Builds run in containers on a digest-pinned
   Debian base, against checksummed SDKs, and release archives are
   byte-reproducible. A deploy checks the card's identity and the archive,
@@ -113,7 +115,9 @@ Current limitations:
 - **Menu.** No Wi-Fi, MIDI program-change, backup or log screens, and loading
   modes from a USB drive isn't ported.
 - **Persist.** The Persist button affects only modes that read
-  `ctx.auto_clear`. Most modes still clear the screen every frame.
+  `ctx.auto_clear`. The factory pack honours it in 79 of its 87 ports; the six
+  veil-trail ports always show their trails, and the two `t-ball-of-mirrors`
+  modes ignore it.
 
 ## Getting started
 

@@ -70,9 +70,9 @@ pass ([bench checklist](docs/BENCH-CHECKLIST.md)):
   2.2 MB/h, correlated with mode reloads. On v0.1.3, a no-switching baseline
   and 1,188 rapid reloads (Lua and MilkDrop modes) showed no growth after
   warm-up. What remains is a multi-hour soak across the whole catalog.
-- **Persist adoption.** Persist only has a visible effect in modes that check
-  `ctx.auto_clear` before clearing. `starter` does; most pack modes still clear
-  every frame. This is mode work in the packs, not engine work.
+- **Persist adoption.** Done in the factory pack (79 of 87 ports) and
+  checked by `tools/scene_verify.py`. MilkDrop treats feedback as its own
+  persistence; whether Persist should change its decay is open.
 
 ### Platform hardening
 

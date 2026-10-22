@@ -52,6 +52,20 @@ bridge (draw into a target, fade it, blit it), which costs three full-screen
 passes; render that pair at reduced resolution (see the
 [scene library](SCENE-LIBRARY.md) notes).
 
+A full-screen shader repaints every pixel, so skipping the clear changes
+nothing. Blend the new frame over the persisted canvas instead, at no extra
+cost: draw the final canvas blit with partial alpha when Persist is on,
+`e.color(1, 1, 1, ctx.auto_clear and 1 or 0.25)` before `draw_target`, or,
+for a shader drawn straight to the canvas, pass a uniform such as
+`u_mix = ctx.auto_clear and 1.0 or 0.25` and write it as the fragment's
+alpha. `draw_shader` ignores `color()` alpha; only the fragment's own alpha
+blends. With Persist off the alpha is 1, so the output is unchanged. Reset
+`color(1, 1, 1)` before any overlay that should stay opaque.
+
+`tools/scene_verify.py` presses Persist in one of its runs: a mode that reads
+`ctx.auto_clear` fails if the picture does not change, and one that does not
+read it gets a warning.
+
 ## Reference modes
 
 | Mode | Where | What to read it for |
