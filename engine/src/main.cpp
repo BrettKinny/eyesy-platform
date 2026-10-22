@@ -658,7 +658,8 @@ class EngineApp : public ofBaseApp {
             while (snd_seq_query_port_subscribers(seq, subs) >= 0) {
                 auto addr = snd_seq_query_subscribe_get_addr(subs);
                 connected.insert({addr->client, addr->port});
-                snd_seq_query_subscribe_set_index(subs, snd_seq_query_subscribe_get_index(subs) + 1);
+                snd_seq_query_subscribe_set_index(subs,
+                                                  snd_seq_query_subscribe_get_index(subs) + 1);
             }
             auto plan = eyesy::planMidiSources(readable, connected, midiSources);
             for (const auto &[c, p] : plan.connect)

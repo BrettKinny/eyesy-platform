@@ -18,7 +18,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends cmake ninja-build g++
+          sudo apt-get install -y --no-install-recommends cmake ninja-build g++ python3-pil
 
       - name: Build and run core tests
         run: |
