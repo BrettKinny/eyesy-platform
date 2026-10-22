@@ -155,6 +155,10 @@ def sdk(arm=False):
         (target / ".eyesy-kms-link-patched").write_text(digest(ROOT / "tools/of-kms-link.patch") + "\n")
 
 
+# The packs a published release may carry. modes sync assembles every
+# eyesy-modes-* sibling by default, private ones included, so a versioned
+# package refuses anything else.
+RELEASE_PACKS = ("eyesy-modes-factory", "eyesy-modes-milkdrop")
 VERSION_RE = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?")
 
 
@@ -173,6 +177,15 @@ def require_clean_sources(sources, modes_root):
     for name, entry in mode_packs.read_catalog(modes_root).get("synced", {}).items():
         if mode_packs.tree_digest(modes_root / name) != entry["sha256"]:
             raise RuntimeError(f"modes/{name} changed since `modes sync`; sync again")
+    private = sorted(set(sources["packs"]) - set(RELEASE_PACKS))
+    if private:
+        raise RuntimeError(
+            "A versioned release may only carry "
+            + ", ".join(RELEASE_PACKS)
+            + "; also synced: "
+            + ", ".join(private)
+            + ". Sync with EYESY_MODE_PACKS set to the release packs."
+        )
 
 
 def package(arm=False, version=None):

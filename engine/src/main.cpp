@@ -301,6 +301,9 @@ class EngineApp : public ofBaseApp {
         if (catalog.empty())
             return;
         selected = (index + int(catalog.size())) % catalog.size();
+        // Marks the journal so GPU driver messages (such as a VC4 register
+        // allocation failure) can be tied to the mode that caused them.
+        ofLogNotice() << "Mode: loading " << catalog[selected].filename().string();
         if (!runtime.load(catalog[selected], 1280, 720))
             ++modeErrors;
         runtime.snapshot(ofGetElapsedTimef(), 0, knobs, audio.snapshot(), midi, trigger, autoClear);

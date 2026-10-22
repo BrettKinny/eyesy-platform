@@ -147,6 +147,30 @@ class PackageTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, expected):
                     self.package(root, version="v0.1.0")
 
+    def test_version_rejects_packs_outside_the_release_set(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            (root / "modes/.gitignore").write_text("*\n!.gitignore\n!starter/\n!starter/**\n")
+            self.commit_all(root)
+            (root / "modes/wave").mkdir()
+            (root / "modes/wave/main.lua").write_text("return {}")
+            catalog = {
+                "synced": {
+                    "wave": {
+                        "pack": "eyesy-modes-private",
+                        "sha256": ctl.mode_packs.tree_digest(root / "modes/wave"),
+                    }
+                },
+                "packs": {"eyesy-modes-private": {"commit": "abc", "dirty": False}},
+            }
+            (root / "modes/.catalog.json").write_text(json.dumps(catalog))
+            with self.assertRaisesRegex(RuntimeError, "also synced: eyesy-modes-private"):
+                self.package(root, version="v0.1.0")
+            with patch.object(ctl, "RELEASE_PACKS", ("eyesy-modes-private",)):
+                self.package(root, version="v0.1.0")
+            self.assertTrue((root / "dist/v0.1.0-amd64.tar.gz").is_file())
+
     def test_byte_reproducible_despite_source_timestamps(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

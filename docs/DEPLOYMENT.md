@@ -71,7 +71,10 @@ python3 tools/release.py dist/dev-<payload-id>-armhf.tar.gz --architecture armhf
 published release, pass `--version v1.2.3` instead: the archive becomes
 `v1.2.3-armhf.tar.gz`, and packaging refuses unless the platform and every
 synced pack are clean git checkouts and `modes/` still matches the last
-`modes sync`. Either way the manifest's `sources` records the platform commit
+`modes sync`. It also refuses any pack other than the public release packs
+(`RELEASE_PACKS` in `eyesyctl`: factory and milkdrop), because `modes sync`
+assembles every `eyesy-modes-*` sibling, private ones included; sync a release
+with `EYESY_MODE_PACKS` naming those packs. Either way the manifest's `sources` records the platform commit
 and the commit of each pack at sync time (`null` when a tree is not a git
 checkout).
 
