@@ -41,6 +41,8 @@ into a 640x360 target (480x270 for heavy fields) and upscale with
 
 ### Measuring on the device
 
+`tools/device_verify.py` runs this check over a whole packaged release and also flags GPU shader-compile failures, black output and over-budget modes ([usage](HEADLESS-DEVELOPMENT.md#whole-release-device-check)).
+
 Tier runs use `./eyesyctl headless-test` or `tools/benchmark.py`: 600 frames
 offscreen on the device GPU while the deployed service keeps running. That
 makes every number a shared-load number, and two things follow.

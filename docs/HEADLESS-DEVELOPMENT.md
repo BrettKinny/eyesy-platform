@@ -62,6 +62,36 @@ deliberately broken draw callback, which returned engine exit 2 and CLI exit 1
 while still retrieving the screenshot, log and reports. The backend behind
 this command is described in [display backends](DISPLAY-BACKENDS.md).
 
+## Whole-release device check
+
+`tools/device_verify.py` runs every mode of a packaged ARM release through the
+headless test above (one engine launch per mode, real GPU) and classifies what comes
+back. It catches what `tools/scene_verify.py` cannot see on desktop software GL:
+
+```sh
+python3 tools/device_verify.py dist/RELEASE-armhf.tar.gz \
+  --host DEVICE_IP --clone-id UUID_FROM_RECEIPT --output local/device-verify-001 \
+  [--mode starter --mode milkdrop] [--frames 180] [--budget-ms 33.3] [--fail-on-budget]
+```
+
+Per mode it prints one line and lists findings (a mode can have several):
+
+| Finding | Detected by |
+| --- | --- |
+| `setup_error` | `mode_errors > 0`, `error`/`shader_warning` text, engine nonzero exit or timeout, software renderer, missing evidence (GLES2 compile failures land here) |
+| `gpu_compile` | `engine.log` lines such as `Failed to register allocate`, `Failed to compile ...`; the engine reports no error for register-allocation failures |
+| `black` | final grab mean luma below 0.0001 of full scale (as `scene_verify`) |
+| `flat` | final grab luma stddev below 0.002 of full scale |
+| `over_budget` | `p50_ms` above `--budget-ms` (default 33.3, tier C) |
+
+Output: `DIR/MODE.json` per mode, `DIR/summary.json`, and the retrieved evidence
+under `DIR/runs/MODE/`. Exit 0 if every mode passes, 1 on any hard finding, 2 if the
+only findings are `over_budget` (1 with `--fail-on-budget`). Each mode uploads the
+archive and launches the engine once, so budget roughly 20-40 s per mode; the 89
+public modes take under an hour. Timings are shared-load numbers, see
+[measuring on the device](SCENE-LIBRARY.md#measuring-on-the-device). Modes are
+not batched into one launch so each result is attributable and isolated.
+
 ## What still needs the bench
 
 Display-service activation, rollback to the previous release or stock, and
