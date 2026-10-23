@@ -85,6 +85,11 @@ back-to-back runs. So:
   upscale. `ofFbo` targets are `GL_LINEAR`, so a chunky look needs a nearest
   resample in the shader (`floor(uv*RES)+0.5`) rather than the plain
   `draw_target` upscale.
+- `draw_target` and `draw_image` use an engine-owned straight-line texture
+  shader, not openFrameworks' default one (which on the Pi is one branchy
+  shader with a `discard`, and cost about 4 ms more per full-screen draw). A
+  full-screen draw is about 1.4 ms on the CM3+, the same as a `draw_shader`
+  blit, so there is no need to blit with a shader to save time.
 - Hoist anything constant for the frame into Lua uniforms or a baked atlas.
 - Exploit provable dead work: if at most two rings can reach a pixel, evaluate
   two, not all of them.

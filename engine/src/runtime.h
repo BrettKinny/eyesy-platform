@@ -4,6 +4,7 @@
 #include "ofMain.h"
 #include "palette_manager.h"
 #include <filesystem>
+#include <functional>
 #include <lua.hpp>
 #include <map>
 #include <vector>
@@ -29,6 +30,7 @@ class ModeRuntime {
     void close();
     ~ModeRuntime() {
         close();
+        textureShader.reset();
     }
     size_t resourceCount() const {
         return fbos.size() + shaders.size() + images.size() + meshes.size();
@@ -57,4 +59,8 @@ class ModeRuntime {
     std::filesystem::path asset(const std::string &relative) const;
     void resetGraphics();
     std::shared_ptr<ofShader> compileShader(const std::filesystem::path &file);
+    // Engine-owned shader for drawing render targets and images; see drawTextured().
+    std::unique_ptr<ofShader> textureShader;
+    bool textureShaderTried = false;
+    void drawTextured(const std::function<void()> &draw);
 };

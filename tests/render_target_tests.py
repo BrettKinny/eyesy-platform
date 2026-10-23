@@ -63,6 +63,76 @@ def pixel(path, x, y):
     return tuple(rows[y][x * bpp : x * bpp + 3])
 
 
+def write_png(path, width, height, rgb):
+    """A solid-colour RGB PNG, for the image-draw case."""
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+
+    rows = b"".join(b"\x00" + bytes(rgb) * width for _ in range(height))
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+
+
+def check_texture_draws(root):
+    """draw_target / draw_image keep placement, orientation, tint, alpha and nesting.
+
+    The engine draws these with its own texture shader (the default one is slow on the Pi's
+    GPU), so pin down what the picture must be. The target's top-left quarter is red and the rest
+    green; drawn 2x at (100, 50), tinted (0.5, 1, 1) at alpha 1, then at alpha 0.5, then through a
+    second target, then an image.
+    """
+    scenes = {
+        "tint": "e.color(0.5,1,1,1); e.draw_target(small,100,50,640,360)",
+        "alpha": "e.color(1,1,1,0.5); e.draw_target(small,100,50,640,360)",
+        "nested": (
+            "e.begin_target(mid); e.draw_target(small,0,0,640,360); e.end_target(); "
+            "e.color(1,1,1,1); e.draw_target(mid,100,50,640,360)"
+        ),
+        "image": "e.color(1,1,1,1); e.draw_image(img,100,50,200,100)",
+    }
+    images = {}
+    for name, draw in scenes.items():
+        mode = root / ("tex-" + name)
+        mode.mkdir()
+        write_png(mode / "dot.png", 1, 1, (255, 128, 0))
+        (mode / "main.lua").write_text(
+            "local e=eyesy; local small, mid, img; return {api_version=1,setup=function(ctx) "
+            "small=e.target(320,180); mid=e.target(640,360); img=e.image('dot.png'); end,"
+            "draw=function(ctx) e.clear(0,0,0); e.begin_target(small); e.clear(0,1,0); "
+            "e.color(1,0,0); e.rect(0,0,160,90); e.end_target(); " + draw + " end}"
+        )
+        images[name] = run(mode, root / ("store-tex-" + name))
+    outside = (0, 0, 0)
+    # (scene, x, y, expected): target pixel (80,45) lands at (260,140); (240,45) at (580,140);
+    # (80,135) at (260,320).
+    expected = [
+        ("tint", 260, 140, (127, 0, 0)),
+        ("tint", 580, 140, (0, 255, 0)),
+        ("tint", 260, 320, (0, 255, 0)),
+        ("tint", 50, 140, outside),
+        ("tint", 260, 450, outside),
+        ("alpha", 260, 140, (127, 0, 0)),
+        ("alpha", 580, 140, (0, 127, 0)),
+        ("alpha", 50, 140, outside),
+        ("nested", 260, 140, (255, 0, 0)),
+        ("nested", 580, 140, (0, 255, 0)),
+        ("nested", 260, 320, (0, 255, 0)),
+        ("nested", 50, 140, outside),
+        ("image", 200, 100, (255, 128, 0)),
+        ("image", 50, 100, outside),
+        ("image", 200, 200, outside),
+    ]
+    for scene, x, y, want in expected:
+        got = pixel(images[scene], x, y)
+        if max(abs(got[i] - want[i]) for i in range(3)) > 12:
+            raise AssertionError((scene, x, y, want, got))
+
+
 def run(mode, store):
     cmd = [
         "xvfb-run",
@@ -129,6 +199,7 @@ def main():
             for p in pts:
                 if pixel(images[a], *p[:2]) != pixel(images[b], *p[:2]):
                     raise AssertionError("target differs from full render")
+        check_texture_draws(root)
     print("Render target pixel regression passed")
 
 
