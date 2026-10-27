@@ -92,7 +92,15 @@ class HeadlessWorkflowTests(unittest.TestCase):
                 contextlib.redirect_stderr(io.StringIO()) as stderr,
             ):
                 with self.assertRaises(subprocess.CalledProcessError):
-                    helper.execute(Path(temp) / "archive", "host", "clone", "starter", 10, Path(temp) / "out")
+                    helper.execute(
+                        Path(temp) / "archive",
+                        "host",
+                        "clone",
+                        "starter",
+                        10,
+                        Path(temp) / "out",
+                        keep_staging=True,
+                    )
             self.assertIn(
                 "Remote staging retained for inspection: /tmp/eyesy-headless.ABC", stderr.getvalue()
             )
@@ -171,6 +179,41 @@ class HeadlessWorkflowTests(unittest.TestCase):
             self.assertIn("tar -xzf", run_commands[3])
             self.assertIn("benchmark.py", run_commands[4])
             self.assertIn("scp", run_commands[5])
+            self.assertIn(
+                "rm -rf /tmp/eyesy-headless.ABC /sdcard/eyesy-platform/experiments/headless-", run_commands[6]
+            )
+            self.assertIn("-mmin +60", calls[2][1][-1])
+
+    def test_failed_run_still_removes_remote_files_by_default(self):
+        with tempfile.TemporaryDirectory() as temp:
+            calls = []
+
+            def command(args, **kwargs):
+                calls.append(args)
+                if args[0] == "ssh" and "--require-gpu" in args[-1]:
+                    raise subprocess.CalledProcessError(1, args)
+
+            with (
+                mock.patch.object(
+                    helper.release,
+                    "verify",
+                    return_value={"release": "r", "files": {"modes/starter/main.lua": "x"}},
+                ),
+                mock.patch.object(
+                    helper.subprocess,
+                    "check_output",
+                    side_effect=['{"clone_id":"clone"}', "Compute Module 3 Plus", "/tmp/eyesy-headless.ABC"],
+                ),
+                mock.patch.object(helper, "run", side_effect=command),
+                contextlib.redirect_stderr(io.StringIO()) as stderr,
+            ):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    helper.execute(Path(temp) / "archive", "host", "clone", "starter", 10, Path(temp) / "out")
+            self.assertNotIn("retained", stderr.getvalue())
+            self.assertEqual(calls[-1][0], "ssh")
+            self.assertIn(
+                "rm -rf /tmp/eyesy-headless.ABC /sdcard/eyesy-platform/experiments/headless-", calls[-1][-1]
+            )
 
 
 if __name__ == "__main__":

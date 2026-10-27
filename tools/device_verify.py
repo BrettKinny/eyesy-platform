@@ -166,6 +166,7 @@ def verify_mode(execute, args, mode, out_dir):
             args.frames,
             out_dir,
             ssh_options(args.host, args.known_hosts),
+            keep_staging=args.keep_staging,
         )
     except Exception as exc:  # engine failure still leaves evidence; keep classifying
         run_error = f"{type(exc).__name__}: {exc}"
@@ -211,6 +212,7 @@ def parser():
     p.add_argument("--output", type=Path, required=True, help="new directory")
     p.add_argument("--budget-ms", type=float, default=33.3, help="p50 frame-time budget")
     p.add_argument("--fail-on-budget", action="store_true", help="treat over-budget as exit 1 not 2")
+    p.add_argument("--keep-staging", action="store_true", help="leave each run's files on the unit")
     p.add_argument("--brightness-low", type=float, default=0.0001, help="black below this mean luma (0-1)")
     p.add_argument("--flatness", type=float, default=0.002, help="flat below this luma stddev (0-1)")
     return p

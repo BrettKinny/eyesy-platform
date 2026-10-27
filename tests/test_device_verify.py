@@ -85,7 +85,7 @@ class EvidenceTests(unittest.TestCase):
     def test_main_with_fake_execute(self):
         with tempfile.TemporaryDirectory() as t:
 
-            def fake(archive, host, clone, mode, frames, out, ssh=None):
+            def fake(archive, host, clone, mode, frames, out, ssh=None, keep_staging=False):
                 run = Path(out) / "headless-1" / f"00-{mode}"
                 (run / "grabs").mkdir(parents=True)
                 slow = mode == "slow"

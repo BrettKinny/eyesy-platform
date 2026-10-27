@@ -585,6 +585,7 @@ def cmd_headless_test(args):
         args.output,
         ssh_options(args),
         replay=args.replay,
+        keep_staging=args.keep_staging,
     )
     print(json.dumps(result, indent=2))
 
@@ -635,6 +636,7 @@ def build_parser():
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--replay", type=Path)
     p.add_argument("--known-hosts", type=Path)
+    p.add_argument("--keep-staging", action="store_true", help="leave the run's files on the unit")
     p.set_defaults(func=cmd_headless_test)
 
     for name in ("provision", "deploy", "rollback"):

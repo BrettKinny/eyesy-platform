@@ -19,7 +19,7 @@ def run(args, **kwargs):
     return subprocess.run([str(x) for x in args], check=True, **kwargs)
 
 
-def execute(archive, host, clone_id, mode, frames, output, ssh_options=None, replay=None):
+def execute(archive, host, clone_id, mode, frames, output, ssh_options=None, replay=None, keep_staging=False):
     manifest = release.verify(archive, "armhf")
     if not SAFE.fullmatch(mode):
         raise ValueError("Mode must be a safe basename")
@@ -52,11 +52,22 @@ def execute(archive, host, clone_id, mode, frames, output, ssh_options=None, rep
     model = subprocess.check_output(ssh + ["cat /proc/device-tree/model"], text=True, timeout=15)
     if "Compute Module 3 Plus" not in model:
         raise RuntimeError("Remote board model mismatch")
+    # /tmp on the unit is a 435 MB tmpfs: staging left by runs that died before cleanup
+    # (killed, lost connection) once filled it, and every later upload failed. Clear any
+    # older than an hour, which no live run can still be using.
     staging = subprocess.check_output(
-        ssh + ["mktemp -d /tmp/eyesy-headless.XXXXXXXX"], text=True, timeout=15
+        ssh
+        + [
+            "find /tmp -maxdepth 1 -name 'eyesy-headless.*' -mmin +60 -exec rm -rf {} + ; "
+            "mktemp -d /tmp/eyesy-headless.XXXXXXXX"
+        ],
+        text=True,
+        timeout=30,
     ).strip()
     if not re.fullmatch(r"/tmp/eyesy-headless\.[A-Za-z0-9]+", staging):
         raise RuntimeError("Unexpected staging path")
+    remote_paths = [staging]
+    failed = True
     try:
         run(scp + [str(archive), f"music@{host}:{staging}/release.tar.gz"], timeout=120)
         run(
@@ -97,6 +108,7 @@ def execute(archive, host, clone_id, mode, frames, output, ssh_options=None, rep
             timeout=120,
         )
         experiment = f"/sdcard/eyesy-platform/experiments/headless-{uuid.uuid4().hex}"
+        remote_paths.append(experiment)
         command = [
             "python3",
             staging + "/benchmark.py",
@@ -131,8 +143,16 @@ def execute(archive, host, clone_id, mode, frames, output, ssh_options=None, rep
             raise
         if benchmark_error is not None:
             raise benchmark_error
-        run(ssh + ["rm -rf " + shlex.quote(staging)], timeout=30)
+        failed = False
         return {"output": str(output), "experiment": experiment, "release": root, "staging": staging}
-    except Exception:
-        print(f"Remote staging retained for inspection: {staging}", file=sys.stderr)
-        raise
+    finally:
+        # The run's evidence is in `output` by now (or could not be fetched), so the remote
+        # copies go too, unless asked to keep them for a look on the unit.
+        if keep_staging:
+            if failed:
+                print(f"Remote staging retained for inspection: {staging}", file=sys.stderr)
+        else:
+            try:
+                run(ssh + ["rm -rf " + " ".join(shlex.quote(p) for p in remote_paths)], timeout=30)
+            except Exception as exc:
+                print(f"Remote cleanup failed ({exc}): {' '.join(remote_paths)}", file=sys.stderr)
