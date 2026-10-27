@@ -41,9 +41,12 @@ Replace the archive, IP, and UUID with the actual values. The command verifies t
 archive and card before staging, tests one mode with synthetic audio on the real
 GPU, and copies the result folder into the new local output directory. Inspect
 `summary.json`, `report.json`, `engine.log`, and `grabs/*.png`. A failed engine run
-still attempts to retrieve diagnostics and exits nonzero. Temporary staging and
-device experiment reports are retained for inspection; `/tmp` staging disappears
-on reboot. Existing local output directories are refused.
+still attempts to retrieve diagnostics and exits nonzero. The run's staging in
+`/tmp` and its experiment folder on the card are removed afterwards, pass or fail
+(the evidence is already in the output directory); `--keep-staging` keeps them on
+the unit for inspection. Staging older than an hour, from runs that were killed
+or lost the connection, is cleared at the start of each run, because `/tmp` is a
+small tmpfs. Existing local output directories are refused.
 
 This command does not use sudo, stop stock services, activate a release, or change
 boot selection. It defaults to `local/eyesy_known_hosts` when available, otherwise
