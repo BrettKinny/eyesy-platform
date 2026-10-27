@@ -144,6 +144,7 @@ static std::vector<std::array<float, 3>> builtinPalette(const std::string &name)
     return {};
 }
 void ModeRuntime::resetGraphics() {
+    endWide();
     endSolid();
     while (matrixDepth > 0) {
         ofPopMatrix();
@@ -433,6 +434,7 @@ int ModeRuntime::dispatch(lua_State *l) {
     }
     return lua_error(l);
 }
+static bool wideLinesEnabled();
 int ModeRuntime::invoke(lua_State *l, int op) {
     auto n = [&](int i, double fallback = 0) {
         if (lua_isnoneornil(l, i))
@@ -466,11 +468,21 @@ int ModeRuntime::invoke(lua_State *l, int op) {
     // Shape ops run inside the solid shader (see beginSolid()); ops that only change colour,
     // matrices or Lua-side values may run inside it too; anything else leaves it first.
     switch (op) {
+    case LINE:
+        // A wide line leaves the solid shader for its own (see drawWideLine()); the solid
+        // shader is re-entered by the next shape op.
+        if (wideLinesEnabled() && n(5, 1) > 1) {
+            if (wideActive || beginWide())
+                break;
+        }
+        endWide();
+        beginSolid();
+        break;
     case RECT:
     case CIRCLE:
-    case LINE:
     case MESH:
     case MESH_DRAW:
+        endWide();
         beginSolid();
         break;
     case COLOR:
@@ -489,6 +501,7 @@ int ModeRuntime::invoke(lua_State *l, int op) {
     case LFO:
         break;
     default:
+        endWide();
         endSolid();
         break;
     }
@@ -506,6 +519,10 @@ int ModeRuntime::invoke(lua_State *l, int op) {
         ofDrawCircle(n(1), n(2), n(3));
         break;
     case LINE:
+        if (wideActive) {
+            drawWideLine(n(1), n(2), n(3), n(4), n(5, 1));
+            break;
+        }
         ofSetLineWidth(n(5, 1));
         ofDrawLine(n(1), n(2), n(3), n(4));
         break;
@@ -1034,6 +1051,105 @@ void ModeRuntime::endSolid() {
         return;
     solidShader->end();
     solidActive = false;
+}
+// Lines wider than one pixel. On the Raspberry Pi target openFrameworks draws every line as a
+// plain GL_LINES primitive through its single default shader and never applies the line width, so
+// e.line() was always one pixel wide there. Elsewhere openFrameworks has a line shader that turns
+// each segment into a screen-space quad: the end points go through the model-view-projection
+// matrix to window pixels, and are pushed half the width either way along the screen-space
+// perpendicular (butt caps; the thickness is in pixels whatever the scale, rotation or camera).
+// This does the same arithmetic on the CPU and draws the quad with a pass-through shader, keeping
+// each end point's depth. The matrices and the viewport come from the current renderer, so
+// render targets and cameras work. EYESY_WIDE_LINES=1/0 forces it on or off (tests); the default
+// is on for the Pi only.
+static bool wideLinesEnabled() {
+    static const bool enabled = [] {
+        if (const char *forced = getenv("EYESY_WIDE_LINES"))
+            return forced[0] == '1';
+#ifdef TARGET_RASPBERRY_PI
+        return true;
+#else
+        return false;
+#endif
+    }();
+    return enabled;
+}
+bool ModeRuntime::beginWide() {
+    if (!wideShaderTried) {
+        wideShaderTried = true;
+        const bool es = std::string(reinterpret_cast<const char *>(glGetString(GL_VERSION)))
+                            .find("OpenGL ES") != std::string::npos;
+        const std::string vertex = es ? "precision highp float;\nattribute vec4 position;\n"
+                                      : "#version 150\nin vec4 position;\n";
+        const std::string fragment =
+            es ? "precision highp float;\n"
+               : "#version 150\nout vec4 outputColor;\n#define gl_FragColor outputColor\n";
+        auto shader = std::make_unique<ofShader>();
+        const bool ok =
+            shader->setupShaderFromSource(
+                GL_VERTEX_SHADER,
+                vertex + "void main(){ gl_Position = vec4(position.xyz, 1.0); }") &&
+            shader->setupShaderFromSource(GL_FRAGMENT_SHADER,
+                                          fragment + "uniform vec4 globalColor;\n"
+                                                     "void main(){ gl_FragColor = globalColor; }");
+        if (ok) {
+            shader->bindDefaults();
+            if (shader->linkProgram())
+                wideShader = std::move(shader);
+        }
+        if (!wideShader)
+            ofLogWarning("runtime") << "wide line shader unavailable; lines stay one pixel wide";
+        else {
+            wideMesh.setMode(OF_PRIMITIVE_TRIANGLE_STRIP);
+            for (int i = 0; i < 4; ++i)
+                wideMesh.addVertex({0.0f, 0.0f, 0.0f});
+        }
+    }
+    if (!wideShader)
+        return false;
+    endSolid();
+    wideShader->begin();
+    wideActive = true;
+    return true;
+}
+void ModeRuntime::endWide() {
+    if (!wideActive)
+        return;
+    wideShader->end();
+    wideActive = false;
+}
+// Called with the wide shader bound. A zero-length segment, or an end point at or behind the
+// camera plane, draws nothing (openFrameworks' own line shader produces nothing usable there).
+void ModeRuntime::drawWideLine(float x1, float y1, float x2, float y2, float width) {
+    auto renderer = ofGetCurrentRenderer();
+    const glm::mat4 mvp = renderer->getCurrentMatrix(OF_MATRIX_PROJECTION) *
+                          renderer->getCurrentMatrix(OF_MATRIX_MODELVIEW);
+    const glm::vec4 a = mvp * glm::vec4(x1, y1, 0.0f, 1.0f);
+    const glm::vec4 b = mvp * glm::vec4(x2, y2, 0.0f, 1.0f);
+    if (a.w <= 1e-6f || b.w <= 1e-6f)
+        return;
+    const ofRectangle view = renderer->getCurrentViewport();
+    const glm::vec2 size(view.getWidth(), view.getHeight());
+    const glm::vec2 na = glm::vec2(a.x, a.y) / a.w;
+    const glm::vec2 nb = glm::vec2(b.x, b.y) / b.w;
+    const glm::vec2 pa = (na + 1.0f) * (0.5f * size);
+    const glm::vec2 pb = (nb + 1.0f) * (0.5f * size);
+    const glm::vec2 delta = pa - pb;
+    const float length = glm::length(delta);
+    if (!(length > 1e-6f))
+        return;
+    const glm::vec2 dir = glm::vec2(-delta.y, delta.x) / length * (width * 0.5f);
+    const float za = a.z / a.w;
+    const float zb = b.z / b.w;
+    auto corner = [&](int i, const glm::vec2 &pixel, float z) {
+        const glm::vec2 ndc = pixel / size * 2.0f - 1.0f;
+        wideMesh.getVertices()[i] = {ndc.x, ndc.y, z};
+    };
+    corner(0, pa + dir, za);
+    corner(1, pa - dir, za);
+    corner(2, pb + dir, zb);
+    corner(3, pb - dir, zb);
+    wideMesh.draw();
 }
 std::shared_ptr<ofShader> ModeRuntime::compileShader(const std::filesystem::path &file) {
     std::ifstream in(file);

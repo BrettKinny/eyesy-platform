@@ -69,4 +69,12 @@ class ModeRuntime {
     bool solidActive = false;
     void beginSolid();
     void endSolid();
+    // Engine-owned shader and quad for lines wider than one pixel; see drawWideLine().
+    std::unique_ptr<ofShader> wideShader;
+    bool wideShaderTried = false;
+    bool wideActive = false;
+    ofMesh wideMesh;
+    bool beginWide();
+    void endWide();
+    void drawWideLine(float x1, float y1, float x2, float y2, float width);
 };

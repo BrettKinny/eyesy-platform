@@ -62,6 +62,9 @@ Colors use 0..1; coordinates and line width use pixels; rotation uses degrees.
 `clear(r,g,b,a=1)`, `color(r,g,b,a=1)`, `rect(x,y,w,h)`, `circle(x,y,r)`,
 `line(x1,y1,x2,y2,width=1)`, `text(string,x,y)`.
 
+`line` width is in screen pixels (butt caps) and is not scaled by `scale()` or the camera,
+on the device as on desktop.
+
 `push()`, `pop()`, `translate(x,y,z=0)`, `rotate(degrees,x=0,y=0,z=1)`,
 `scale(x=1,y=1,z=1)`. Underflow and more than 32 nested matrices are errors.
 Matrices, camera, targets, style, and depth state are cleaned up after callbacks.

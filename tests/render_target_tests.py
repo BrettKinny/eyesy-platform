@@ -209,10 +209,112 @@ def check_shape_draws(root):
             raise AssertionError((scene, x, y, want, got))
 
 
-def run(mode, store, solid=None):
+def check_wide_lines(root):
+    """Lines wider than one pixel: the engine's quad matches openFrameworks' line shader.
+
+    The Raspberry Pi has no line shader, so there the engine builds each wide line itself as a
+    screen-space quad (butt caps, `width` pixels thick whatever the scale or rotation). It is
+    forced on here with EYESY_WIDE_LINES=1 and must give byte-identical pictures to the desktop
+    line shader (EYESY_WIDE_LINES=0) for lines of several widths and directions, under
+    translate/rotate/scale, inside a render target, with alpha, and through the camera with depth
+    on. Width 1 stays on the plain path, which is also checked to be unchanged.
+    """
+    scenes = {
+        "axis": (
+            "e.color(1,0,0,1); e.line(100,100,500,100,2); e.line(100,150,500,150,5); "
+            "e.line(100,200,500,200,12); e.color(0,1,0,1); e.line(600,50,600,300,2); "
+            "e.line(650,50,650,300,5); e.line(720,50,720,300,12)"
+        ),
+        "diagonal": (
+            "e.color(0,0,1,1); e.line(100,400,400,650,2); e.line(500,400,800,650,5); "
+            "e.line(900,400,1200,650,12); e.line(900,650,1200,400,12)"
+        ),
+        "transform": (
+            "e.color(1,1,0,1); e.push(); e.translate(640,360); e.rotate(30); e.scale(2,0.5); "
+            "e.line(-200,0,200,0,12); e.line(0,-100,0,100,12); e.line(-150,-80,150,80,5); e.pop(); "
+            "e.push(); e.scale(0.25,0.25); e.line(400,2000,1800,2000,12); e.pop()"
+        ),
+        "target": (
+            "e.begin_target(tg); e.clear(0,0,0,1); e.color(1,0,1,1); e.line(20,20,300,20,12); "
+            "e.line(20,40,300,160,5); e.line(160,10,160,170,3); e.end_target(); "
+            "e.color(1,1,1,1); e.draw_target(tg,100,100,640,360)"
+        ),
+        "alpha": (
+            "e.color(1,0,0,0.5); e.line(100,300,500,300,12); e.color(0,0,1,0.5); "
+            "e.line(300,250,300,450,12); e.color(1,1,1,0.25); e.line(100,500,600,560,8)"
+        ),
+        "mixed": (
+            "e.color(1,0.5,0,1); e.rect(50,50,100,100); e.line(0,0,640,360,6); e.circle(300,300,40); "
+            "e.line(0,360,640,0,1); e.text('hi',20,20); e.line(100,600,900,600,9); "
+            "e.rect(700,100,60,60)"
+        ),
+        "camera": (
+            "e.depth(true); e.color(0,1,1,1); e.begin_camera(0,0,800,0,0,0); "
+            "e.line(-150,0,150,0,12); e.line(-100,-100,100,100,5); e.end_camera(); "
+            "e.depth(false)"
+        ),
+        "thin": "e.color(1,1,1,1); e.line(100,100,500,100,1); e.line(100,200,500,260,1)",
+    }
+    images = {}
+    for name, draw in scenes.items():
+        mode = root / ("wide-" + name)
+        mode.mkdir()
+        (mode / "main.lua").write_text(
+            "local e=eyesy; local tg; return {api_version=1,setup=function(ctx) "
+            "tg=e.target(320,180); end,"
+            "draw=function(ctx) e.clear(0.2,0.2,0.2); " + draw + " end}"
+        )
+        plain = run(mode, root / ("store-wide-plain-" + name), wide="0")
+        wide = run(mode, root / ("store-wide-on-" + name), wide="1")
+        if plain.read_bytes() != wide.read_bytes():
+            raise AssertionError(("wide line quad differs from the line shader", name))
+        images[name] = wide
+    bg = (51, 51, 51)
+    # (scene, x, y, expected). A horizontal line at y=200 of width 12 covers rows 194..205: 4 px
+    # off-centre is inside, 7 px off is outside. Same for the width-5 line at y=150 (2 in, 4 out).
+    expected = [
+        ("axis", 300, 196, (255, 0, 0)),
+        ("axis", 300, 204, (255, 0, 0)),
+        ("axis", 300, 207, bg),
+        ("axis", 300, 193, bg),
+        ("axis", 300, 150, (255, 0, 0)),
+        ("axis", 300, 153, bg),
+        ("axis", 300, 146, bg),
+        ("axis", 300, 101, bg),
+        ("axis", 650, 100, (0, 255, 0)),
+        ("axis", 654, 100, bg),
+        ("axis", 723, 100, (0, 255, 0)),
+        ("axis", 728, 100, bg),
+        ("axis", 90, 200, bg),
+        ("axis", 510, 200, bg),
+        ("transform", 640, 360, (255, 255, 0)),
+        ("alpha", 200, 303, (153, 25, 25)),
+        ("alpha", 200, 312, bg),
+        ("alpha", 300, 400, (25, 25, 153)),
+        ("target", 300, 140, (255, 0, 255)),
+        ("target", 300, 160, (0, 0, 0)),
+        ("thin", 300, 103, bg),
+        ("camera", 600, 360, (0, 255, 255)),
+        ("camera", 600, 372, bg),
+    ]
+    for scene, x, y, want in expected:
+        got = pixel(images[scene], x, y)
+        if max(abs(got[i] - want[i]) for i in range(3)) > 12:
+            raise AssertionError((scene, x, y, want, got))
+    # A width-1 line is one pixel: a hairline on the pixel boundary lands on row 99 or 100.
+    rows = [pixel(images["thin"], 300, y) for y in (98, 99, 100, 101)]
+    if sum(1 for r in rows if r == (255, 255, 255)) != 1:
+        raise AssertionError(("thin line is not one pixel wide", rows))
+
+
+def run(mode, store, solid=None, wide=None):
     env = None
-    if solid is not None:
-        env = dict(os.environ, EYESY_SOLID_SHAPES=solid)
+    if solid is not None or wide is not None:
+        env = dict(os.environ)
+        if solid is not None:
+            env["EYESY_SOLID_SHAPES"] = solid
+        if wide is not None:
+            env["EYESY_WIDE_LINES"] = wide
     cmd = [
         "xvfb-run",
         "-a",
@@ -280,6 +382,7 @@ def main():
                     raise AssertionError("target differs from full render")
         check_texture_draws(root)
         check_shape_draws(root)
+        check_wide_lines(root)
     print("Render target pixel regression passed")
 
 
