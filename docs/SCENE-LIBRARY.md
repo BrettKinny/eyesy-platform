@@ -52,7 +52,11 @@ engine's own per-frame cost plus whatever the rest of the device is doing. With
 the live service on a light scene, the cheapest 640x360-plus-upscale scenes
 measured 23.5–24.1 ms (September 2026), and `starter` measured 24.2–24.5 ms in
 the factory pack's quietest sessions. Across other sessions the same `starter`
-run measured up to 37.0 ms, and one load spike reached 47.9 ms. Tier A cannot
+run measured up to 37.0 ms, and one load spike reached 47.9 ms. With the live
+service on `starter` itself, a cold unit and no throttling, `starter` measured
+18.0 ms and `milkdrop` 22.3 ms (October 2026, engine 99671b4). Putting the live
+service on `wireframe-bardo` raised them to 23.0 and 27.7 ms, with no other
+change; the HDMI capture streamer made no difference. Tier A cannot
 be shown offscreen; the deployed service itself runs `starter` at about 60 fps
 on the KMS path.
 
