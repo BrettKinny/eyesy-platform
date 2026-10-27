@@ -90,6 +90,12 @@ back-to-back runs. So:
   shader with a `discard`, and cost about 4 ms more per full-screen draw). A
   full-screen draw is about 1.4 ms on the CM3+, the same as a `draw_shader`
   blit, so there is no need to blit with a shader to save time.
+- `rect`, `circle`, `line` and `draw_mesh` also use an engine-owned solid-colour
+  shader on the Pi. A full-screen translucent `rect` (a Persist fade, say) is
+  about 1.5 ms on the CM3+, against 2.5 ms through openFrameworks' default
+  shader, and a small shape costs a few microseconds less. Text, targets,
+  images and shader draws leave it, and each switch costs about 12 us, so
+  group shapes rather than alternating a shape and a label hundreds of times.
 - Hoist anything constant for the frame into Lua uniforms or a baked atlas.
 - Exploit provable dead work: if at most two rings can reach a pixel, evaluate
   two, not all of them.

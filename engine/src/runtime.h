@@ -31,6 +31,7 @@ class ModeRuntime {
     ~ModeRuntime() {
         close();
         textureShader.reset();
+        solidShader.reset();
     }
     size_t resourceCount() const {
         return fbos.size() + shaders.size() + images.size() + meshes.size();
@@ -63,4 +64,9 @@ class ModeRuntime {
     std::unique_ptr<ofShader> textureShader;
     bool textureShaderTried = false;
     void drawTextured(const std::function<void()> &draw);
+    std::unique_ptr<ofShader> solidShader;
+    bool solidShaderTried = false;
+    bool solidActive = false;
+    void beginSolid();
+    void endSolid();
 };

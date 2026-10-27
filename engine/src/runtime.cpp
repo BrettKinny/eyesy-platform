@@ -144,6 +144,7 @@ static std::vector<std::array<float, 3>> builtinPalette(const std::string &name)
     return {};
 }
 void ModeRuntime::resetGraphics() {
+    endSolid();
     while (matrixDepth > 0) {
         ofPopMatrix();
         --matrixDepth;
@@ -462,6 +463,35 @@ int ModeRuntime::invoke(lua_State *l, int op) {
         if (!lua_istable(l, i))
             throw std::runtime_error(std::string(what) + " must be a table");
     };
+    // Shape ops run inside the solid shader (see beginSolid()); ops that only change colour,
+    // matrices or Lua-side values may run inside it too; anything else leaves it first.
+    switch (op) {
+    case RECT:
+    case CIRCLE:
+    case LINE:
+    case MESH:
+    case MESH_DRAW:
+        beginSolid();
+        break;
+    case COLOR:
+    case PUSH:
+    case POP:
+    case TRANSLATE:
+    case ROTATE:
+    case SCALE:
+    case DEPTH:
+    case PARAM:
+    case RANDOM:
+    case PALETTE:
+    case PALETTE_DEFINE:
+    case PALETTE_FG:
+    case PALETTE_BG:
+    case LFO:
+        break;
+    default:
+        endSolid();
+        break;
+    }
     switch (op) {
     case CLEAR:
         ofClear(n(1) * 255, n(2) * 255, n(3) * 255, n(4, 1) * 255);
@@ -938,6 +968,72 @@ void ModeRuntime::drawTextured(const std::function<void()> &draw) {
     textureShader->begin();
     draw();
     textureShader->end();
+}
+// Draws rects, circles, lines and meshes with a small engine-owned solid-colour shader instead of
+// openFrameworks' default one, for the same reason as drawTextured(): on the Raspberry Pi
+// target the default shader is the general one (it branches on texturing and can discard for
+// bitmap text), and on the VC4 that makes a full-screen fill cost about 2.5 ms against 1.5 ms
+// here, and each small shape a few microseconds more. These ops never carry texture coordinates
+// or per-vertex colours, so the colour is globalColor alone, as in the default shader.
+//
+// Switching programs costs about 12 us, so the shader is entered at the first shape op and left
+// only when something else could draw (text, targets, images, shaders, the camera, clear) or the
+// callback ends; colour and matrix ops run inside it, because openFrameworks keeps the current
+// shader's uniforms up to date. Only the Pi target is changed: elsewhere openFrameworks has
+// per-primitive default shaders and draws wide lines with its own line shader, which a plain
+// shader would turn into hairlines. EYESY_SOLID_SHAPES=1/0 forces it on or off (tests).
+static bool solidShapesEnabled() {
+    static const bool enabled = [] {
+        if (const char *forced = getenv("EYESY_SOLID_SHAPES"))
+            return forced[0] == '1';
+#ifdef TARGET_RASPBERRY_PI
+        return true;
+#else
+        return false;
+#endif
+    }();
+    return enabled;
+}
+void ModeRuntime::beginSolid() {
+    if (solidActive || !solidShapesEnabled())
+        return;
+    if (!solidShaderTried) {
+        solidShaderTried = true;
+        const bool es = std::string(reinterpret_cast<const char *>(glGetString(GL_VERSION)))
+                            .find("OpenGL ES") != std::string::npos;
+        const std::string vertex = es ? "precision highp float;\nattribute vec4 position;\n"
+                                      : "#version 150\nin vec4 position;\n";
+        const std::string fragment =
+            es ? "precision highp float;\n"
+               : "#version 150\nout vec4 outputColor;\n#define gl_FragColor outputColor\n";
+        auto shader = std::make_unique<ofShader>();
+        const bool ok =
+            shader->setupShaderFromSource(
+                GL_VERTEX_SHADER, vertex + "uniform mat4 modelViewProjectionMatrix;\n"
+                                           "void main(){ gl_Position = modelViewProjectionMatrix * "
+                                           "position; }") &&
+            shader->setupShaderFromSource(GL_FRAGMENT_SHADER, fragment +
+                                                                  "uniform vec4 globalColor;\n"
+                                                                  "void main(){ gl_FragColor = "
+                                                                  "globalColor; }");
+        if (ok) {
+            shader->bindDefaults();
+            if (shader->linkProgram())
+                solidShader = std::move(shader);
+        }
+        if (!solidShader)
+            ofLogWarning("runtime") << "solid shader unavailable; using the default shader";
+    }
+    if (!solidShader)
+        return;
+    solidShader->begin();
+    solidActive = true;
+}
+void ModeRuntime::endSolid() {
+    if (!solidActive)
+        return;
+    solidShader->end();
+    solidActive = false;
 }
 std::shared_ptr<ofShader> ModeRuntime::compileShader(const std::filesystem::path &file) {
     std::ifstream in(file);

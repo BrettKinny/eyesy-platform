@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Pixel-level reduced render-target regression (desktop build container)."""
 
+import os
 import subprocess
 import tempfile
 import struct
@@ -133,7 +134,85 @@ def check_texture_draws(root):
             raise AssertionError((scene, x, y, want, got))
 
 
-def run(mode, store):
+def check_shape_draws(root):
+    """Rects, circles and meshes draw the same through the engine's solid-colour shader.
+
+    On the Pi the engine draws shapes with its own shader (the default one is slow on the Pi's
+    GPU). It is forced on here with EYESY_SOLID_SHAPES=1 and must give byte-identical pictures to
+    openFrameworks' default path, with the expected colour, alpha, placement, transforms, text
+    drawn between shapes, and drawing into a target. Lines are left out: the desktop default
+    draws them thicker than a plain shader can.
+    """
+    scenes = {
+        "fill": "e.color(1,0.5,0,1); e.rect(100,100,200,100)",
+        "alpha": "e.color(1,0,0,0.5); e.rect(100,100,200,100); e.color(0,0,1,0.5); e.circle(300,150,60)",
+        "circle": "e.color(0,1,0,1); e.circle(400,300,50)",
+        "transform": (
+            "e.push(); e.translate(600,400); e.rotate(90); e.color(0,0,1,1); e.rect(0,0,100,50); "
+            "e.pop(); e.color(1,0,0,1); e.rect(50,50,20,20)"
+        ),
+        "mesh": (
+            "e.color(1,1,0,1); e.update_mesh(mesh,{{100,500,0},{300,500,0},{200,650,0}},{1,2,3}); "
+            "e.draw_mesh(mesh); e.color(0,1,1,1); e.mesh({{100,100,0},{400,100,0}})"
+        ),
+        "target": (
+            "e.begin_target(tg); e.clear(0,0,0,1); e.color(1,0,1,1); e.rect(10,10,100,50); "
+            "e.circle(200,100,30); e.end_target(); e.color(1,1,1,1); e.draw_target(tg,0,0,640,360)"
+        ),
+        "text": (
+            "e.color(1,1,1,1); e.rect(20,20,60,30); e.text('hello',30,40); e.color(1,0,0,1); "
+            "e.rect(100,20,60,30); e.text('world',110,40); e.color(0,1,0,1); e.rect(200,20,60,30)"
+        ),
+    }
+    images = {}
+    for name, draw in scenes.items():
+        mode = root / ("shape-" + name)
+        mode.mkdir()
+        (mode / "main.lua").write_text(
+            "local e=eyesy; local mesh, tg; return {api_version=1,setup=function(ctx) "
+            "mesh=e.new_mesh(); tg=e.target(320,180); end,"
+            "draw=function(ctx) e.clear(0.2,0.2,0.2); " + draw + " end}"
+        )
+        plain = run(mode, root / ("store-shape-plain-" + name), "0")
+        solid = run(mode, root / ("store-shape-solid-" + name), "1")
+        if plain.read_bytes() != solid.read_bytes():
+            raise AssertionError(("solid shader changed the picture", name))
+        images[name] = solid
+    bg = (51, 51, 51)
+    # (scene, x, y, expected). Alpha 0.5 over the grey background (51) is (153, 25, 25) for red;
+    # blue over that is (76, 12, 140); the circle's blue over bare grey is (25, 25, 153).
+    expected = [
+        ("fill", 200, 150, (255, 128, 0)),
+        ("fill", 50, 150, bg),
+        ("fill", 200, 250, bg),
+        ("alpha", 150, 150, (153, 25, 25)),
+        ("alpha", 330, 150, (25, 25, 153)),
+        ("alpha", 280, 150, (76, 12, 140)),
+        ("circle", 400, 300, (0, 255, 0)),
+        ("circle", 400, 360, bg),
+        ("transform", 575, 450, (0, 0, 255)),
+        ("transform", 625, 450, bg),
+        ("transform", 60, 60, (255, 0, 0)),
+        ("mesh", 200, 540, (255, 255, 0)),
+        ("mesh", 50, 540, bg),
+        ("target", 100, 60, (255, 0, 255)),
+        ("target", 400, 200, (255, 0, 255)),
+        ("target", 400, 300, (0, 0, 0)),
+        ("target", 800, 300, bg),
+        ("text", 25, 25, (255, 255, 255)),
+        ("text", 105, 25, (255, 0, 0)),
+        ("text", 205, 25, (0, 255, 0)),
+    ]
+    for scene, x, y, want in expected:
+        got = pixel(images[scene], x, y)
+        if max(abs(got[i] - want[i]) for i in range(3)) > 12:
+            raise AssertionError((scene, x, y, want, got))
+
+
+def run(mode, store, solid=None):
+    env = None
+    if solid is not None:
+        env = dict(os.environ, EYESY_SOLID_SHAPES=solid)
     cmd = [
         "xvfb-run",
         "-a",
@@ -147,7 +226,7 @@ def run(mode, store):
         "--frames",
         "2",
     ]
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30, env=env)
     if p.returncode:
         raise AssertionError(p.stdout)
     return next((store / "grabs").glob("*.png"))
@@ -200,6 +279,7 @@ def main():
                 if pixel(images[a], *p[:2]) != pixel(images[b], *p[:2]):
                     raise AssertionError("target differs from full render")
         check_texture_draws(root)
+        check_shape_draws(root)
     print("Render target pixel regression passed")
 
 
