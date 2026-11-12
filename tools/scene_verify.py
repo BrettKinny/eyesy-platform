@@ -458,8 +458,12 @@ def main():
         parser.error(str(error))
     output = args.output.resolve()
     if output.exists() or output.is_symlink():
-        parser.error("output directory must not already exist")
-    output.mkdir(parents=True)
+        # an empty pre-created directory (e.g. a pre-mounted container
+        # volume) is acceptable; anything with contents is not
+        if not (output.is_dir() and not any(output.iterdir())):
+            parser.error("output directory must not already exist")
+    else:
+        output.mkdir(parents=True)
     engine = args.engine.resolve()
     summaries = []
     for i, mode in enumerate(modes):
