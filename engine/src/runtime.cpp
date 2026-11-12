@@ -255,6 +255,8 @@ bool ModeRuntime::load(const std::filesystem::path &folder, int w, int h) {
     lua_newtable(lua);
     number(lua, "width", w);
     number(lua, "height", h);
+    lua_newtable(lua);
+    lua_setfield(lua, -2, "params");
     for (auto entry :
          {std::make_pair("palette_fg", PALETTE_FG), std::make_pair("palette_bg", PALETTE_BG)}) {
         lua_pushlightuserdata(lua, this);
@@ -565,6 +567,21 @@ int ModeRuntime::invoke(lua_State *l, int op) {
         if (parameters.count(name))
             throw std::runtime_error("duplicate parameter");
         parameters[name] = {name, std::clamp(def, minimum, maximum), minimum, maximum, knob};
+        // Publish the default at once so setup can read ctx.params[name]; snapshot()
+        // rebuilds the table with live knob values before every update and draw.
+        if (contextRef != LUA_NOREF) {
+            const int top = lua_gettop(l);
+            lua_rawgeti(l, LUA_REGISTRYINDEX, contextRef);
+            lua_getfield(l, -1, "params");
+            if (!lua_istable(l, -1)) {
+                lua_pop(l, 1);
+                lua_newtable(l);
+                lua_pushvalue(l, -1);
+                lua_setfield(l, -3, "params");
+            }
+            number(l, name.c_str(), parameters[name].value);
+            lua_settop(l, top);
+        }
         break;
     }
     case RANDOM:

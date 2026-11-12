@@ -79,7 +79,28 @@ return {api_version=1,
         )
         report = run(callback, root / "storage-callback")
         assert report["mode_errors"] == 1 and "callback boom" in report["error"], report
-    print("Runtime robustness tests passed: malformed graphics inputs and callback cleanup")
+        # Declared parameters are readable in setup, before the first per-frame snapshot.
+        params = make(
+            root,
+            "params-in-setup",
+            """
+return {api_version=1,
+  setup=function(ctx)
+    assert(next(ctx.params) == nil, "params starts empty")
+    eyesy.param("speed", 2, 0, 1, 0)
+    eyesy.param("size", 0.25, 0, 1, 1)
+    assert(ctx.params.speed == 1, "speed default is clamped into range")
+    assert(ctx.params.size == 0.25, "size default is visible in setup")
+  end,
+  draw=function(ctx) assert(ctx.params.speed == 1 and ctx.params.size ~= nil, "draw params") end}
+""",
+        )
+        report = run(params, root / "storage-params", expected=0)
+        assert report["mode_errors"] == 0 and report["error"] == "", report
+    print(
+        "Runtime robustness tests passed: malformed graphics inputs, callback cleanup "
+        "and params in setup"
+    )
 
 
 if __name__ == "__main__":
