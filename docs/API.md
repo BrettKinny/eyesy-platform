@@ -39,7 +39,8 @@ MIDI-note, combined, or quarter-note MIDI-clock triggers.
 ## Parameters and utility functions
 
 - `eyesy.param(name, default, min, max, knob)` declares a unique parameter in setup.
-  Knob 1..5 maps to hardware; 0 leaves it unassigned. Read `ctx.params[name]`.
+  Knob 1..5 maps to hardware; 0 leaves it unassigned. Read `ctx.params[name]`; it holds
+  the default as soon as the parameter is declared, so setup can read it too.
   Scene recall applies soft takeover until the physical knob crosses its saved value.
 - `eyesy.palette(phase)` returns three color channels in 0..1 from a cosine palette.
 - `ctx.palette_fg(phase)` and `ctx.palette_bg(phase)` return three channels from the
