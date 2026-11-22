@@ -1240,6 +1240,16 @@ int main(int argc, char **argv) {
         auto window = o.kms         ? createKmsWindow(o.videoMode)
                       : o.offscreen ? createOffscreenWindow(1280, 720)
                                     : ofCreateWindow(windowSettings);
+        // openFrameworks only logs when GLFW cannot open a window (no X display in a
+        // container, say) and leaves a null GLFW window behind, which the first window call
+        // turns into a GLFW assertion abort. Fail here with a clear message instead.
+        if (auto glfw = std::dynamic_pointer_cast<ofAppGLFWWindow>(window);
+            glfw && !glfw->getGLFWWindow()) {
+            const char *display = std::getenv("DISPLAY");
+            throw std::runtime_error(std::string("could not open a window (DISPLAY=") +
+                                     (display ? display : "unset") +
+                                     "); run under xvfb-run or mount the X11 socket");
+        }
         // ofInit (called by every window factory) installs OF's handler, which
         // surfaces SIGTERM as a nonzero exit; replace it for the loop below.
         std::signal(SIGTERM, requestTermination);
