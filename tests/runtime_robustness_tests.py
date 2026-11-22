@@ -97,10 +97,7 @@ return {api_version=1,
         )
         report = run(params, root / "storage-params", expected=0)
         assert report["mode_errors"] == 0 and report["error"] == "", report
-    print(
-        "Runtime robustness tests passed: malformed graphics inputs, callback cleanup "
-        "and params in setup"
-    )
+    print("Runtime robustness tests passed: malformed graphics inputs, callback cleanup and params in setup")
 
 
 if __name__ == "__main__":
